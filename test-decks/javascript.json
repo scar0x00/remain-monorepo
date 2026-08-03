@@ -1,0 +1,22 @@
+[
+  {
+    "front": "What is the difference between `let`, `const`, and `var`?",
+    "back": "`var` is function-scoped and hoisted; `let` and `const` are block-scoped. `const` prevents re-assignment of the variable binding, while `let` allows it."
+  },
+  {
+    "front": "What is a Closure?",
+    "back": "The combination of a function bundled together with references to its surrounding state (the lexical environment), allowing an inner function to access the scope of an outer function."
+  },
+  {
+    "front": "What is the difference between `==` and `===`?",
+    "back": "`==` performs type coercion before comparison, whereas `===` compares both value and type without coercion."
+  },
+  {
+    "front": "What is a Promise in JavaScript?",
+    "back": "An object representing the eventual completion or failure of an asynchronous operation and its resulting value."
+  },
+  {
+    "front": "What is the difference between an `interface` and a `type` in TypeScript?",
+    "back": "Interfaces can be extended/merged by declaring them multiple times, whereas types are aliases and cannot be merged, but can use unions and intersections."
+  }
+]

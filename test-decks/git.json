@@ -1,0 +1,22 @@
+[
+  {
+    "front": "What is the difference between `git fetch` and `git pull`?",
+    "back": "`git fetch` downloads commits, files, and refs from a remote repository without merging; `git pull` does a `git fetch` followed immediately by a `git merge`."
+  },
+  {
+    "front": "What does `git stash` do?",
+    "back": "Temporarily shelves (stashes) changes you've made to your working copy so you can work on something else, and then reapply them later."
+  },
+  {
+    "front": "What is a 'detached HEAD' state?",
+    "back": "When Git has checked out a specific commit rather than a branch, meaning any new commits won't update any branch pointer."
+  },
+  {
+    "front": "How do you undo the last commit but keep the changes in your working directory?",
+    "back": "`git reset --soft HEAD~1`"
+  },
+  {
+    "front": "What is the purpose of `git rebase`?",
+    "back": "To apply commits from one branch on top of another branch to create a linear history."
+  }
+]

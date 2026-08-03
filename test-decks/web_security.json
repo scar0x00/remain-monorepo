@@ -1,0 +1,22 @@
+[
+  {
+    "front": "What does HTTPS stand for and what does it do?",
+    "back": "Hypertext Transfer Protocol Secure. It encrypts communication between the client and server using TLS/SSL to prevent eavesdropping and tampering."
+  },
+  {
+    "front": "What is Cross-Site Scripting (XSS)?",
+    "back": "A vulnerability where an attacker injects malicious scripts into trusted websites, which then execute in the user's browser."
+  },
+  {
+    "front": "What is SQL Injection (SQLi)?",
+    "back": "A vulnerability where an attacker manipulates SQL queries by injecting malicious input, potentially allowing unauthorized access to the database."
+  },
+  {
+    "front": "What does CORS stand for and what does it do?",
+    "back": "Cross-Origin Resource Sharing. A browser security mechanism that allows or restricts requested resources on a web page to be requested from another domain."
+  },
+  {
+    "front": "What is CSRF (Cross-Site Request Forgery)?",
+    "back": "An attack that forces an end user to execute unwanted actions on a web application in which they're currently authenticated."
+  }
+]

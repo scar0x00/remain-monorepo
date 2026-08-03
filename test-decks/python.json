@@ -1,0 +1,22 @@
+[
+  {
+    "front": "What is the difference between list and tuple?",
+    "back": "Lists are mutable and defined with square brackets `[]`, while tuples are immutable and defined with parentheses `()`."
+  },
+  {
+    "front": "What is a list comprehension?",
+    "back": "A concise way to create lists in Python, e.g., `[x**2 for x in range(10)]`."
+  },
+  {
+    "front": "What does the `__init__` method do in a Python class?",
+    "back": "It is the constructor method called automatically when a new instance of the class is created."
+  },
+  {
+    "front": "What is the difference between `is` and `==`?",
+    "back": "`is` checks for identity (if two variables point to the same object in memory), while `==` checks for equality (if the values are equal)."
+  },
+  {
+    "front": "How do you handle exceptions in Python?",
+    "back": "Using `try`, `except`, `else`, and `finally` blocks."
+  }
+]

@@ -1,0 +1,22 @@
+[
+  {
+    "front": "What is a Primary Key?",
+    "back": "A column or set of columns that uniquely identifies each row in a table. It must contain unique values and cannot contain NULL values."
+  },
+  {
+    "front": "What is the difference between `INNER JOIN` and `LEFT JOIN`?",
+    "back": "`INNER JOIN` returns records with matching values in both tables; `LEFT JOIN` returns all records from the left table and matched records from the right table (returning NULL if no match)."
+  },
+  {
+    "front": "What does the `GROUP BY` clause do?",
+    "back": "Groups rows that have the same values into summary rows, typically used with aggregate functions like `COUNT()`, `MAX()`, `SUM()`."
+  },
+  {
+    "front": "What is a Foreign Key?",
+    "back": "A field (or collection of fields) in one table that refers to the Primary Key in another table, establishing a link between the data in the two tables."
+  },
+  {
+    "front": "What is database normalization?",
+    "back": "The process of organizing data in a database to reduce redundancy and improve data integrity by dividing tables and establishing relationships."
+  }
+]

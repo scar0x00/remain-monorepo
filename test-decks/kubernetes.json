@@ -1,0 +1,22 @@
+[
+  {
+    "front": "What is a Pod in Kubernetes?",
+    "back": "The smallest deployable unit in Kubernetes, representing a single instance of a running process, sharing network and storage resources."
+  },
+  {
+    "front": "What is the role of the Kubelet?",
+    "back": "An agent running on each node that ensures containers are running in a Pod as described in PodSpecs."
+  },
+  {
+    "front": "What is a Kubernetes Service?",
+    "back": "An abstraction that defines a logical set of Pods and a policy to access them, providing a stable IP address and DNS name."
+  },
+  {
+    "front": "What is a ConfigMap?",
+    "back": "An API object used to store non-confidential data in key-value pairs, allowing you to decouple environment-specific configuration from container images."
+  },
+  {
+    "front": "What command is used to apply configuration changes from a YAML file?",
+    "back": "`kubectl apply -f <filename>`"
+  }
+]

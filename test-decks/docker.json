@@ -1,0 +1,22 @@
+[
+  {
+    "front": "What is a Docker image?",
+    "back": "A read-only template with instructions for creating a Docker container."
+  },
+  {
+    "front": "How does a container differ from a virtual machine?",
+    "back": "Containers share the host OS kernel and are lightweight, while VMs include a full guest OS and run on a hypervisor."
+  },
+  {
+    "front": "What is the purpose of the CMD instruction in a Dockerfile?",
+    "back": "It specifies the default command to execute when starting a container."
+  },
+  {
+    "front": "What is a Docker volume?",
+    "back": "A mechanism for persisting data generated and used by Docker containers, stored on the host filesystem managed by Docker."
+  },
+  {
+    "front": "How do you view running containers in the Docker CLI?",
+    "back": "`docker ps` (or `docker container ls`)"
+  }
+]

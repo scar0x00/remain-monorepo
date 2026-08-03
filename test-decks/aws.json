@@ -1,0 +1,22 @@
+[
+  {
+    "front": "What is Amazon EC2?",
+    "back": "Elastic Compute Cloud: a service that provides resizable compute capacity (virtual servers) in the cloud."
+  },
+  {
+    "front": "What is Amazon S3?",
+    "back": "Simple Storage Service: an object storage service offering industry-leading scalability, data availability, security, and performance."
+  },
+  {
+    "front": "What is AWS IAM?",
+    "back": "Identity and Access Management: enables you to manage access to AWS services and resources securely by creating users, groups, and roles."
+  },
+  {
+    "front": "What is the purpose of an Amazon VPC?",
+    "back": "Virtual Private Cloud: lets you provision a logically isolated section of the AWS Cloud where you can launch AWS resources in a virtual network you define."
+  },
+  {
+    "front": "What is AWS Lambda?",
+    "back": "A serverless compute service that runs your code in response to events and automatically manages the underlying compute resources."
+  }
+]

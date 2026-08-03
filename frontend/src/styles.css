@@ -1,0 +1,55 @@
+@import "tailwindcss";
+
+/* 1. Default (DARK MODE) Variables */
+:root {
+  /* Surfaces & Base UI */
+  --app-bg: #03071e;           /* Ink Black */
+  --app-card: #370617;         /* Night Bordeaux */
+  --app-card-hover: #6a040f;   /* Black Cherry */
+  --app-border: #6a040f;       /* Black Cherry */
+  --app-text: #ffba08;         /* Amber Flame */
+  --app-text-muted: #f48c06;   /* Dark Orange */
+
+  /* Brand / Action Colors */
+  --primary: #d00000;          /* Brick Ember */
+  --primary-hover: #dc2f02;    /* Red Ochre */
+  --secondary: #e85d04;        /* Autumn Leaf */
+  --accent: #faa307;           /* Orange */
+}
+
+/* 2. Light Mode Override */
+@media (prefers-color-scheme: light) {
+  :root {
+    /* Surfaces & Base UI */
+    --app-bg: #ffba08;         /* Amber Flame (Light background) */
+    --app-card: #faa307;       /* Orange (Light surface) */
+    --app-card-hover: #f48c06; /* Dark Orange */
+    --app-border: #e85d04;     /* Autumn Leaf */
+    --app-text: #03071e;       /* Ink Black (Dark text on light) */
+    --app-text-muted: #370617; /* Night Bordeaux */
+
+    /* Brand / Action Colors */
+    --primary: #9d0208;        /* Oxblood */
+    --primary-hover: #6a040f;  /* Black Cherry */
+    --secondary: #dc2f02;      /* Red Ochre */
+    --accent: #d00000;         /* Brick Ember */
+  }
+}
+
+/* 3. Register Semantic Utility Tokens with Tailwind CSS v4 */
+@theme {
+  --color-app-bg: var(--app-bg);
+  --color-app-card: var(--app-card);
+  --color-app-card-hover: var(--app-card-hover);
+  --color-app-border: var(--app-border);
+  --color-app-text: var(--app-text);
+  --color-app-text-muted: var(--app-text-muted);
+
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-secondary: var(--secondary);
+  --color-accent: var(--accent);
+
+  --font-sans: 'Google Sans', system-ui, -apple-system, sans-serif;
+  --font-mono: 'Google Sans Code', monospace;
+}
