@@ -26,7 +26,14 @@
               }
             ],
             "styles": [
-              "src/styles.css"
+              "src/styles.css",
+              "node_modules/katex/dist/katex.min.css",
+              "node_modules/prismjs/themes/prism-okaidia.min.css"
+            ],
+            "scripts": [
+              "node_modules/prismjs/prism.js",
+              "node_modules/prismjs/plugins/autoloader/prism-autoloader.min.js",
+              "node_modules/mermaid/dist/mermaid.min.js"
             ],
             "server": "src/main.server.ts",
             "outputMode": "server",

@@ -10,7 +10,7 @@
     "serve:ssr:frontend": "node dist/frontend/server/server.mjs"
   },
   "private": true,
-  "packageManager": "npm@11.12.1",
+  "packageManager": "pnpm@11.22.0",
   "dependencies": {
     "@angular/common": "^22.1.0",
     "@angular/compiler": "^22.1.0",
@@ -21,6 +21,12 @@
     "@angular/router": "^22.1.0",
     "@angular/ssr": "^22.1.2",
     "express": "^5.1.0",
+    "katex": "^0.18.4",
+    "marked": "^18.0.9",
+    "marked-katex-extension": "^5.1.10",
+    "mermaid": "^11.16.1",
+    "ngx-markdown": "^22.0.0",
+    "prismjs": "^1.30.0",
     "rxjs": "~7.8.0",
     "tslib": "^2.3.0"
   },
