@@ -13,7 +13,7 @@ export const routes: Routes = [
         component: BrowseDecksRoute,
     },
     {
-        path: "deck-study",
+        path: "deck-study/:id",
         component: DeckStudyRoute,
     },
 ];

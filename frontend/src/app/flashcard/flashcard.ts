@@ -12,7 +12,7 @@ import { MarkdownComponent } from 'ngx-markdown';
   templateUrl: './flashcard.html',
 })
 export class Flashcard {
-  hideBack = input<boolean>();
-  front = input<string>();
-  back = input<string>();
+  hideBack = input<boolean>(true);
+  front = input.required<string | undefined>();
+  back = input.required<string | undefined>();
 }

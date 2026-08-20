@@ -1,0 +1,86 @@
+[
+  {
+    "front": "### What is Linear Modulation?\n\nDefine linear modulation in the context of communications and state the mathematical condition that distinguishes it from non-linear modulation.",
+    "back": "A modulation scheme is **linear** if the modulated signal satisfies the **principle of superposition** with respect to the baseband message signal.\n\nIf message $m_1(t) \\to s_1(t)$ and $m_2(t) \\to s_2(t)$, then:\n\n$$am_1(t) + bm_2(t) \\to as_1(t) + bs_2(t)$$\n\n**Key Consequence:** Linear modulation primarily results in frequency translation (shifting) of the message spectrum without generating new frequency components that depend non-linearly on message amplitudes (unlike FM/PM)."
+  },
+  {
+    "front": "### Standard Amplitude Modulation (DSB-FC)\n\n1. Write the time-domain expression for a conventional AM signal with carrier $A_c \\cos(2\\pi f_c t)$ and message $m(t)$.\n2. Define the **modulation index** $\\mu$ (for tone modulation $m(t) = A_m \\cos(2\\pi f_mt)$). $$e(t) = A_c \\cos[2\\pi(nf_0 + f_{\\text{LO}})t + n\\phi(t)] + A_c \\cos[2\\pi(nf_0 - f_{\\text{LO}})t + n\\phi(t)]$$",
+    "back": "1. **Time-domain expression:**\n$$s(t) = A_c [1 + k_a m(t)] \\cos(2\\pi f_c t)$$\nwhere $k_a$ is the amplitude sensitivity.\n\n2. **Modulation index (tone modulation):**\n$$\\mu = k_a A_m = \\frac{A_m}{A_c}$$\n\nTo prevent envelope distortion during envelope detection, we require $\\mu \\le 1$ (or $\\max|k_a m(t)| \\le 1$ )."
+  },
+  {
+    "front": "### AM Envelope Detection & Overmodulation\n\nWhat happens when the modulation index $\\mu > 1$ (overmodulation) in conventional AM, and why does an envelope detector fail?",
+    "back": "When $\\mu > 1$:\n- The term $[1 + k_a m(t)]$ becomes negative during parts of the message cycle.\n- The phase of the carrier experiences a $180^\\circ$ ($\\pi$ radians) phase reversal.\n- **Envelope detector failure:** An envelope detector follows $|1 + k_a m(t)|$, rectifying negative values to positive, causing severe **harmonic distortion** and clipping of the detected signal."
+  },
+  {
+    "front": "### Power Efficiency of Conventional AM\n\nWhat is the maximum theoretical power efficiency $\\eta$ of standard AM for single-tone sinusoidal modulation, and how is it calculated?",
+    "back": "**Efficiency formula:**\n$$\\eta = \\frac{P_{\\text{sidebands}}}{P_{\\text{total}}} = \\frac{\\frac{1}{4} A_c^2 \\mu^2}{\\frac{1}{2} A_c^2 + \\frac{1}{4} A_c^2 \\mu^2} = \\frac{\\mu^2}{2 + \\mu^2}$$\n\nFor maximum distortionless modulation ($\\mu = 1$):\n$$\\eta_{\\max} = \\frac{1^2}{2 + 1^2} = \\frac{1}{3} \\approx 33.33\\%$$\n\nAt least $66.7\\%$ of total power is wasted on the unmodulated carrier."
+  },
+  {
+    "front": "### Double-Sideband Suppressed-Carrier (DSB-SC)\n\n1. Write the time-domain equation and frequency-domain spectrum $S(f)$ for DSB-SC.\n2. What is its transmission bandwidth $B_T$ given a message bandwidth $W$?",
+    "back": "1. **Equations:**\n- **Time-domain:**\n$$s(t) = A_c m(t) \\cos(2\\pi f_c t)$$\n- **Frequency-domain:**\n$$S(f) = \\frac{A_c}{2} [M(f - f_c) + M(f + f_c)]$$\n\n2. **Bandwidth:**\n$$B_T = 2W$$\n*(Twice the baseband message bandwidth $W$.)*"
+  },
+  {
+    "front": "### Coherent Detection of DSB-SC\n\nExplain how coherent (synchronous) demodulation recovers $m(t)$ from a DSB-SC signal $s(t) = A_c m(t) \\cos(2\\pi f_c t)$.",
+    "back": "1. **Multiply** received signal by a local oscillator carrier $\\cos(2\\pi f_c t)$:\n$$v(t) = s(t) \\cdot 2\\cos(2\\pi f_c t) = 2 A_c m(t) \\cos^2(2\\pi f_c t)$$\n$$v(t) = A_c m(t) [1 + \\cos(4\\pi f_c t)] = A_c m(t) + A_c m(t)\\cos(4\\pi f_c t)$$\n\n2. **Low-Pass Filter (LPF)** removes the high-frequency component at $2f_c$:\n$$y(t) = A_c m(t)$$"
+  },
+  {
+    "front": "### Coherent Detection: Phase Error Effect\n\nWhat happens to the demodulated output of DSB-SC if the receiver's local oscillator has a phase error $\\phi$, i.e., $c_{\\text{local}}(t) = \\cos(2\\pi f_c t + \\phi)$?",
+    "back": "Multiplying the signal by $\\cos(2\\pi f_c t + \\phi)$ and passing through a low-pass filter yields:\n$$y(t) = \\frac{1}{2} A_c m(t) \\cos(\\phi)$$\n\n- **Signal attenuation:** Output amplitude is scaled by $\\cos(\\phi)$.\n- **Quadrature Null Effect:** If $\\phi = \\pm 90^\\circ$ ($\\pi/2$), $\\cos(\\phi) = 0$, and the output signal completely disappears."
+  },
+  {
+    "front": "### Costas Loop for DSB-SC Demodulation\n\nWhat is the role of a **Costas Loop**, and how does it maintain carrier synchronization for DSB-SC signals?",
+    "back": "A Costas Loop is a phase-locked loop (PLL) configuration designed to recover carrier phase and demodulate suppressed-carrier linear signals.\n\n- **I-arm (In-Phase):** Multiplies input by $\\cos(2\\pi f_c t + \\phi) \\to I(t) \\propto m(t)\\cos\\phi$\n- **Q-arm (Quadrature):** Multiplies input by $\\sin(2\\pi f_c t + \\phi) \\to Q(t) \\propto m(t)\\sin\\phi$\n- **Phase Discriminator:** Multiplies $I(t) \\times Q(t) \\propto m^2(t) \\sin(2\\phi)$.\n\nSince $m^2(t) > 0$, the error signal $\\sin(2\\phi)$ is independent of message polarity and drives a VCO to keep $\\phi \\to 0$."
+  },
+  {
+    "front": "### Single-Sideband Modulation (SSB) & Hilbert Transform\n\n1. Define the Hilbert Transform $\\hat{m}(t)$ in terms of frequency response $H(f)$.\n2. Write the time-domain expressions for **Upper Sideband (USSB)** and **Lower Sideband (LSSB)**.",
+    "back": "1. **Hilbert Transform Frequency Response:**\n$$H(f) = -j \\operatorname{sgn}(f) = \\begin{cases} -j, & f > 0 \\\\ +j, & f < 0 \\end{cases}$$\n*(Introduces a $-90^\\circ$ phase shift to positive frequencies and $+90^\\circ$ to negative frequencies.)*\n\n2. **Time-Domain Expressions:**\n- **USSB:** $s_{\\text{USB}}(t) = A_c m(t) \\cos(2\\pi f_c t) - A_c \\hat{m}(t) \\sin(2\\pi f_c t)$\n- **LSSB:** $s_{\\text{LSB}}(t) = A_c m(t) \\cos(2\\pi f_c t) + A_c \\hat{m}(t) \\sin(2\\pi f_c t)$"
+  },
+  {
+    "front": "### Spectral Efficiency: SSB vs DSB\n\nCompare Single-Sideband (SSB) and Double-Sideband Suppressed-Carrier (DSB-SC) in terms of **bandwidth** and **implementation complexity**.",
+    "back": "| Metric | DSB-SC | SSB |\n| :--- | :--- | :--- |\n| **Transmission Bandwidth** | $B_T = 2W$ | $B_T = W$ |\n| **Spectral Efficiency** | $1\\text{ Hz baseband} \\to 2\\text{ Hz RF}$ | $1\\text{ Hz baseband} \\to 1\\text{ Hz RF}$ |\n| **Filtering Requirement** | Relaxed bandpass | Extremely sharp cutoff at $f_c$ |\n| **Low-frequency Response** | Good (can transmit DC) | Poor near DC (due to non-ideal filter transition) |"
+  },
+  {
+    "front": "### Vestigial Sideband Modulation (VSB)\n\n1. Why was VSB developed as a compromise between DSB and SSB?\n2. What is the standard bandwidth $B_T$ of a VSB signal with vestige bandwidth $f_v$?",
+    "back": "1. **Motivation:**\n- SSB requires an ideal brick-wall filter to eliminate one sideband near $f_c$, which is practically impossible when baseband content has significant DC/low frequencies (e.g., analog video signals).\n- VSB passes one sideband completely and a *vestige* (small part) of the other, allowing gradual filter roll-off.\n\n2. **Bandwidth:**\n$$B_T = W + f_v$$\nwhere $W$ is message bandwidth and $f_v \\ll W$ is the vestige bandwidth."
+  },
+  {
+    "front": "### VSB Filter Condition for Distortionless Reception\n\nWhat condition must the sideband-shaping filter $H(f)$ satisfy around the carrier frequency $f_c$ to enable undistorted coherent demodulation?",
+    "back": "The filter transfer function $H(f)$ must exhibit **odd symmetry** about the carrier frequency $f_c$ within the transition band:\n\n$$H(f - f_c) + H(f + f_c) = \\text{constant} \\quad \\text{for } |f| \\le W$$\n\nEquivalently, at baseband:\n$$H_{\\text{eq}}(f) = H(f + f_c) + H(f - f_c) = 1 \\quad \\forall |f| \\le W$$"
+  },
+  {
+    "front": "### Quadrature Amplitude Modulation (QAM)\n\n1. Write the general time-domain equation of a QAM signal transmitting two independent signals $m_I(t)$ and $m_Q(t)$.\n2. What is the transmission bandwidth if both signals have bandwidth $W$?",
+    "back": "1. **Time-domain expression:**\n$$s_{\\text{QAM}}(t) = m_I(t) \\cos(2\\pi f_c t) - m_Q(t) \\sin(2\\pi f_c t)$$\n- $m_I(t)$: **In-phase** component\n- $m_Q(t)$: **Quadrature** component\n\n2. **Bandwidth:**\n$$B_T = 2W$$\n*(Since it transmits two separate signals of bandwidth $W$ within $2W$, the effective bandwidth per signal is $W$, matching SSB efficiency while keeping simple filtering.)*"
+  },
+  {
+    "front": "### In-Phase and Quadrature (I/Q) Demodulation\n\nGiven $s(t) = I(t)\\cos(2\\pi f_c t) - Q(t)\\sin(2\\pi f_c t)$, write pseudo-code or steps to recover both $I(t)$ and $Q(t)$.",
+    "back": "```python\n# Step 1: Carrier generation\ncarrier_I = 2 * cos(2 * pi * fc * t)\ncarrier_Q = -2 * sin(2 * pi * fc * t)\n\n# Step 2: Mixing (Frequency translation)\nraw_I = s(t) * carrier_I  # = I(t)[1 + cos(4*pi*fc*t)] - Q(t)sin(4*pi*fc*t)\nraw_Q = s(t) * carrier_Q  # = Q(t)[1 - cos(4*pi*fc*t)] - I(t)sin(4*pi*fc*t)\n\n# Step 3: Low-pass filtering (cutoff at baseband bandwidth W)\nI_recovered = low_pass_filter(raw_I)\nQ_recovered = low_pass_filter(raw_Q)\n```"
+  },
+  {
+    "front": "### Complex Envelope Representation\n\nExpress an arbitrary linear bandpass signal $s(t)$ in terms of its complex envelope $\\tilde{s}(t)$, and define its relation to $I(t)$ and $Q(t)$.",
+    "back": "**Representation:**\n$$s(t) = \\operatorname{Re}\\left\\{ \\tilde{s}(t) e^{j 2\\pi f_c t} \\right\\}$$\n\nwhere the **complex envelope (baseband equivalent)** is:\n$$\\tilde{s}(t) = I(t) + j Q(t) = A(t) e^{j\\theta(t)}$$\n\n- **In-phase:** $I(t) = A(t) \\cos \\theta(t)$\n- **Quadrature:** $Q(t) = A(t) \\sin \\theta(t)$\n- **Envelope:** $A(t) = \\sqrt{I^2(t) + Q^2(t)}$\n- **Phase:** $\\theta(t) = \\arctan\\left(\\frac{Q(t)}{I(t)}\\right)$"
+  },
+  {
+    "front": "### Binary Phase Shift Keying (BPSK) as Linear Modulation\n\nExplain why BPSK ($s_i(t) = \\pm A_c g(t) \\cos(2\\pi f_c t)$) is classified as a linear digital modulation scheme.",
+    "back": "BPSK can be expressed as:\n$$s(t) = \\left( \\sum_k a_k p(t - kT_b) \\right) \\cos(2\\pi f_c t)$$\nwhere $a_k \\in \\{-1, +1\\}$ represents binary data, and $p(t)$ is the pulse shape.\n\nBecause the modulated passband signal is a **direct linear convolution** of the discrete symbol sequence with a continuous pulse shaping filter followed by a linear frequency shift: $\\mathcal{M}(a_1 x_1 + a_2 x_2) = a_1 \\mathcal{M}(x_1) + a_2 \\mathcal{M}(x_2)$."
+  },
+  {
+    "front": "### Constellation Diagram: Minimum Euclidean Distance\n\n1. What is a constellation diagram in linear digital modulation?\n2. What is the significance of the **minimum Euclidean distance** ($d_{\\min}$)?",
+    "back": "1. **Definition:** A 2D plot representing modulation symbols as points $(I_k, Q_k)$ in the complex plane spanned by orthonormal basis functions $\\phi_1(t) = \\sqrt{\\frac{2}{T_s}}\\cos(2\\pi f_c t)$ and $\\phi_2(t) = -\\sqrt{\\frac{2}{T_s}}\\sin(2\\pi f_c t)$.\n\n2. **Significance of $d_{\\min}$:**\nUnder AWGN, symbol error probability $P_e$ is dominated by $d_{\\min}$:\n$$P_e \\approx Q\\left( \\frac{d_{\\min}}{2\\sigma} \\right) = Q\\left( \\sqrt{\\frac{d_{\\min}^2}{2 N_0}} \\right)$$\nMaximizing $d_{\\min}$ for a given average transmit power minimizes the error rate."
+  },
+  {
+    "front": "### Nyquist ISI Criterion for Linear Digital Modulation\n\nWhat is the Nyquist condition on the baseband pulse $p(t)$ (and its spectrum $P(f)$) to achieve zero Intersymbol Interference (ISI) at sampling instances $t = k T_s$?",
+    "back": "- **Time-domain condition:**\n$$p(k T_s) = \\begin{cases} 1, & k = 0 \\\\ 0, & k \\neq 0 \\end{cases}$$\n\n- **Frequency-domain condition:**\n$$\\sum_{n=-\\infty}^{\\infty} P\\left(f - \\frac{n}{T_s}\\right) = T_s$$\n\n*(The periodic summation of frequency replicas of $P(f)$ shifted by integer multiples of the symbol rate $R_s = 1/T_s$ must equal a constant.)*"
+  },
+  {
+    "front": "### Raised Cosine Spectrum & Roll-off Factor\n\nFor a Raised Cosine filter with roll-off factor $\\beta \\in [0, 1]$ and symbol rate $R_s = 1/T_s$:\n1. What is the required RF bandwidth $B$ for a linearly modulated passband signal (e.g., QPSK/QAM)?\n2. What does $\\beta = 0$ and $\\beta = 1$ physically represent?",
+    "back": "1. **Passband Bandwidth:**\n$$B = (1 + \\beta) R_s = (1 + \\beta) \\frac{1}{T_s}$$\n\n2. **Physical meaning of $\\beta$:**\n- **$\\beta = 0$ (Ideal Nyquist Sinc pulse):** Minimum theoretical bandwidth $B = R_s$, but impulse response decays very slowly ($1/t$), making it extremely sensitive to timing jitter.\n- **$\\beta = 1$ ($100\\%$ excess bandwidth):** Double the minimum bandwidth ($B = 2R_s$), but impulse response decays rapidly ($1/t^3$), providing high robustness to timing errors."
+  },
+  {
+    "front": "### Peak-to-Average Power Ratio (PAPR) in Linear Modulation\n\nWhy do linear modulation schemes (especially higher-order QAM or root-raised-cosine filtered signals) suffer from high PAPR, and what problem does this cause at the transmitter?",
+    "back": "1. **Origin of high PAPR:**\n- Pulse-shaping filters introduce large envelope fluctuations between zero-crossings.\n- Multiple amplitude levels (e.g., in 16-QAM or 64-QAM) mean outer constellation points require significantly more instantaneous power than average.\n\n2. **Consequences:**\n- Requires High Power Amplifiers (HPAs) to operate with large **power back-off**.\n- Operating near saturation leads to **non-linear distortion**, resulting in spectral regrowth (adjacent channel leakage) and constellation warping."
+  },
+  {
+    "front": "### Noise Performance: Figure of Merit Comparison\n\nRank the following analog linear modulation schemes by their noise performance **Figure of Merit** $\\gamma = \\frac{(\\text{SNR})_o}{(\\text{SNR})_c}$:\n- DSB-SC\n- SSB\n- Conventional AM (with $\\mu = 1$)",
+    "back": "1. **DSB-SC:** $\\gamma = 1$ ($0\\text{ dB}$)\n2. **SSB:** $\\gamma = 1$ ($0\\text{ dB}$)\n3. **Conventional AM:** $\\gamma = \\frac{\\mu^2}{2 + \\mu^2} \\le \\frac{1}{3} \\approx -4.8\\text{ dB}$\n\n**Note:** While DSB-SC and SSB have the same figure of merit ($\\gamma = 1$), SSB uses half the RF bandwidth of DSB-SC."
+  }
+]

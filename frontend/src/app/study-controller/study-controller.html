@@ -1,1 +1,15 @@
-<p>study-controller works!</p>
+<div class="text-app-text">
+    <app-flashcard
+        class="text-md"
+        [front]="currentMd()?.front"
+        [back]="currentMd()?.back"
+        [hideBack]="false"
+    />
+</div>
+<div class="text-app-bg text-lg fixed w-full flex justify-center left-0 bottom-12 gap-12 items-center bg-transparent">
+    <button class="font-bold bg-app-text-muted px-6 py-2 rounded-2xl" (click)="nextCard()">Right</button>
+    <button class="font-bold bg-app-text-muted px-6 py-2 rounded-2xl">Wrong</button>
+</div>
+<p class="text-white">
+    
+</p>
