@@ -56,4 +56,30 @@ app.get("/api/v1/deck/:key", async (c) => {
   });
 })
 
+app.put("/api/v1/deck/:key", async (c) => {
+  const key = c.req.param('key');
+  const body = c.req.raw.body;
+
+  if (!body) {
+    return c.text('Body is required', 400);
+  }
+
+  await c.env.DECKS.put(key, body);
+
+  return c.text(`Put ${key} successfully!`);
+})
+
+app.get("/api/v1/decks", async (c) => {
+  const list = await c.env.DECKS.list();
+  
+  const decks = list.objects.map(obj => ({
+    key: obj.key,
+    size: obj.size,
+    uploaded: obj.uploaded,
+    etag: obj.httpEtag,
+  }));
+
+  return c.json({ decks });
+});
+
 export default app;
