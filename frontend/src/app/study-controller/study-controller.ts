@@ -23,7 +23,7 @@ export class StudyController {
 
   protected readonly deck = httpResource<Deck>(() => {
     const id = this.deckId();
-    return id ? `/api/v1/deck/${id}` : undefined;
+    return id ? `/api/v1/deck/${id}.json` : undefined;
   });
 
   rightCounter = signal(0);
