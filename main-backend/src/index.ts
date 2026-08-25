@@ -70,16 +70,19 @@ app.put("/api/v1/deck/:key", async (c) => {
 })
 
 app.get("/api/v1/decks", async (c) => {
-  const list = await c.env.DECKS.list();
-  
+  const query = c.req.query('searchTerm');
+  const list = await c.env.DECKS.list({
+        prefix: query
+  });
+
   const decks = list.objects.map(obj => ({
-    key: obj.key,
+    deckName: obj.key,
     size: obj.size,
     uploaded: obj.uploaded,
     etag: obj.httpEtag,
   }));
 
-  return c.json({ decks });
+  return c.json(decks);
 });
 
 export default app;
