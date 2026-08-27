@@ -3,7 +3,7 @@
         <ul class="flex flex-col justify-start items-start gap-y-2">
             @for (deck of searchTerm.deck.value(); track deck.etag) {
                 <li class="grid grid-cols-2 gap-4 w-full border-b border-b-app-border py-3">
-                    <div class="text-lg text-nowrap text-ellipsis">
+                    <div class="text-lg text-nowrap text-ellipsis font-medium">
                         <a [routerLink]="['/deck-study/', getDeckPath(deck.deckName)]">
                             {{ deck.deckName.replace(/\.json$/i, "") }}
                         </a>

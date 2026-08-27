@@ -10,6 +10,6 @@ export class DeckSearchTerm {
     });
 
     setTerm(term: string) {
-        this.term.set(term);
+        this.term.set(term.toLowerCase());
     }
 }
