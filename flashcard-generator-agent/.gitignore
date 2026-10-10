@@ -1,6 +1,9 @@
 # dependencies (bun install)
 node_modules
 
+# wrangler local state
+.wrangler
+
 # output
 out
 dist

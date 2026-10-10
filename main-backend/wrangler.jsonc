@@ -21,6 +21,12 @@
       "bucket_name": "remain-decks"
     }
   ],
+  "services": [
+    {
+      "binding": "FLASHCARD_AGENT",
+      "service": "flashcard-generator-agent"
+    }
+  ],
   "hyperdrive": [
     {
       "binding": "PG",

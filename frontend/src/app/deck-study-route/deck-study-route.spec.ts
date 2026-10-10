@@ -1,6 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
-import { DeckStudyRouteRoute } from './deck-study-route';
+import { DeckStudyRoute } from './deck-study-route';
 
 describe('DeckStudyRoute', () => {
   let component: DeckStudyRoute;

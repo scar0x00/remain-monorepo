@@ -10,8 +10,8 @@
             "serverUrl": "https://docs.mcp.cloudflare.com/mcp"
         },
         "angular-cli": {
-          "command": "pnpx",
-          "args": ["-y", "@angular/cli", "mcp"]
+          "command": "bunx",
+          "args": ["@angular/cli", "mcp"]
         }
     }
 }

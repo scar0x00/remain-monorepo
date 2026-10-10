@@ -1,78 +1,160 @@
+import { createOpenRouter } from "@openrouter/ai-sdk-provider";
 import { Agent } from "agents";
+import { createAI } from "agents/models/ai-sdk";
 import { generateText, Output } from "ai";
-import { createWorkersAI } from "workers-ai-provider";
-import { stringify as toYaml } from "yaml";
-import { z } from "zod";
 import { DeckOutputSchema, type Deck } from "./schema";
+import {
+  isPlainText,
+  parseDeck,
+  parseRequest,
+  serializeDeck,
+  type DeckFormat,
+  type DeckInput,
+} from "./input";
+import {
+  buildCreatePrompt,
+  buildRefinePrompt,
+  formatSources,
+  SYSTEM_PROMPT,
+  type SourceDocument,
+} from "./prompts";
 
-const MODEL = "@cf/meta/llama-4-scout-17b-16e-instruct";
+const GATEWAY_ID = "default";
+const MODEL = "anthropic/claude-haiku-5.5";
 const MAX_SOURCE_CHARS = 150_000;
-const DECK_NAME_PATTERN = /^[A-Za-z0-9][A-Za-z0-9_-]{0,99}$/;
 
-const RequestSchema = z.object({
-  deckName: z
-    .string()
-    .transform((name) => name.replace(/\.(json|ya?ml)$/i, ""))
-    .pipe(z.string().regex(DECK_NAME_PATTERN, "deckName must be 1-100 letters, digits, '-' or '_'")),
-  format: z.enum(["json", "yaml"]).default("json"),
-  cardCount: z.coerce.number().int().min(1).max(200).default(20),
-  instructions: z.string().max(2000).optional(),
-  text: z.string().optional(),
-  overwrite: z
-    .union([z.boolean(), z.enum(["true", "false"]).transform((value) => value === "true")])
-    .default(false),
-});
-
-const SYSTEM_PROMPT = `You create study flashcards from source material.
-Each card has a "front" (a clear question or prompt) and a "back" (a concise, accurate answer).
-- Cover the most important facts, definitions, processes and concepts in the source.
-- Keep every card self-contained and atomic: one idea per card.
-- Only use information present in the source material. Do not invent facts.
-- Use Markdown inline code for identifiers, commands and code, e.g. \`list.append()\`.
-- Write the cards in the same language as the source material.`;
-
-type SourceDocument = { name: string; content: string };
+const FORMATS: DeckFormat[] = ["json", "yaml"];
 
 export class FlashcardAgent extends Agent<Env> {
   async onRequest(request: Request): Promise<Response> {
     if (request.method !== "POST") {
-      return Response.json({ error: "Use POST to generate a deck" }, { status: 405 });
+      return Response.json(
+        { error: "Use POST to generate a deck" },
+        { status: 405 },
+      );
     }
 
     const parsed = await parseRequest(request);
     if (!parsed.success) {
       return Response.json({ error: parsed.error }, { status: 400 });
     }
-    const input = parsed.data;
 
+    return parsed.data.refine
+      ? this.refineDeck(parsed.data, parsed.files)
+      : this.createDeck(parsed.data, parsed.files);
+  }
+
+  private async createDeck(input: DeckInput, files: File[]): Promise<Response> {
     const key = `${input.deckName}.${input.format}`;
     if (!input.overwrite && (await this.env.DECKS.head(key))) {
-      return Response.json({ error: `Deck ${key} already exists. Set overwrite to replace it` }, { status: 409 });
+      return Response.json(
+        { error: `Deck ${key} already exists. Set overwrite to replace it` },
+        { status: 409 },
+      );
     }
 
-    const sources = await this.collectSources(parsed.files, input.text);
+    const sources = await this.collectSources(files, input.text);
     if (sources.length === 0) {
-      return Response.json({ error: "Provide source text or at least one file" }, { status: 400 });
+      return Response.json(
+        { error: "Provide source text or at least one file" },
+        { status: 400 },
+      );
     }
 
-    const sourceText = sources.map((source) => `<source name="${source.name}">\n${source.content}\n</source>`).join("\n\n");
+    const sourceText = formatSources(sources);
     if (sourceText.length > MAX_SOURCE_CHARS) {
-      return Response.json({ error: "Source material is too large. Split it into smaller decks" }, { status: 413 });
+      return Response.json(
+        { error: "Source material is too large. Split it into smaller decks" },
+        { status: 413 },
+      );
     }
 
-    const cards = await this.generateCards(sourceText, input.cardCount, input.instructions);
-    const body = serializeDeck(cards, input.format);
+    const cards = await this.generateCards(
+      buildCreatePrompt({
+        sourceText,
+        cardCount: input.cardCount,
+        instructions: input.instructions,
+      }),
+    );
+    return this.saveDeck(key, input.format, cards, 201);
+  }
 
-    await this.env.DECKS.put(key, body, {
+  private async refineDeck(input: DeckInput, files: File[]): Promise<Response> {
+    const stored = await this.loadDeck(input.deckName);
+    if (!stored) {
+      return Response.json(
+        { error: `Deck ${input.deckName} does not exist` },
+        { status: 404 },
+      );
+    }
+
+    const currentDeck = parseDeck(stored.text, stored.format);
+    if (!currentDeck) {
+      return Response.json(
+        { error: `Deck ${stored.key} could not be read` },
+        { status: 500 },
+      );
+    }
+
+    if (!input.instructions && files.length === 0) {
+      return Response.json(
+        { error: "Describe the change to make, or attach source files" },
+        { status: 400 },
+      );
+    }
+
+    const sources = await this.collectSources(files, undefined);
+    const sourceText = sources.length > 0 ? formatSources(sources) : undefined;
+    if (sourceText && sourceText.length > MAX_SOURCE_CHARS) {
+      return Response.json(
+        { error: "Source material is too large. Split it into smaller decks" },
+        { status: 413 },
+      );
+    }
+
+    const cards = await this.generateCards(
+      buildRefinePrompt({
+        currentDeck,
+        instructions: input.instructions,
+        sourceText,
+      }),
+    );
+    return this.saveDeck(stored.key, stored.format, cards, 200);
+  }
+
+  private async loadDeck(
+    deckName: string,
+  ): Promise<{ key: string; format: DeckFormat; text: string } | null> {
+    for (const format of FORMATS) {
+      const key = `${deckName}.${format}`;
+      const object = await this.env.DECKS.get(key);
+      if (object) {
+        return { key, format, text: await object.text() };
+      }
+    }
+    return null;
+  }
+
+  private async saveDeck(
+    key: string,
+    format: DeckFormat,
+    cards: Deck,
+    status: 200 | 201,
+  ): Promise<Response> {
+    await this.env.DECKS.put(key, serializeDeck(cards, format), {
       httpMetadata: {
-        contentType: input.format === "json" ? "application/json" : "application/yaml",
+        contentType:
+          format === "json" ? "application/json" : "application/yaml",
       },
     });
 
-    return Response.json({ key, format: input.format, cardCount: cards.length }, { status: 201 });
+    return Response.json({ key, format, cardCount: cards.length }, { status });
   }
 
-  private async collectSources(files: File[], text: string | undefined): Promise<SourceDocument[]> {
+  private async collectSources(
+    files: File[],
+    text: string | undefined,
+  ): Promise<SourceDocument[]> {
     const sources: SourceDocument[] = [];
 
     if (text?.trim()) {
@@ -101,60 +183,21 @@ export class FlashcardAgent extends Agent<Env> {
     return sources;
   }
 
-  private async generateCards(sourceText: string, cardCount: number, instructions: string | undefined): Promise<Deck> {
-    const workersai = createWorkersAI({ binding: this.env.AI });
+  private async generateCards(prompt: string): Promise<Deck> {
+    const ai = createAI({ binding: this.env.AI, id: GATEWAY_ID });
+    const openrouter = createOpenRouter({ apiKey: "cloudflare" });
 
     const result = await generateText({
-      model: workersai(MODEL),
+      model: ai(openrouter(MODEL)),
       output: Output.object({
         schema: DeckOutputSchema,
         name: "flashcard_deck",
         description: "A deck of flashcards generated from the source material",
       }),
       system: SYSTEM_PROMPT,
-      prompt: [
-        `Create exactly ${cardCount} flashcards from the source material below.`,
-        instructions ? `Additional instructions: ${instructions}` : undefined,
-        sourceText,
-      ]
-        .filter(Boolean)
-        .join("\n\n"),
+      prompt,
     });
 
     return result.output.cards;
   }
-}
-
-async function parseRequest(request: Request) {
-  const { fields, files } = await readRequest(request);
-  const parsed = RequestSchema.safeParse(fields);
-
-  if (!parsed.success) {
-    return { success: false as const, error: parsed.error.issues.map((issue) => issue.message).join("; ") };
-  }
-
-  return { success: true as const, data: parsed.data, files };
-}
-
-async function readRequest(request: Request): Promise<{ fields: Record<string, unknown>; files: File[] }> {
-  if (request.headers.get("content-type")?.includes("multipart/form-data")) {
-    const form = await request.formData();
-    const fields = Object.fromEntries([...form.entries()].filter(([, value]) => typeof value === "string"));
-    const files = form.getAll("files").filter((value): value is File => value instanceof File);
-    return { fields, files };
-  }
-
-  const body = await request.json().catch(() => null);
-  return { fields: (body ?? {}) as Record<string, unknown>, files: [] };
-}
-
-function isPlainText(file: File): boolean {
-  return file.type.startsWith("text/") || file.type === "application/json" || /\.(md|txt|json|ya?ml|csv)$/i.test(file.name);
-}
-
-function serializeDeck(cards: Deck, format: "json" | "yaml"): string {
-  if (format === "json") {
-    return `${JSON.stringify(cards, null, 2)}\n`;
-  }
-  return toYaml(cards);
 }
