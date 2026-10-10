@@ -1,12 +1,12 @@
 # Graph Report - remain-monorepo  (2026-10-10)
 
 ## Corpus Check
-- 155 files · ~198,908 words
+- 159 files · ~201,430 words
 - Verdict: corpus is large enough that graph structure adds value.
-- Unclassified: 15 file(s) not represented in the graph (top: (none) 7, .jsonc 3, .lock 2)
+- Unclassified: 16 file(s) not represented in the graph (top: (none) 8, .jsonc 3, .lock 2)
 
 ## Summary
-- 4308 nodes · 4619 edges · 362 communities (63 shown, 299 thin omitted)
+- 4332 nodes · 4677 edges · 364 communities (64 shown, 300 thin omitted)
 - Extraction: 99% EXTRACTED · 1% INFERRED · 0% AMBIGUOUS · INFERRED: 49 edges (avg confidence: 0.79)
 - Token cost: 0 input · 0 output
 
@@ -23,7 +23,7 @@
 - Angular Developer Guidelines (SKILL)
 - main-backend/src/index.ts
 - dependencies
-- @angular/core
+- deck-list.ts
 - graphify SKILL (Claude)
 - frontend/package.json
 - Console
@@ -31,10 +31,10 @@
 - URL
 - study-controller.ts
 - URLSearchParams
-- @angular/router
+- @angular/core
 - DurableObjectStorage
 - update.md
-- app.routes.ts
+- flashcard-chat-route.ts
 - Container
 - Element
 - Headers
@@ -363,7 +363,7 @@
 - AnalyticsSQLBinding
 - ProcessEnv
 - Base_Ai_Cf_Google_Gemma_4_26B_A4B_It
-- flashcard-chat-route.ts
+- flashcard-generator.ts
 - input.ts
 - dev-server.test.ts
 - agent.ts
@@ -378,6 +378,7 @@
 - devDependencies
 - FakeClient
 - frontend_src_app_deck_study_route_deck_study_route_deckstudyrouteroute
+- .refineDeck
 
 ## God Nodes (most connected - your core abstractions)
 1. `@angular/core` - 32 edges
@@ -416,7 +417,7 @@
 - **Graphify query pipeline** — opencode_skills_graphify_references_query, opencode_skills_graphify_references_query_expansion, opencode_skills_graphify_references_query_traversal, opencode_skills_graphify_references_query_save_result_feedback [INFERRED 0.75]
 - **Deck browse and study flow** — frontend_src_app_browse_decks_route_browse_decks_route, frontend_src_app_search_deck_field_search_deck_field, frontend_src_app_deck_list_deck_list, frontend_src_app_deck_study_route_deck_study_route, frontend_src_app_deck_list_deck_list_download_export [INFERRED 0.85]
 
-## Communities (362 total, 299 thin omitted)
+## Communities (364 total, 300 thin omitted)
 
 ### Community 0 - "main-backend/worker-configuration.d.ts"
 Cohesion: 0.00
@@ -431,23 +432,23 @@ Cohesion: 0.04
 Nodes (12): CloseEvent, CustomEvent, EmailEvent, ErrorEvent, Event, ExtendableEvent, FetchEvent, MessageEvent (+4 more)
 
 ### Community 3 - "options"
-Cohesion: 0.05
-Nodes (44): build, serve, test, builder, configurations, defaultConfiguration, options, cli (+36 more)
+Cohesion: 0.04
+Nodes (46): build, serve, test, builder, configurations, defaultConfiguration, options, cli (+38 more)
 
 ### Community 4 - "Angular Developer Guidelines (SKILL)"
 Cohesion: 0.05
 Nodes (51): Angular Animations, animate.enter and animate.leave, Angular Aria, Headless Accessible Components (Angular Aria), Angular CLI Guide, ng add for Library Installation, Component Harnesses Testing, HarnessLoader (+43 more)
 
 ### Community 5 - "main-backend/src/index.ts"
-Cohesion: 0.22
-Nodes (9): app, DeckRow, auth, commonConfig, getAuth(), initializeAuth(), Env, better-auth (+1 more)
+Cohesion: 0.18
+Nodes (10): app, DeckRow, auth, commonConfig, getAuth(), initializeAuth(), Env, better-auth (+2 more)
 
 ### Community 6 - "dependencies"
 Cohesion: 0.12
 Nodes (17): dependencies, @angular/common, @angular/compiler, @angular/core, @angular/forms, @angular/platform-browser, @angular/platform-server, @angular/router (+9 more)
 
-### Community 7 - "@angular/core"
-Cohesion: 0.13
+### Community 7 - "deck-list.ts"
+Cohesion: 0.11
 Nodes (14): BrowseDecksRoute, Component, DeckList, Deck download/export, Component, DeckSearchTerm, SearchDeckField, Throttled search input (+6 more)
 
 ### Community 8 - "graphify SKILL (Claude)"
@@ -455,8 +456,8 @@ Cohesion: 0.08
 Nodes (27): graphify add and watch reference (Claude), Watch mode auto-rebuild, graphify export reference (Claude), Graph export formats (Neo4j, FalkorDB, SVG, GraphML, MCP), Extraction subagent prompt spec (Claude), Confidence score rubric, Node ID format rule, GitHub clone and cross-repo merge (Claude) (+19 more)
 
 ### Community 9 - "frontend/package.json"
-Cohesion: 0.08
-Nodes (25): @types/node, typescript, name, packageManager, private, version, @angular/build, @angular/cli (+17 more)
+Cohesion: 0.07
+Nodes (26): @types/node, typescript, name, packageManager, private, version, @angular/build, @angular/cli (+18 more)
 
 ### Community 11 - "TransformStream"
 Cohesion: 0.10
@@ -466,17 +467,17 @@ Nodes (7): CompressionStream, DecompressionStream, FixedLengthStream, IdentityTr
 Cohesion: 0.14
 Nodes (9): Flashcard, Markdown and KaTeX rendering, Component, Study session, StudyController, Component, Card, Deck (+1 more)
 
-### Community 15 - "@angular/router"
-Cohesion: 0.13
-Nodes (12): App, appConfig, routes, Component, ChatBubble, Component, NavBar, Component (+4 more)
+### Community 15 - "@angular/core"
+Cohesion: 0.12
+Nodes (13): App, appConfig, routes, Component, DeckStudyRoute, Component, DeckUploadRoute, Component (+5 more)
 
 ### Community 17 - "update.md"
 Cohesion: 0.14
 Nodes (9): Use bun instead of npm, CLAUDE.md integration, Post-commit hook, Constrained query expansion, Save-result feedback loop, BFS and DFS traversal, Whisper domain prompt, Cluster-only mode (+1 more)
 
-### Community 18 - "app.routes.ts"
-Cohesion: 0.21
-Nodes (5): DeckStudyRoute, Component, DeckUploadRoute, Component, Presigned upload URLs via S3-compatible layer
+### Community 18 - "flashcard-chat-route.ts"
+Cohesion: 0.18
+Nodes (8): ChatBubble, Component, FlashcardChatRoute, Component, AssistantChatMessage, ChatMessage, UserChatMessage, @angular/router
 
 ### Community 24 - "Body"
 Cohesion: 0.15
@@ -523,8 +524,8 @@ Cohesion: 0.33
 Nodes (6): FormArray, FormGroup, NonNullableFormBuilder, patchValue vs setValue, Reactive forms, Unified form events
 
 ### Community 58 - "flashcard-chat.utils.ts"
-Cohesion: 0.13
-Nodes (22): ChatComposer, Component, ACCEPT_ATTRIBUTE, ACCEPTED_EXTENSIONS, AttachmentReview, CARD_COUNT, describeAgentError(), fileExtension() (+14 more)
+Cohesion: 0.16
+Nodes (18): ChatComposer, Component, ACCEPT_ATTRIBUTE, ACCEPTED_EXTENSIONS, AttachmentReview, CARD_COUNT, describeAgentError(), fileExtension() (+10 more)
 
 ### Community 62 - "ArtifactsRepo"
 Cohesion: 0.11
@@ -559,8 +560,8 @@ Cohesion: 0.67
 Nodes (3): Do not mock the Router in tests, provideRouter in TestBed, RouterTestingHarness
 
 ### Community 120 - "flashcard-generator-agent/package.json"
-Cohesion: 0.17
-Nodes (11): @types/node, typescript, wrangler, name, peerDependencies, typescript, private, type (+3 more)
+Cohesion: 0.14
+Nodes (13): @types/node, typescript, wrangler, name, peerDependencies, typescript, private, type (+5 more)
 
 ### Community 122 - "BasicImageTransformations"
 Cohesion: 0.67
@@ -618,21 +619,21 @@ Nodes (3): BasicImageTransformations, RequestInitCfPropertiesImage, RequestInitC
 Cohesion: 0.67
 Nodes (3): RequestInitCfPropertiesVaryAcceptHeader, RequestInitCfPropertiesVaryAcceptLanguageHeader, RequestInitCfPropertiesVaryHeader
 
-### Community 347 - "flashcard-chat-route.ts"
-Cohesion: 0.25
-Nodes (10): FlashcardChatRoute, Component, FLASHCARD_AGENT_URL, FlashcardGenerator, AssistantChatMessage, GenerateDeckRequest, GenerateDeckResult, Injectable (+2 more)
+### Community 347 - "flashcard-generator.ts"
+Cohesion: 0.24
+Nodes (10): file(), request(), toGenerateFormData(), FLASHCARD_API_URL, FlashcardGenerator, GenerateDeckRequest, GenerateDeckResult, Injectable (+2 more)
 
 ### Community 348 - "input.ts"
-Cohesion: 0.27
-Nodes (6): isPlainText(), parseRequest(), readRequest(), RequestSchema, serializeDeck(), yaml
+Cohesion: 0.26
+Nodes (8): BooleanFlag, isPlainText(), parseDeck(), parseRequest(), readRequest(), RequestSchema, serializeDeck(), yaml
 
 ### Community 349 - "dev-server.test.ts"
 Cohesion: 0.17
-Nodes (7): PORT, created, deckName(), PORT, ROOT, ref_node_os, ref_node_path
+Nodes (8): PORT, created, deckName(), PORT, ROOT, ref_bun_test, ref_node_os, ref_node_path
 
 ### Community 350 - "agent.ts"
-Cohesion: 0.27
-Nodes (6): FlashcardAgent, SourceDocument, Deck, agents, ai, @openrouter/ai-sdk-provider
+Cohesion: 0.28
+Nodes (8): FORMATS, buildCreatePrompt(), buildRefinePrompt(), formatSources(), SourceDocument, SYSTEM_PROMPT, currentDeck, agents
 
 ### Community 351 - "deck-api.test.ts"
 Cohesion: 0.29
@@ -643,12 +644,12 @@ Cohesion: 0.25
 Nodes (4): FileInput, HostComponent, Component, Component
 
 ### Community 353 - "main-backend/package.json"
-Cohesion: 0.22
-Nodes (8): devDependencies, wrangler, @types/node, wrangler, name, type, hono, @types/pg
+Cohesion: 0.25
+Nodes (7): devDependencies, wrangler, @types/node, wrangler, name, type, @types/pg
 
 ### Community 354 - "schema.ts"
-Cohesion: 0.29
-Nodes (6): Card, CardSchema, DeckOutputSchema, DeckSchema, ref_bun_test, zod
+Cohesion: 0.33
+Nodes (5): Card, CardSchema, DeckOutputSchema, DeckSchema, zod
 
 ### Community 355 - "dependencies"
 Cohesion: 0.29
@@ -670,22 +671,26 @@ Nodes (6): dependencies, better-auth, hono, pg, @types/node, @types/pg
 Cohesion: 0.40
 Nodes (5): devDependencies, @cloudflare/workers-types, @types/bun, @types/node, wrangler
 
+### Community 362 - ".refineDeck"
+Cohesion: 0.40
+Nodes (4): FlashcardAgent, DeckFormat, DeckInput, Deck
+
 ## Knowledge Gaps
-- **2132 isolated node(s):** `connect-psql-command.sh script`, `$schema`, `type`, `url`, `enabled` (+2127 more)
-  These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 3639 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
-- **299 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **2133 isolated node(s):** `connect-psql-command.sh script`, `$schema`, `type`, `url`, `enabled` (+2128 more)
+  These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 3645 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
+- **300 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `parseRequest()` connect `input.ts` to `agent.ts`?**
-  _High betweenness centrality (0.067) - this node is a cross-community bridge._
-- **Why does `serializeDeck()` connect `input.ts` to `agent.ts`?**
-  _High betweenness centrality (0.067) - this node is a cross-community bridge._
-- **Why does `isPlainText()` connect `input.ts` to `agent.ts`?**
-  _High betweenness centrality (0.066) - this node is a cross-community bridge._
+- **Why does `parseDeck()` connect `input.ts` to `.refineDeck`, `agent.ts`?**
+  _High betweenness centrality (0.034) - this node is a cross-community bridge._
+- **Why does `formatSources()` connect `agent.ts` to `.refineDeck`?**
+  _High betweenness centrality (0.033) - this node is a cross-community bridge._
+- **Why does `buildRefinePrompt()` connect `agent.ts` to `.refineDeck`?**
+  _High betweenness centrality (0.033) - this node is a cross-community bridge._
 - **What connects `connect-psql-command.sh script`, `$schema`, `type` to the rest of the system?**
-  _2132 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _2133 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `main-backend/worker-configuration.d.ts` be split into smaller, more focused modules?**
   _Cohesion score 0.0021208907741251328 - nodes in this community are weakly interconnected._
 - **Should `ServiceWorkerGlobalScope` be split into smaller, more focused modules?**
