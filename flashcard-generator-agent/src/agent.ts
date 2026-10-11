@@ -4,6 +4,8 @@ import { createAI } from "agents/models/ai-sdk";
 import { generateText, Output } from "ai";
 import { DeckOutputSchema, type Deck } from "./schema";
 import {
+  hasExtractedText,
+  isPdf,
   isPlainText,
   parseDeck,
   parseRequest,
@@ -53,8 +55,8 @@ export class FlashcardAgent extends Agent<Env> {
       );
     }
 
-    const sources = await this.collectSources(files, input.text);
-    if (sources.length === 0) {
+    const { sources, pdfs } = await this.collectSources(files, input.text);
+    if (sources.length === 0 && pdfs.length === 0) {
       return Response.json(
         { error: "Provide source text or at least one file" },
         { status: 400 },
@@ -75,6 +77,7 @@ export class FlashcardAgent extends Agent<Env> {
         cardCount: input.cardCount,
         instructions: input.instructions,
       }),
+      pdfs,
     );
     return this.saveDeck(key, input.format, cards, 201);
   }
@@ -103,7 +106,7 @@ export class FlashcardAgent extends Agent<Env> {
       );
     }
 
-    const sources = await this.collectSources(files, undefined);
+    const { sources, pdfs } = await this.collectSources(files, undefined);
     const sourceText = sources.length > 0 ? formatSources(sources) : undefined;
     if (sourceText && sourceText.length > MAX_SOURCE_CHARS) {
       return Response.json(
@@ -118,6 +121,7 @@ export class FlashcardAgent extends Agent<Env> {
         instructions: input.instructions,
         sourceText,
       }),
+      pdfs,
     );
     return this.saveDeck(stored.key, stored.format, cards, 200);
   }
@@ -151,11 +155,14 @@ export class FlashcardAgent extends Agent<Env> {
     return Response.json({ key, format, cardCount: cards.length }, { status });
   }
 
+  // Returns the text sources, plus any PDFs that Workers AI could not extract text from.
+  // Those PDFs are sent to the model as files instead, which reads the rendered pages.
   private async collectSources(
     files: File[],
     text: string | undefined,
-  ): Promise<SourceDocument[]> {
+  ): Promise<{ sources: SourceDocument[]; pdfs: File[] }> {
     const sources: SourceDocument[] = [];
+    const pdfs: File[] = [];
 
     if (text?.trim()) {
       sources.push({ name: "text", content: text });
@@ -176,16 +183,32 @@ export class FlashcardAgent extends Agent<Env> {
         if (result.format === "error") {
           throw new Error(`Could not read ${result.name}: ${result.error}`);
         }
+
+        const file = convertibleFiles.find((candidate) => candidate.name === result.name);
+        if (file && isPdf(file) && !hasExtractedText(result.data)) {
+          console.warn(`No text extracted from ${result.name}; sending the PDF to the model`);
+          pdfs.push(file);
+          continue;
+        }
         sources.push({ name: result.name, content: result.data });
       }
     }
 
-    return sources;
+    return { sources, pdfs };
   }
 
-  private async generateCards(prompt: string): Promise<Deck> {
+  private async generateCards(prompt: string, pdfs: File[]): Promise<Deck> {
     const ai = createAI({ binding: this.env.AI, id: GATEWAY_ID });
     const openrouter = createOpenRouter({ apiKey: "cloudflare" });
+
+    const documents = await Promise.all(
+      pdfs.map(async (file) => ({
+        type: "file" as const,
+        data: new Uint8Array(await file.arrayBuffer()),
+        mediaType: "application/pdf",
+        filename: file.name,
+      })),
+    );
 
     const result = await generateText({
       model: ai(openrouter(MODEL)),
@@ -195,7 +218,12 @@ export class FlashcardAgent extends Agent<Env> {
         description: "A deck of flashcards generated from the source material",
       }),
       system: SYSTEM_PROMPT,
-      prompt,
+      messages: [
+        {
+          role: "user",
+          content: [...documents, { type: "text", text: prompt }],
+        },
+      ],
     });
 
     return result.output.cards;

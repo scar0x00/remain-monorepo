@@ -1,15 +1,17 @@
 # Graph Report - remain-monorepo  (2026-10-10)
 
 ## Corpus Check
-- cluster-only mode — file stats not available
+- 141 files · ~179,855 words
+- Verdict: corpus is large enough that graph structure adds value.
+- Unclassified: 14 file(s) not represented in the graph (top: (none) 6, .jsonc 3, .lock 2)
 
 ## Summary
-- 4332 nodes · 4677 edges · 364 communities (60 shown, 304 thin omitted)
-- Extraction: 99% EXTRACTED · 1% INFERRED · 0% AMBIGUOUS · INFERRED: 49 edges (avg confidence: 0.79)
-- Token cost: 10,066 input · 3,835 output
+- 4296 nodes · 4649 edges · 362 communities (59 shown, 303 thin omitted)
+- Extraction: 99% EXTRACTED · 1% INFERRED · 0% AMBIGUOUS · INFERRED: 39 edges (avg confidence: 0.77)
+- Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `eb974449`
+- Built from commit: `c18b34f9`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -22,16 +24,14 @@
 - Backend Server Setup
 - Core Dependencies
 - Deck Browsing Route
-- Graph Export Documentation
 - Frontend Dependencies
 - Console API
 - Stream Transform APIs
 - URL Utilities
 - Flashcard Study Session
 - URL Search Parameters
-- Angular App Setup
+- @angular/core
 - Durable Object Storage
-- Development Documentation
 - Chat Bubble Component
 - Container Management
 - DOM Element API
@@ -365,7 +365,6 @@
 - Server Testing
 - Flashcard Generation Logic
 - Test Fixtures
-- File Input Component
 - Backend Package Config
 - Data Schema Definitions
 - AI Agent Dependencies
@@ -389,16 +388,16 @@
 10. `Container` - 15 edges
 
 ## Surprising Connections (you probably didn't know these)
-- `OpenCode @mention subagent dispatch` --semantically_similar_to--> `graphify extraction pipeline`  [INFERRED] [semantically similar]
-  .opencode/skills/graphify/SKILL.md → .claude/skills/graphify/SKILL.md
-- `graphify SKILL (Claude)` --shares_data_with--> `graphify SKILL (OpenCode)`  [INFERRED]
-  .claude/skills/graphify/SKILL.md → .opencode/skills/graphify/SKILL.md
-- `graphify add and watch reference (Claude)` --shares_data_with--> `graphify add and watch reference (OpenCode)`  [INFERRED]
-  .claude/skills/graphify/references/add-watch.md → .opencode/skills/graphify/references/add-watch.md
-- `graphify export reference (Claude)` --shares_data_with--> `graphify export reference (OpenCode)`  [INFERRED]
-  .claude/skills/graphify/references/exports.md → .opencode/skills/graphify/references/exports.md
-- `Extraction subagent prompt spec (Claude)` --shares_data_with--> `Extraction subagent prompt spec (OpenCode)`  [INFERRED]
-  .claude/skills/graphify/references/extraction-spec.md → .opencode/skills/graphify/references/extraction-spec.md
+- `Headless Accessible Components (Angular Aria)` --semantically_similar_to--> `Template Control Flow (@if @for @switch)`  [INFERRED] [semantically similar]
+  .agents/skills/angular-developer/references/angular-aria.md → .agents/skills/angular-developer/references/components.md
+- `Signal Forms guide` --semantically_similar_to--> `Template-Driven Forms guide`  [INFERRED] [semantically similar]
+  .agents/skills/angular-developer/references/signal-forms.md → .agents/skills/angular-developer/references/template-driven-forms.md
+- `FormField vs FieldState` --conceptually_related_to--> `Angular Signals Overview`  [INFERRED]
+  .agents/skills/angular-developer/references/signal-forms.md → .agents/skills/angular-developer/references/signals-overview.md
+- `Lazy loading` --conceptually_related_to--> `Injection Context`  [INFERRED]
+  .agents/skills/angular-developer/references/loading-strategies.md → .agents/skills/angular-developer/references/injection-context.md
+- `inject() migration schematic` --conceptually_related_to--> `inject() function`  [INFERRED]
+  .agents/skills/angular-developer/references/migrations.md → .agents/skills/angular-developer/references/injection-context.md
 
 ## Import Cycles
 - None detected.
@@ -406,14 +405,12 @@
 ## Hyperedges (group relationships)
 - **Angular Dependency Injection System** — agents_skills_angular_developer_references_di_fundamentals_inject_function, agents_skills_angular_developer_references_creating_services_service_decorator, agents_skills_angular_developer_references_defining_providers_injectiontoken, agents_skills_angular_developer_references_hierarchical_injectors_element_vs_environment [EXTRACTED 1.00]
 - **Angular Side-Effect Guidance** — agents_skills_angular_developer_references_effects_afterrendereffect, agents_skills_angular_developer_references_effects_effect_no_state_propagation [EXTRACTED 1.00]
-- **graphify extraction and update flow** — claude_skills_graphify_skill, claude_skills_graphify_references_extraction_spec, claude_skills_graphify_references_update, claude_skills_graphify_references_transcribe [EXTRACTED 1.00]
 - **Angular signal-based form state stack** — agents_skills_angular_developer_references_signal_forms, agents_skills_angular_developer_references_signals_overview, agents_skills_angular_developer_references_signal_forms_formfield_vs_fieldstate [INFERRED 0.75]
 - **Angular routing lifecycle** — agents_skills_angular_developer_references_router_lifecycle_router_events, agents_skills_angular_developer_references_navigate_to_routes_router_navigate, agents_skills_angular_developer_references_route_guards_guards, agents_skills_angular_developer_references_loading_strategies_lazy_loading [INFERRED 0.75]
 - **Angular signal-based APIs** — agents_skills_angular_developer_references_inputs_signal_inputs, agents_skills_angular_developer_references_outputs_output_fn, agents_skills_angular_developer_references_linked_signal_linkedsignal, agents_skills_angular_developer_references_resource_resource [INFERRED 0.75]
-- **Graphify query pipeline** — opencode_skills_graphify_references_query, opencode_skills_graphify_references_query_expansion, opencode_skills_graphify_references_query_traversal, opencode_skills_graphify_references_query_save_result_feedback [INFERRED 0.75]
 - **Deck browse and study flow** — frontend_src_app_browse_decks_route_browse_decks_route, frontend_src_app_search_deck_field_search_deck_field, frontend_src_app_deck_list_deck_list, frontend_src_app_deck_study_route_deck_study_route, frontend_src_app_deck_list_deck_list_download_export [INFERRED 0.85]
 
-## Communities (364 total, 304 thin omitted)
+## Communities (362 total, 303 thin omitted)
 
 ### Community 0 - "Agent Memory Configuration"
 Cohesion: 0.00
@@ -447,10 +444,6 @@ Nodes (17): dependencies, @angular/common, @angular/compiler, @angular/core, @an
 Cohesion: 0.11
 Nodes (8): BrowseDecksRoute, DeckList, Deck download/export, DeckSearchTerm, SearchDeckField, DeckEntry, @angular/forms, spec.md (Deck list and search)
 
-### Community 8 - "Graph Export Documentation"
-Cohesion: 0.08
-Nodes (23): graphify add and watch reference (Claude), Watch mode auto-rebuild, graphify export reference (Claude), Graph export formats (Neo4j, FalkorDB, SVG, GraphML, MCP), Extraction subagent prompt spec (Claude), Confidence score rubric, GitHub clone and cross-repo merge (Claude), Cross-repo graph merge (+15 more)
-
 ### Community 9 - "Frontend Dependencies"
 Cohesion: 0.07
 Nodes (25): @types/node, typescript, name, packageManager, private, version, @angular/build, @angular/cli (+17 more)
@@ -463,9 +456,9 @@ Nodes (7): CompressionStream, DecompressionStream, FixedLengthStream, IdentityTr
 Cohesion: 0.14
 Nodes (7): Flashcard, Markdown and KaTeX rendering, Study session, StudyController, Card, Deck, ngx-markdown
 
-### Community 15 - "Angular App Setup"
-Cohesion: 0.12
-Nodes (8): App, appConfig, routes, DeckStudyRoute, DeckUploadRoute, NavBar, @angular/core, @angular/platform-browser
+### Community 15 - "@angular/core"
+Cohesion: 0.09
+Nodes (10): App, appConfig, routes, DeckStudyRoute, DeckUploadRoute, FileInput, HostComponent, NavBar (+2 more)
 
 ### Community 18 - "Chat Bubble Component"
 Cohesion: 0.18
@@ -656,24 +649,24 @@ Cohesion: 0.40
 Nodes (4): FlashcardAgent, DeckFormat, DeckInput, Deck
 
 ## Knowledge Gaps
-- **114 isolated node(s):** `RFC-2253`, `RFC-3339`, `RFC-5246`, `RFC-9440`, `@types/node` (+109 more)
-  These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 3645 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
-- **304 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **104 isolated node(s):** `@cloudflare/workers-types`, `@types/bun`, `@types/node`, `wrangler`, `typescript` (+99 more)
+  These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 3621 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
+- **303 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
 - **Why does `parseRequest()` connect `Request Input Parsing` to `Flashcard Agent Core`, `Flashcard Generation Logic`?**
-  _High betweenness centrality (0.034) - this node is a cross-community bridge._
-- **What connects `RFC-2253`, `RFC-3339`, `RFC-5246` to the rest of the system?**
-  _114 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _High betweenness centrality (0.032) - this node is a cross-community bridge._
+- **What connects `@cloudflare/workers-types`, `@types/bun`, `@types/node` to the rest of the system?**
+  _104 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Agent Memory Configuration` be split into smaller, more focused modules?**
   _Cohesion score 0.0021208907741251328 - nodes in this community are weakly interconnected._
 - **Why does `isPlainText()` connect `Request Input Parsing` to `Flashcard Agent Core`, `Flashcard Generation Logic`?**
-  _High betweenness centrality (0.033) - this node is a cross-community bridge._
+  _High betweenness centrality (0.032) - this node is a cross-community bridge._
 - **Should `Abort Signal API` be split into smaller, more focused modules?**
   _Cohesion score 0.043478260869565216 - nodes in this community are weakly interconnected._
 - **Why does `serializeDeck()` connect `Request Input Parsing` to `Flashcard Agent Core`, `Flashcard Generation Logic`?**
-  _High betweenness centrality (0.033) - this node is a cross-community bridge._
+  _High betweenness centrality (0.032) - this node is a cross-community bridge._
 - **Should `Event Types` be split into smaller, more focused modules?**
   _Cohesion score 0.043478260869565216 - nodes in this community are weakly interconnected._

@@ -75,6 +75,23 @@ export function isPlainText(file: File): boolean {
   );
 }
 
+export function isPdf(file: File): boolean {
+  return file.type === "application/pdf" || /\.pdf$/i.test(file.name);
+}
+
+// Workers AI always emits a title, a "- Key=value" metadata list and a "### Page N" heading per page,
+// even when it extracts no text from the PDF. A conversion is only usable if prose is left over.
+const MIN_EXTRACTED_CHARS = 200;
+
+export function hasExtractedText(markdown: string): boolean {
+  const body = markdown
+    .split("\n")
+    .filter((line) => !/^\s*#{1,6}\s/.test(line) && !/^\s*-\s+\w+=/.test(line))
+    .join("\n")
+    .trim();
+  return body.length >= MIN_EXTRACTED_CHARS;
+}
+
 export function serializeDeck(cards: Deck, format: DeckFormat): string {
   if (format === "json") {
     return `${JSON.stringify(cards, null, 2)}\n`;
