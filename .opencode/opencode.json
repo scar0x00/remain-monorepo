@@ -1,11 +1,12 @@
 {
-  "plugin": [
-    ".opencode/plugins/graphify.js"
-  ],
   "mcp": {
     "angular-mcp": {
       "type": "local",
-      "command": ["bunx", "@angular/cli", "mcp"]
+      "command": [
+        "bunx",
+        "@angular/cli",
+        "mcp"
+      ]
     }
   }
 }

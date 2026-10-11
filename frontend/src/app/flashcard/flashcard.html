@@ -1,3 +1,4 @@
+@if (front()) {
 <markdown
     class="[&_.katex-display]:overflow-x-auto [&_.katex-display]:overflow-y-hidden [&_.katex-display]:pb-3 
     [&_table]:block [&_table]:overflow-x-auto [&_table]:overflow-y-hidden [&_table]:w-full [&_table]:text-sm
@@ -7,6 +8,7 @@
     [data]="front()"
 >
 </markdown>
+}
 
 @if (!hideBack()) {
     <hr class="my-4 opacity-25">
