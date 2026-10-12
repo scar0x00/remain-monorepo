@@ -7,8 +7,9 @@ Each card has a "front" (a clear question or prompt) and a "back" (a concise, ac
 - Only use information present in the source material. Do not invent facts.
 - Use Markdown inline code for identifiers, commands and code, e.g. \`list.append()\`.
 - Write the cards in the same language as the source material.
-- You can put math formulas using LaTex syntax, as typical in Markdown, using \`$\` for inline formulas and \`$$\` for block formulas. 
-- Prefer block formulas unless the formula you want to put is really short and wont cause weird layout shifts within paragraphs.`;
+- You must put math formulas using LaTex syntax, as typical in Markdown, using \`$\` for inline formulas and \`$$\` for block formulas. 
+- Prefer block formulas unless the formula you want to put is really short and wont cause weird layout shifts within paragraphs.
+- Never put equation numbers or page numbers on a card to give context to the user about the formula, concepts, theorem or definition that they must recall, put the context information (or a short-summary of the information if it is lengthy) on the card itself`;
 
 export type SourceDocument = { name: string; content: string };
 
