@@ -1,0 +1,6 @@
+<div class="flex justify-center gap-2 items-center mb-8">
+    <label for="deck-search">
+      <input [(ngModel)]="searchValue" (input)="handleInput($event)" id="deck-search" type="text"  class="text-app-text bg-app-card border-2 rounded-2xl px-3 py-2 focus:outline-none focus:border-secondary focus:ring-secondary focus:ring-2 font-mono" />
+    </label>
+        <svg (click)="handleClear()" xmlns="http://www.w3.org/2000/svg" class="text-app-text size-7 lucide lucide-x-icon lucide-x" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" ><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+</div>

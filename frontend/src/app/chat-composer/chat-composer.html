@@ -1,0 +1,150 @@
+<form
+  ngNoForm
+  (submit)="$event.preventDefault(); send()"
+  class="flex shrink-0 flex-col gap-3 rounded-2xl border border-app-border bg-app-card p-3 text-app-text"
+>
+  @if (files().length > 0) {
+    <ul class="flex flex-wrap gap-2" aria-label="Attached files">
+      @for (file of files(); track $index) {
+        <li
+          class="flex max-w-full items-center gap-2 rounded-lg bg-app-bg px-2 py-1 font-mono text-xs"
+        >
+          <span class="max-w-[12rem] truncate">{{ file.name }}</span>
+          <span class="text-app-text-muted">{{ formatFileSize(file.size) }}</span>
+          <button
+            type="button"
+            (click)="removeFile($index)"
+            [attr.aria-label]="'Remove ' + file.name"
+            class="inline-flex size-6 items-center justify-center rounded text-app-text-muted hover:cursor-pointer hover:text-app-text"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              class="lucide lucide-x-icon lucide-x"
+            >
+              <path d="M18 6 6 18" />
+              <path d="m6 6 12 12" />
+            </svg>
+          </button>
+        </li>
+      }
+    </ul>
+  }
+
+  @if (problems().length > 0) {
+    <ul role="alert" class="space-y-1 text-sm text-red-400">
+      @for (problem of problems(); track problem) {
+        <li>{{ problem }}</li>
+      }
+    </ul>
+  }
+
+  @if (activeDeck(); as deck) {
+    <p class="text-sm text-app-text-muted">
+      Editing <span class="font-mono text-app-text">{{ deck }}</span
+      >. Describe a change, or attach files to add their material to it.
+    </p>
+  }
+
+  <textarea
+    name="message"
+    rows="3"
+    aria-label="Message"
+    [disabled]="disabled()"
+    [ngModel]="text()"
+    (ngModelChange)="text.set($event)"
+    (keydown.control.enter)="send()"
+    (keydown.meta.enter)="send()"
+    [placeholder]="
+      activeDeck()
+        ? 'For example: make the answers shorter, or add a card about photosynthesis'
+        : 'Paste text, or describe what to focus on when attaching files'
+    "
+    class="w-full resize-y rounded-xl border border-app-border bg-app-bg px-3 py-2 text-sm placeholder:text-app-text-muted focus:outline-none focus:ring-2 focus:ring-app-border disabled:opacity-50"
+  ></textarea>
+
+  @if (!activeDeck()) {
+    <div class="grid grid-cols-1 gap-2 sm:grid-cols-[1fr_7rem]">
+      <label class="flex flex-col gap-1 text-xs text-app-text-muted">
+        Deck name
+        <input
+          name="deckName"
+          type="text"
+          autocomplete="off"
+          placeholder="my-deck"
+          [disabled]="disabled()"
+          [ngModel]="deckName()"
+          (ngModelChange)="deckName.set($event)"
+          class="min-h-11 rounded-lg border border-app-border bg-app-bg px-3 font-mono text-sm text-app-text"
+        />
+      </label>
+      <label class="flex flex-col gap-1 text-xs text-app-text-muted">
+        <span class="flex items-center justify-between gap-2">
+          Cards
+          <span class="inline-flex items-center gap-1">
+            <input
+              type="checkbox"
+              name="limitCards"
+              aria-label="Set a number of cards"
+              [disabled]="disabled()"
+              [ngModel]="limitCards()"
+              (ngModelChange)="limitCards.set($event)"
+            />
+          </span>
+        </span>
+        <input
+          name="cardCount"
+          type="number"
+          [min]="cardCountRange.min"
+          [max]="cardCountRange.max"
+          [placeholder]="limitCards() ? '' : 'Auto'"
+          [disabled]="disabled() || !limitCards()"
+          [ngModel]="cardCount()"
+          (ngModelChange)="cardCount.set($event)"
+          class="min-h-11 rounded-lg border border-app-border bg-app-bg px-3 text-sm text-app-text"
+        />
+      </label>
+    </div>
+  }
+
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    @if (!activeDeck()) {
+      <label class="inline-flex min-h-11 items-center gap-2 text-sm text-app-text-muted">
+        <input
+          type="checkbox"
+          name="overwrite"
+          [disabled]="disabled()"
+          [ngModel]="overwrite()"
+          (ngModelChange)="overwrite.set($event)"
+        />
+        Overwrite deck if it exists
+      </label>
+    } @else {
+      <span></span>
+    }
+
+    <div class="flex items-center gap-2">
+      <app-file-input
+        [accept]="accept"
+        [multiple]="true"
+        [disabled]="disabled()"
+        label="Attach files"
+        (filesSelected)="addFiles($event)"
+      />
+      <button
+        type="submit"
+        [disabled]="disabled()"
+        class="min-h-11 rounded-xl border-2 border-app-text bg-app-text-muted px-5 font-bold text-app-bg hover:cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
+      >
+        {{ activeDeck() ? 'Update deck' : 'Generate' }}
+      </button>
+    </div>
+  </div>
+</form>

@@ -1,0 +1,41 @@
+<section class="mx-auto flex h-[calc(100dvh-7rem)] w-full max-w-3xl flex-col gap-4 text-app-text">
+  <header class="flex shrink-0 flex-col items-center gap-2 text-center">
+    <h1 class="text-xl font-bold sm:text-2xl">Generate flashcards</h1>
+    <p class="text-sm text-app-text-muted">
+      Attach PDFs, images, text, Markdown or LaTeX files, or paste some text, then generate a deck.
+      Then ask for changes to refine it.
+    </p>
+    @if (activeDeck(); as deck) {
+      <button
+        type="button"
+        (click)="startNewDeck()"
+        [disabled]="pending()"
+        class="min-h-11 rounded-lg border border-app-border px-4 text-sm text-app-text hover:cursor-pointer hover:bg-app-card-hover disabled:cursor-not-allowed disabled:opacity-50"
+      >
+        New deck (currently {{ deck }})
+      </button>
+    }
+  </header>
+
+  <div
+    #log
+    role="log"
+    aria-live="polite"
+    class="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto pr-1"
+  >
+    @if (messages().length === 0) {
+      <p class="my-auto text-center text-sm text-app-text-muted">
+        Nothing here yet. Start by attaching a file below.
+      </p>
+    }
+    @for (message of messages(); track message.id) {
+      <app-chat-bubble [message]="message" />
+    }
+  </div>
+
+  <app-chat-composer
+    [disabled]="pending()"
+    [activeDeck]="activeDeck()"
+    (submitted)="submit($event)"
+  />
+</section>

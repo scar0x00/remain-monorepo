@@ -1,0 +1,12 @@
+{
+  "mcp": {
+    "angular-mcp": {
+      "type": "local",
+      "command": [
+        "bunx",
+        "@angular/cli",
+        "mcp"
+      ]
+    }
+  }
+}
