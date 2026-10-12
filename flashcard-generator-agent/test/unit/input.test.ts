@@ -1,7 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { parse as parseYaml } from "yaml";
 import {
-  hasExtractedText,
   isPdf,
   isPlainText,
   parseDeck,
@@ -41,10 +40,10 @@ describe("parseRequest", () => {
     expect(result.data).toMatchObject({
       deckName: "my-deck",
       format: "json",
-      cardCount: 20,
       overwrite: false,
       text: "hello",
     });
+    expect(result.data.cardCount).toBeUndefined();
     expect(result.files).toEqual([]);
   });
 
@@ -264,27 +263,5 @@ describe("isPdf", () => {
     expect(isPdf(new File(["%PDF"], "chapter.bin", { type: "application/pdf" }))).toBe(true);
     expect(isPdf(new File(["%PDF"], "CHAPTER.PDF"))).toBe(true);
     expect(isPdf(new File(["x"], "slides.pptx"))).toBe(false);
-  });
-});
-
-describe("hasExtractedText", () => {
-  test("rejects a conversion that only has a title, metadata and page headings", () => {
-    const headings = Array.from({ length: 16 }, (_, i) => `### Page ${i + 1}\n\n\n`).join("");
-    const empty = [
-      "# chapter.pdf",
-      "## Metadata",
-      "- PDFFormatVersion=1.4",
-      "- Producer=iLovePDF",
-      "- ModDate=D:20260527221246Z",
-      "## Contents",
-      headings,
-    ].join("\n");
-    expect(hasExtractedText(empty)).toBe(false);
-  });
-
-  test("accepts a conversion with real page content", () => {
-    const body = "The modulation index is defined as $\\mu = k_a A_m$. ".repeat(10);
-    const converted = `# chapter.pdf\n## Contents\n### Page 1\n\n${body}\n\n### Page 2\n\n${body}`;
-    expect(hasExtractedText(converted)).toBe(true);
   });
 });

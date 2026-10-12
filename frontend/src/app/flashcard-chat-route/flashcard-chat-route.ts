@@ -51,7 +51,9 @@ export class FlashcardChatRoute {
         state: 'pending',
         text: request.refine
           ? `Updating ${request.deckName}…`
-          : `Generating ${request.cardCount} flashcards…`,
+          : request.cardCount === null
+            ? 'Generating flashcards…'
+            : `Generating ${request.cardCount} flashcards…`,
       },
     ]);
 

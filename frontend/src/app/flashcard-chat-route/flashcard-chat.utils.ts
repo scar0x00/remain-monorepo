@@ -87,9 +87,10 @@ export function validateSubmission(request: GenerateDeckRequest): string | null 
       return "Deck name must be 1-100 letters, digits, '-' or '_'";
     }
     if (
-      !Number.isInteger(request.cardCount) ||
-      request.cardCount < CARD_COUNT.min ||
-      request.cardCount > CARD_COUNT.max
+      request.cardCount !== null &&
+      (!Number.isInteger(request.cardCount) ||
+        request.cardCount < CARD_COUNT.min ||
+        request.cardCount > CARD_COUNT.max)
     ) {
       return `Card count must be between ${CARD_COUNT.min} and ${CARD_COUNT.max}`;
     }
@@ -121,7 +122,9 @@ export function toGenerateFormData(request: GenerateDeckRequest): FormData {
       form.append('instructions', text);
     }
   } else {
-    form.append('cardCount', String(request.cardCount));
+    if (request.cardCount !== null) {
+      form.append('cardCount', String(request.cardCount));
+    }
     form.append('overwrite', String(request.overwrite));
     if (request.files.length > 0) {
       if (text) {

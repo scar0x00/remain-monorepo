@@ -2,9 +2,9 @@ import { createOpenRouter } from "@openrouter/ai-sdk-provider";
 import { Agent } from "agents";
 import { createAI } from "agents/models/ai-sdk";
 import { generateText, Output } from "ai";
+import { batchPdfs } from "./pdf";
 import { DeckOutputSchema, type Deck } from "./schema";
 import {
-  hasExtractedText,
   isPdf,
   isPlainText,
   parseDeck,
@@ -16,6 +16,7 @@ import {
 import {
   buildCreatePrompt,
   buildRefinePrompt,
+  chunkSources,
   formatSources,
   SYSTEM_PROMPT,
   type SourceDocument,
@@ -23,7 +24,9 @@ import {
 
 const GATEWAY_ID = "default";
 const MODEL = "anthropic/claude-haiku-5.5";
-const MAX_SOURCE_CHARS = 150_000;
+// Source text beyond this is split into parts, each turned into cards by its own model call.
+const MAX_CHUNK_CHARS = 100_000;
+const MAX_JOBS = 8;
 
 const FORMATS: DeckFormat[] = ["json", "yaml"];
 
@@ -63,22 +66,42 @@ export class FlashcardAgent extends Agent<Env> {
       );
     }
 
-    const sourceText = formatSources(sources);
-    if (sourceText.length > MAX_SOURCE_CHARS) {
+    const textChunks = chunkSources(sources, MAX_CHUNK_CHARS);
+    const pdfBatches = await batchPdfs(pdfs);
+
+    // Each job is one model call. The first text chunk shares its call with the first batch of PDFs.
+    const jobs: { sources: SourceDocument[]; pdfs: File[] }[] = textChunks.map((chunk, i) => ({
+      sources: chunk,
+      pdfs: i === 0 ? (pdfBatches[0] ?? []) : [],
+    }));
+    for (const batch of pdfBatches.slice(textChunks.length > 0 ? 1 : 0)) {
+      jobs.push({ sources: [], pdfs: batch });
+    }
+
+    if (jobs.length > MAX_JOBS) {
       return Response.json(
         { error: "Source material is too large. Split it into smaller decks" },
         { status: 413 },
       );
     }
 
-    const cards = await this.generateCards(
-      buildCreatePrompt({
-        sourceText,
-        cardCount: input.cardCount,
-        instructions: input.instructions,
-      }),
-      pdfs,
-    );
+    const cards: Deck = [];
+    for (const [i, job] of jobs.entries()) {
+      const cardCount = input.cardCount
+        ? Math.max(1, Math.round(input.cardCount / jobs.length))
+        : undefined;
+      cards.push(
+        ...(await this.generateCards(
+          buildCreatePrompt({
+            sourceText: formatSources(job.sources),
+            cardCount,
+            instructions: input.instructions,
+            part: jobs.length > 1 ? { index: i + 1, total: jobs.length } : undefined,
+          }),
+          job.pdfs,
+        )),
+      );
+    }
     return this.saveDeck(key, input.format, cards, 201);
   }
 
@@ -108,9 +131,12 @@ export class FlashcardAgent extends Agent<Env> {
 
     const { sources, pdfs } = await this.collectSources(files, undefined);
     const sourceText = sources.length > 0 ? formatSources(sources) : undefined;
-    if (sourceText && sourceText.length > MAX_SOURCE_CHARS) {
+    if ((sourceText && sourceText.length > MAX_CHUNK_CHARS) || (await batchPdfs(pdfs)).length > 1) {
       return Response.json(
-        { error: "Source material is too large. Split it into smaller decks" },
+        {
+          error:
+            "Source material is too large to add to an existing deck. Attach a shorter file, or create a new deck from it",
+        },
         { status: 413 },
       );
     }
@@ -155,8 +181,8 @@ export class FlashcardAgent extends Agent<Env> {
     return Response.json({ key, format, cardCount: cards.length }, { status });
   }
 
-  // Returns the text sources, plus any PDFs that Workers AI could not extract text from.
-  // Those PDFs are sent to the model as files instead, which reads the rendered pages.
+  // Returns the text sources, plus the PDFs. PDFs are never converted to markdown: they are sent
+  // to the model as files, which reads both the text and the rendered pages.
   private async collectSources(
     files: File[],
     text: string | undefined,
@@ -168,12 +194,13 @@ export class FlashcardAgent extends Agent<Env> {
       sources.push({ name: "text", content: text });
     }
 
-    const plainFiles = files.filter(isPlainText);
-    for (const file of plainFiles) {
+    for (const file of files.filter(isPlainText)) {
       sources.push({ name: file.name, content: await file.text() });
     }
 
-    const convertibleFiles = files.filter((file) => !isPlainText(file));
+    pdfs.push(...files.filter((file) => !isPlainText(file) && isPdf(file)));
+
+    const convertibleFiles = files.filter((file) => !isPlainText(file) && !isPdf(file));
     if (convertibleFiles.length > 0) {
       const converted = await this.env.AI.toMarkdown(
         convertibleFiles.map((file) => ({ name: file.name, blob: file })),
@@ -184,12 +211,6 @@ export class FlashcardAgent extends Agent<Env> {
           throw new Error(`Could not read ${result.name}: ${result.error}`);
         }
 
-        const file = convertibleFiles.find((candidate) => candidate.name === result.name);
-        if (file && isPdf(file) && !hasExtractedText(result.data)) {
-          console.warn(`No text extracted from ${result.name}; sending the PDF to the model`);
-          pdfs.push(file);
-          continue;
-        }
         sources.push({ name: result.name, content: result.data });
       }
     }

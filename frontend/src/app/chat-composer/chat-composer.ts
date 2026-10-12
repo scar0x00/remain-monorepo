@@ -29,6 +29,8 @@ export class ChatComposer {
   readonly text = signal('');
   readonly deckName = signal('');
   readonly cardCount = signal<number | null>(CARD_COUNT.default);
+  // When false the model chooses the deck length and no card count is sent.
+  readonly limitCards = signal(true);
   readonly overwrite = signal(false);
   readonly files = signal<File[]>([]);
   readonly problems = signal<string[]>([]);
@@ -52,6 +54,7 @@ export class ChatComposer {
     this.text.set('');
     this.deckName.set('');
     this.cardCount.set(CARD_COUNT.default);
+    this.limitCards.set(true);
     this.overwrite.set(false);
     this.files.set([]);
     this.problems.set([]);
@@ -63,7 +66,7 @@ export class ChatComposer {
     const activeDeck = this.activeDeck();
     const request: GenerateDeckRequest = {
       deckName: activeDeck ?? this.deckName().trim(),
-      cardCount: Number(this.cardCount()),
+      cardCount: this.limitCards() ? Number(this.cardCount()) : null,
       overwrite: this.overwrite(),
       refine: activeDeck !== null,
       text: this.text(),
