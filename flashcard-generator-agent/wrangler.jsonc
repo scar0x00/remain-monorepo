@@ -4,6 +4,9 @@
   "main": "src/index.ts",
   "compatibility_date": "2026-10-10",
   "compatibility_flags": ["nodejs_compat"],
+  // Private: only reachable through the main-backend service binding.
+  "workers_dev": false,
+  "preview_urls": false,
   "ai": {
     "binding": "AI",
   },
