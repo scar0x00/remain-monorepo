@@ -1,0 +1,1 @@
+psql -h db.lijvspidevmprtzogsge.supabase.co -p 5432 -d postgres -U postgres
