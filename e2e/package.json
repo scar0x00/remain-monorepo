@@ -1,0 +1,11 @@
+{
+  "name": "remain-e2e",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "test": "bun test"
+  },
+  "devDependencies": {
+    "playwright-core": "^1.64.0"
+  }
+}

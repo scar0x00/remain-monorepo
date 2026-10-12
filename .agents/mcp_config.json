@@ -1,0 +1,17 @@
+{
+    "mcpServers": {
+        "obscura-browser": {
+            "command": "obscura",
+            "args": [
+                "mcp"
+            ]
+        },
+        "cloudflare-docs": {
+            "serverUrl": "https://docs.mcp.cloudflare.com/mcp"
+        },
+        "angular-cli": {
+          "command": "bunx",
+          "args": ["@angular/cli", "mcp"]
+        }
+    }
+}
