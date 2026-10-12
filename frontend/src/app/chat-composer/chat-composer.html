@@ -86,13 +86,26 @@
         />
       </label>
       <label class="flex flex-col gap-1 text-xs text-app-text-muted">
-        Cards
+        <span class="flex items-center justify-between gap-2">
+          Cards
+          <span class="inline-flex items-center gap-1">
+            <input
+              type="checkbox"
+              name="limitCards"
+              aria-label="Set a number of cards"
+              [disabled]="disabled()"
+              [ngModel]="limitCards()"
+              (ngModelChange)="limitCards.set($event)"
+            />
+          </span>
+        </span>
         <input
           name="cardCount"
           type="number"
           [min]="cardCountRange.min"
           [max]="cardCountRange.max"
-          [disabled]="disabled()"
+          [placeholder]="limitCards() ? '' : 'Auto'"
+          [disabled]="disabled() || !limitCards()"
           [ngModel]="cardCount()"
           (ngModelChange)="cardCount.set($event)"
           class="min-h-11 rounded-lg border border-app-border bg-app-bg px-3 text-sm text-app-text"
