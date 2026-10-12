@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "angular-mcp": {
+      "type": "stdio",
+      "command": "bunx",
+      "args": ["@angular/cli", "mcp"]
+    },
+    "cloudflare-docs": {
+      "type": "http",
+      "url": "https://docs.mcp.cloudflare.com/mcp"
+    }
+  }
+}

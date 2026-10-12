@@ -1,0 +1,33 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "flashcard-generator-agent",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-10-10",
+  "compatibility_flags": ["nodejs_compat"],
+  "ai": {
+    "binding": "AI",
+  },
+  "r2_buckets": [
+    {
+      "binding": "DECKS",
+      "bucket_name": "remain-decks",
+    },
+  ],
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "FlashcardAgent",
+        "class_name": "FlashcardAgent",
+      },
+    ],
+  },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": ["FlashcardAgent"],
+    },
+  ],
+  "observability": {
+    "enabled": true,
+  },
+}

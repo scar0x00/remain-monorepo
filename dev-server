@@ -1,0 +1,106 @@
+#!/usr/bin/env bash
+# Start, stop, and inspect all project dev servers.
+# Usage: ./dev-server {start|stop|restart|status|logs}
+
+set -u
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+STATE_DIR="${TMPDIR:-/tmp/opencode}/dev-server"
+mkdir -p "$STATE_DIR"
+
+# Both workers read and write the same R2 bucket (remain-decks). Give them one persist dir so a
+# deck the agent writes is visible to main-backend; otherwise each keeps its own local store.
+WRANGLER_STATE="$STATE_DIR/wrangler-state"
+
+# name | directory | bun script | port argument
+SERVERS=(
+  "main-backend|$ROOT/main-backend|dev|--port 8787 --inspector-port 9230 --persist-to $WRANGLER_STATE"
+  "flashcard-generator-agent|$ROOT/flashcard-generator-agent|dev|--port 8788 --persist-to $WRANGLER_STATE"
+  "frontend|$ROOT/frontend|start|--port 4200"
+)
+
+pid_file() { echo "$STATE_DIR/$1.pid"; }
+log_file() { echo "$STATE_DIR/$1.log"; }
+
+is_running() {
+  local pid_file="$1"
+  [[ -f "$pid_file" ]] && kill -0 "$(cat "$pid_file")" 2>/dev/null
+}
+
+start_one() {
+  local name="$1" dir="$2" script="$3" args="$4"
+  local pid_file log_file
+  pid_file="$(pid_file "$name")"
+  log_file="$(log_file "$name")"
+
+  if is_running "$pid_file"; then
+    echo "[$name] already running (pid $(cat "$pid_file"))"
+    return
+  fi
+
+  # setsid gives the server its own process group so stop can kill the whole tree.
+  cd "$dir" || return
+  setsid bun run "$script" $args >"$log_file" 2>&1 </dev/null &
+  local pid=$!
+  cd "$ROOT" || return
+  echo "$pid" >"$pid_file"
+  echo "[$name] started (pid $pid), log: $log_file"
+}
+
+stop_one() {
+  local name="$1"
+  local pid_file
+  pid_file="$(pid_file "$name")"
+
+  if ! is_running "$pid_file"; then
+    rm -f "$pid_file"
+    echo "[$name] not running"
+    return
+  fi
+
+  local pid
+  pid="$(cat "$pid_file")"
+  kill -TERM -- "-$pid" 2>/dev/null || kill -TERM "$pid" 2>/dev/null
+
+  for _ in 1 2 3 4 5 6 7 8 9 10; do
+    kill -0 "$pid" 2>/dev/null || break
+    sleep 0.5
+  done
+  if kill -0 "$pid" 2>/dev/null; then
+    kill -KILL -- "-$pid" 2>/dev/null || kill -KILL "$pid" 2>/dev/null
+  fi
+
+  rm -f "$pid_file"
+  echo "[$name] stopped"
+}
+
+status_one() {
+  local name="$1"
+  local pid_file
+  pid_file="$(pid_file "$name")"
+  if is_running "$pid_file"; then
+    echo "[$name] running (pid $(cat "$pid_file"))"
+  else
+    echo "[$name] stopped"
+  fi
+}
+
+each() {
+  local fn="$1" entry name dir script args
+  for entry in "${SERVERS[@]}"; do
+    IFS='|' read -r name dir script args <<<"$entry"
+    "$fn" "$name" "$dir" "$script" "$args"
+  done
+}
+
+case "${1:-}" in
+  start)   each start_one ;;
+  stop)    for entry in "${SERVERS[@]}"; do IFS='|' read -r name _ <<<"$entry"; stop_one "$name"; done ;;
+  restart) for entry in "${SERVERS[@]}"; do IFS='|' read -r name _ <<<"$entry"; stop_one "$name"; done; each start_one ;;
+  status)  for entry in "${SERVERS[@]}"; do IFS='|' read -r name _ <<<"$entry"; status_one "$name"; done ;;
+  logs)    tail -n 50 -f "$STATE_DIR"/*.log ;;
+  *)
+    echo "Usage: $0 {start|stop|restart|status|logs}"
+    exit 1
+    ;;
+esac
