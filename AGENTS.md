@@ -2,6 +2,10 @@
 
 Never use `npm` or `npmx`. Use `bun` or `bunx` instead.
 
+You can check the state of the repo on github using `gh`.
+
+Cloudflare released a new CLI tool named `cf`. Cloudflare’s `cf` is a new, unified command-line tool for the Cloudflare platform. It was announced on September 28, 2026 as an open beta, so commands and configuration may still change before a stable release. Is installed an I have already authenticated to it, so you can use it to interact with Cloudflare for cases where `wrangler` falls short or directly cannot be used to perform some task. `cf` is way more comprehensive.
+
 ## Overview
 
 Remain generates and studies flashcard decks. Bun + Cloudflare Workers monorepo; each top-level directory is its own package with its own `package.json` (and `wrangler.jsonc` for Workers). There is no root workspace, so run commands from inside each package.
@@ -70,6 +74,7 @@ Playwright browser tests (`app.e2e.test.ts`) that run against the live stack (`b
 - `test-decks/`, `test-pdfs/`: sample inputs for manual testing.
 - `db/`: only `connect-psql-command.sh`.
 - `spec.md`, `TODO.md`: old notes, not kept up to date.
+- The app will be deployed on Cloudflare Workers using behind Cloudflare Access
 
 ## Commands
 - Frontend: `bun run start`, `bun run build`, `bun run test` (Vitest via `ng test`).

@@ -5,6 +5,11 @@
   "compatibility_flags": [
     "nodejs_compat"
   ],
+  "workers_dev": false,
+  "preview_urls": false,
+  "routes": [
+    { "pattern": "remain.scar0x00.click/*", "zone_name": "scar0x00.click" }
+  ],
   "assets": {
     "directory": "./dist/frontend/browser",
     "not_found_handling": "single-page-application"
