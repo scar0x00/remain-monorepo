@@ -1,0 +1,42 @@
+<section class="text-app-text flex flex-col items-center gap-8 text-center">
+  <div class="stage" aria-hidden="true">
+    <span class="spark spark-1"></span>
+    <span class="spark spark-2"></span>
+    <span class="spark spark-3"></span>
+    <span class="spark spark-4"></span>
+
+    <div class="card card-back-left"></div>
+    <div class="card card-back-right"></div>
+
+    <div class="card card-front">
+      <div class="face face-question">
+        <span class="mark">?</span>
+        <div class="eyes"><i></i><i></i></div>
+        <div class="smile"></div>
+      </div>
+      <div class="face face-answer">
+        <span class="mark">A</span>
+        <div class="eyes happy"><i></i><i></i></div>
+        <div class="smile open"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="flex flex-col items-center gap-3 max-w-md">
+    <h1 class="text-4xl font-bold">Remain</h1>
+    <p class="text-app-text-muted text-lg">
+      Flip, recall and remember. Study a deck, or let AI build one from your notes.
+    </p>
+  </div>
+
+  <div class="flex flex-col sm:flex-row gap-4 w-full max-w-md">
+    <a routerLink="/deck-browse"
+      class="cta flex-1 bg-app-text text-app-bg border-app-text">
+      Study
+    </a>
+    <a routerLink="/flashcard-chat"
+      class="cta flex-1 text-app-text border-app-text hover:bg-app-card">
+      Create a deck
+    </a>
+  </div>
+</section>
