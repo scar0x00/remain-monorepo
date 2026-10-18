@@ -1,10 +1,13 @@
-import { Hono, MiddlewareHandler } from "hono";
+import { Hono } from "hono";
 import { Client } from "pg";
+import { chatRoutes } from "./chat-routes";
+import { finalizeAssistantMessage, isUuid, type Outcome } from "./lib/chat-store";
+import { currentUserMiddleware, SYSTEM_USER_ID } from "./lib/current-user";
+import { pgDbMiddleware } from "./lib/pg";
 import { type Env } from "./types";
 
 const app = new Hono<Env>();
 
-const SYSTEM_USER_ID = "system";
 const FLASHCARD_AGENT_ORIGIN = "http://flashcard-agent";
 
 type DeckRow = {
@@ -14,20 +17,7 @@ type DeckRow = {
   etag: string;
 };
 
-const pgDbMiddleware: MiddlewareHandler = async (c, next) => {
-  const client = new Client({
-    connectionString: c.env.PG.connectionString,
-  });
-
-  await client.connect();
-  c.set("pg", client);
-
-  try {
-    await next();
-  } finally {
-    await client.end();
-  }
-};
+app.route("/api/v1/chats", chatRoutes);
 
 app.get("/api/v1/deck/:key", async (c) => {
   const key = c.req.param("key");
@@ -81,35 +71,93 @@ app.put("/api/v1/deck/:key", pgDbMiddleware, async (c) => {
 
 // Generates a deck (or refines an existing one when `refine` is set) through the flashcard agent,
 // then records the stored deck in Postgres so it shows up in the deck list.
-app.post("/api/v1/flashcards/:deckName", pgDbMiddleware, async (c) => {
+//
+// When the request carries `x-chat-session-id` and `x-chat-message-id` (the pending assistant
+// message created by the chat UI), the outcome is also written to that message, so the saved
+// conversation is complete even if the tab was closed while the deck was generating.
+// `x-chat-refine: true` tells which wording to use. The form body is never parsed here.
+app.post("/api/v1/flashcards/:deckName", pgDbMiddleware, currentUserMiddleware, async (c) => {
   const deckName = c.req.param("deckName");
+  const chat = readChatHeaders(c.req.raw.headers);
+  const settle = async (outcome: Outcome) => {
+    if (!chat) return;
+    try {
+      await finalizeAssistantMessage(
+        c.get("pg"),
+        c.get("userId"),
+        chat.sessionId,
+        chat.messageId,
+        outcome,
+      );
+    } catch (error) {
+      console.error("Could not save the chat outcome", error);
+    }
+  };
+
   const agentUrl = new URL(
     `/agents/flashcard-agent/${encodeURIComponent(deckName)}`,
     FLASHCARD_AGENT_ORIGIN,
   );
 
-  const upstream = await c.env.FLASHCARD_AGENT.fetch(
-    new Request(agentUrl, c.req.raw),
-  );
+  let upstream: Response;
+  try {
+    upstream = await c.env.FLASHCARD_AGENT.fetch(new Request(agentUrl, c.req.raw));
+  } catch (error) {
+    await settle({ ok: false, text: "Could not reach the flashcard agent." });
+    throw error;
+  }
+
   if (!upstream.ok) {
+    await settle({ ok: false, text: await describeAgentFailure(upstream.clone()) });
     return upstream;
   }
 
   const text = await upstream.text();
-  const { key } = JSON.parse(text) as { key: string };
+  const { key, cardCount } = JSON.parse(text) as { key: string; cardCount: number };
 
   const object = await c.env.DECKS.head(key);
   if (!object) {
+    await settle({ ok: false, text: `Generated deck ${key} could not be found` });
     return c.text(`Generated deck ${key} could not be found`, 500);
   }
 
   await upsertDeckRow(c.get("pg"), key, object);
+  await settle({
+    ok: true,
+    text: chat?.refine
+      ? `Updated ${deckName}. It now has ${cardCount} flashcards.`
+      : `Created ${cardCount} flashcards in ${deckName}.`,
+    deckName,
+    deckKey: key,
+    cardCount,
+    etag: object.httpEtag,
+  });
 
   return new Response(text, {
     status: upstream.status,
     headers: { "content-type": "application/json" },
   });
 });
+
+function readChatHeaders(headers: Headers) {
+  const sessionId = headers.get("x-chat-session-id");
+  const messageId = headers.get("x-chat-message-id");
+  if (!isUuid(sessionId) || !isUuid(messageId)) return null;
+
+  return { sessionId, messageId, refine: headers.get("x-chat-refine") === "true" };
+}
+
+async function describeAgentFailure(response: Response) {
+  try {
+    const body = (await response.json()) as { error?: unknown };
+    if (typeof body.error === "string" && body.error.length > 0) {
+      return body.error;
+    }
+  } catch {
+    // Not JSON; fall through to the generic message.
+  }
+  return `The flashcard agent failed with status ${response.status}`;
+}
 
 app.delete("/api/v1/deck/:key", pgDbMiddleware, async (c) => {
   const key = c.req.param("key");

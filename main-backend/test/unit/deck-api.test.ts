@@ -1,10 +1,7 @@
-import { beforeEach, describe, expect, it, mock } from "bun:test";
-import { FakeClient, decks, resetDecks } from "../helpers/fake-pg";
+import { beforeEach, describe, expect, it } from "bun:test";
+import { app } from "../helpers/app";
+import { decks, resetDecks } from "../helpers/fake-pg";
 import { createFakeR2, type FakeR2 } from "../helpers/fake-r2";
-
-mock.module("pg", () => ({ Client: FakeClient }));
-
-const { default: app } = await import("../../src/index");
 
 const BASE = "http://localhost/api/v1";
 let DECKS: FakeR2;

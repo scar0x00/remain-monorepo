@@ -8,5 +8,6 @@ export type Env = {
   };
   Variables: {
     pg: Client;
+    userId: string;
   };
 };
