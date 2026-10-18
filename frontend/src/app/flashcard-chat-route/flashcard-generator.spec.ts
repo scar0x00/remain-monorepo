@@ -43,6 +43,34 @@ describe('FlashcardGenerator', () => {
     );
   });
 
+  it('sends no chat headers by default', () => {
+    service.generate(request).subscribe();
+
+    const req = http.expectOne('/api/v1/flashcards/biology');
+    expect(req.request.headers.has('x-chat-session-id')).toBe(false);
+    expect(req.request.headers.has('x-chat-message-id')).toBe(false);
+    req.flush({});
+  });
+
+  it('tells main-backend which saved message to settle', () => {
+    service.generate(request, { sessionId: 'chat-1', messageId: 'msg-2' }).subscribe();
+    service
+      .generate({ ...request, refine: true, text: 'shorter', files: [] }, {
+        sessionId: 'chat-1',
+        messageId: 'msg-4',
+      })
+      .subscribe();
+
+    const [created, refined] = http.match('/api/v1/flashcards/biology');
+    expect(created.request.headers.get('x-chat-session-id')).toBe('chat-1');
+    expect(created.request.headers.get('x-chat-message-id')).toBe('msg-2');
+    expect(created.request.headers.get('x-chat-refine')).toBe('false');
+    expect(refined.request.headers.get('x-chat-message-id')).toBe('msg-4');
+    expect(refined.request.headers.get('x-chat-refine')).toBe('true');
+    created.flush({});
+    refined.flush({});
+  });
+
   it('marks a refinement in the form data', () => {
     service.generate({ ...request, refine: true, files: [], text: 'shorter' }).subscribe();
 
