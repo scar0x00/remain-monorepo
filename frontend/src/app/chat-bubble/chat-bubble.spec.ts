@@ -26,10 +26,13 @@ describe('ChatBubble', () => {
 
   it('renders the user text and attachment names', () => {
     render({
-      id: 1,
+      id: 'm1',
       role: 'user',
       text: 'Focus on chapter 2',
-      attachments: ['book.pdf', 'notes.tex'],
+      attachments: [
+        { name: 'book.pdf', size: 10 },
+        { name: 'notes.tex', size: 20 },
+      ],
     });
 
     expect(text()).toContain('Focus on chapter 2');
@@ -38,14 +41,14 @@ describe('ChatBubble', () => {
   });
 
   it('omits the text paragraph when the user only attached files', () => {
-    render({ id: 1, role: 'user', text: '', attachments: ['slides.png'] });
+    render({ id: 'm1', role: 'user', text: '', attachments: [{ name: 'slides.png', size: 5 }] });
 
     expect(fixture.nativeElement.querySelector('p')).toBeNull();
     expect(text()).toContain('slides.png');
   });
 
   it('shows a spinner-style status while the agent is working', () => {
-    render({ id: 2, role: 'assistant', state: 'pending', text: 'Generating 20 flashcards…' });
+    render({ id: 'm2', role: 'assistant', state: 'pending', text: 'Generating 20 flashcards…' });
 
     expect(text()).toContain('Generating 20 flashcards…');
     expect(fixture.nativeElement.querySelector('.animate-spin')).not.toBeNull();
@@ -53,7 +56,7 @@ describe('ChatBubble', () => {
   });
 
   it('shows the error as an alert', () => {
-    render({ id: 2, role: 'assistant', state: 'error', text: 'Deck biology.json already exists' });
+    render({ id: 'm2', role: 'assistant', state: 'error', text: 'Deck biology.json already exists' });
 
     const alert = fixture.nativeElement.querySelector('[role="alert"]');
     expect(alert?.textContent).toContain('Deck biology.json already exists');
@@ -61,7 +64,7 @@ describe('ChatBubble', () => {
 
   it('links to the study route when the deck was created', () => {
     render({
-      id: 2,
+      id: 'm2',
       role: 'assistant',
       state: 'done',
       text: 'Created 5 flashcards in biology.',

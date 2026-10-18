@@ -1,0 +1,123 @@
+@if (history.drawerOpen()) {
+  <div class="fixed inset-0 z-40 flex">
+    <button
+      type="button"
+      aria-label="Close chat history"
+      class="absolute inset-0 bg-black/50 hover:cursor-default"
+      (click)="close()"
+    ></button>
+
+    <aside
+      role="dialog"
+      aria-label="Chat history"
+      class="relative flex h-full w-80 max-w-[85%] flex-col gap-3 border-r border-app-border bg-app-bg p-4 text-app-text"
+    >
+      <header class="flex items-center justify-between">
+        <h2 class="text-lg font-bold">Chats</h2>
+        <button
+          type="button"
+          aria-label="Close"
+          class="min-h-11 min-w-11 rounded-lg hover:cursor-pointer hover:bg-app-card-hover"
+          (click)="close()"
+        >
+          ✕
+        </button>
+      </header>
+
+      <a
+        routerLink="/flashcard-chat"
+        (click)="close()"
+        class="flex min-h-11 items-center justify-center rounded-lg border border-app-border px-4 text-sm hover:bg-app-card-hover"
+      >
+        New chat
+      </a>
+
+      @if (failed(); as message) {
+        <p role="alert" class="text-sm text-red-400">{{ message }}</p>
+      }
+
+      <ul class="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto">
+        @if (history.sessions.error()) {
+          <li role="alert" class="text-sm text-red-400">Could not load your chats</li>
+        } @else if (history.sessions.isLoading() && sessions().length === 0) {
+          <li class="text-sm text-app-text-muted">Loading…</li>
+        } @else if (sessions().length === 0) {
+          <li class="text-sm text-app-text-muted">No saved chats yet.</li>
+        }
+
+        @for (session of sessions(); track session.id) {
+          <li class="rounded-lg hover:bg-app-card-hover">
+            @if (renamingId() === session.id) {
+              <form
+                class="flex items-center gap-1 p-1"
+                (submit)="$event.preventDefault(); saveRename(session, title.value)"
+              >
+                <input
+                  #title
+                  type="text"
+                  maxlength="120"
+                  [value]="session.title"
+                  aria-label="Chat title"
+                  class="min-h-11 min-w-0 flex-1 rounded-lg border border-app-border bg-app-bg px-2 text-sm"
+                  (keydown.escape)="renamingId.set(null)"
+                />
+                <button type="submit" class="min-h-11 rounded-lg px-2 text-sm hover:cursor-pointer">
+                  Save
+                </button>
+              </form>
+            } @else if (confirmingDeleteId() === session.id) {
+              <div class="flex items-center justify-between gap-2 p-2 text-sm">
+                <span class="min-w-0 flex-1">Delete chat? The deck stays.</span>
+                <button
+                  type="button"
+                  class="min-h-11 rounded-lg px-2 text-red-400 hover:cursor-pointer"
+                  (click)="confirmDelete(session)"
+                >
+                  Delete
+                </button>
+                <button
+                  type="button"
+                  class="min-h-11 rounded-lg px-2 hover:cursor-pointer"
+                  (click)="confirmingDeleteId.set(null)"
+                >
+                  Cancel
+                </button>
+              </div>
+            } @else {
+              <div class="flex items-center gap-1">
+                <a
+                  [routerLink]="['/flashcard-chat', session.id]"
+                  (click)="close()"
+                  class="flex min-h-11 min-w-0 flex-1 flex-col justify-center px-2"
+                >
+                  <span class="truncate text-sm">{{ session.title }}</span>
+                  @if (session.deckName) {
+                    <span class="truncate font-mono text-xs text-app-text-muted">
+                      {{ session.deckName }}
+                    </span>
+                  }
+                </a>
+                <button
+                  type="button"
+                  [attr.aria-label]="'Rename ' + session.title"
+                  class="min-h-11 min-w-11 rounded-lg text-sm hover:cursor-pointer"
+                  (click)="startRename(session)"
+                >
+                  Rename
+                </button>
+                <button
+                  type="button"
+                  [attr.aria-label]="'Delete ' + session.title"
+                  class="min-h-11 min-w-11 rounded-lg text-sm hover:cursor-pointer"
+                  (click)="askDelete(session)"
+                >
+                  Delete
+                </button>
+              </div>
+            }
+          </li>
+        }
+      </ul>
+    </aside>
+  </div>
+}
