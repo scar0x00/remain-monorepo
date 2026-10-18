@@ -1,0 +1,184 @@
+.cta {
+  border-width: 2px;
+  border-radius: 0.75rem;
+  padding: 0.75rem 1.5rem;
+  font-size: 1.25rem;
+  font-weight: 700;
+  transition: transform 0.15s ease, background-color 0.15s ease;
+}
+
+.cta:hover,
+.cta:focus-visible {
+  transform: translateY(-2px) rotate(-1deg);
+}
+
+.stage {
+  --card-w: 9.5rem;
+  --card-h: 13rem;
+  position: relative;
+  width: 16rem;
+  height: 15.5rem;
+  perspective: 900px;
+}
+
+.card {
+  position: absolute;
+  left: calc(50% - var(--card-w) / 2);
+  top: 1rem;
+  width: var(--card-w);
+  height: var(--card-h);
+  border: 2px solid var(--app-text);
+  border-radius: 1rem;
+  box-shadow: 0 0.5rem 1.5rem rgb(0 0 0 / 0.35);
+}
+
+.card-back-left {
+  background: var(--app-card);
+  transform: rotate(-14deg) translateX(-2.2rem);
+  animation: bob-left 5s ease-in-out infinite;
+}
+
+.card-back-right {
+  background: var(--app-card-hover);
+  transform: rotate(12deg) translateX(2.2rem);
+  animation: bob-right 5s ease-in-out -1.7s infinite;
+}
+
+.card-front {
+  border: 0;
+  box-shadow: none;
+  background: none;
+  transform-style: preserve-3d;
+  animation:
+    bob-front 5s ease-in-out infinite,
+    flip 6s ease-in-out infinite;
+}
+
+.face {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  border: 2px solid var(--app-text);
+  border-radius: 1rem;
+  backface-visibility: hidden;
+  box-shadow: 0 0.5rem 1.5rem rgb(0 0 0 / 0.35);
+}
+
+.face-question {
+  background: var(--app-text);
+  color: var(--app-bg);
+}
+
+.face-answer {
+  background: var(--app-card);
+  color: var(--app-text);
+  transform: rotateY(180deg);
+}
+
+.mark {
+  font-size: 3.5rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.eyes {
+  display: flex;
+  gap: 1.75rem;
+}
+
+.eyes i {
+  width: 0.7rem;
+  height: 0.9rem;
+  border-radius: 50%;
+  background: currentColor;
+  animation: blink 4s ease-in-out infinite;
+}
+
+/* ^ ^ eyes on the answer side */
+.eyes.happy i {
+  height: 0.5rem;
+  width: 1rem;
+  border-radius: 1rem 1rem 0 0;
+  background: none;
+  border: 3px solid currentColor;
+  border-bottom: 0;
+  animation: none;
+}
+
+.smile {
+  width: 1.6rem;
+  height: 0.8rem;
+  border: 3px solid currentColor;
+  border-top: 0;
+  border-radius: 0 0 1.6rem 1.6rem;
+}
+
+.smile.open {
+  background: currentColor;
+}
+
+.spark {
+  position: absolute;
+  width: 0.7rem;
+  height: 1rem;
+  border-radius: 0.2rem;
+  background: var(--app-text);
+  opacity: 0.8;
+  animation: twinkle 3s ease-in-out infinite;
+}
+
+.spark-1 { left: 4%;  top: 18%; animation-delay: 0s; }
+.spark-2 { right: 6%; top: 8%;  animation-delay: -1s; width: 0.5rem; height: 0.7rem; }
+.spark-3 { left: 10%; bottom: 8%; animation-delay: -2s; width: 0.5rem; height: 0.7rem; }
+.spark-4 { right: 4%; bottom: 22%; animation-delay: -0.5s; }
+
+@keyframes bob-front {
+  0%, 100% { translate: 0 0; }
+  50% { translate: 0 -0.6rem; }
+}
+
+@keyframes bob-left {
+  0%, 100% { transform: rotate(-14deg) translateX(-2.2rem) translateY(0); }
+  50% { transform: rotate(-17deg) translateX(-2.6rem) translateY(0.4rem); }
+}
+
+@keyframes bob-right {
+  0%, 100% { transform: rotate(12deg) translateX(2.2rem) translateY(0); }
+  50% { transform: rotate(15deg) translateX(2.6rem) translateY(0.4rem); }
+}
+
+/* rest on the question, flip to the answer, rest, flip back */
+@keyframes flip {
+  0%, 30% { rotate: y 0deg; }
+  45%, 80% { rotate: y 180deg; }
+  95%, 100% { rotate: y 360deg; }
+}
+
+@keyframes blink {
+  0%, 92%, 100% { transform: scaleY(1); }
+  96% { transform: scaleY(0.1); }
+}
+
+@keyframes twinkle {
+  0%, 100% { transform: scale(0.6) rotate(0deg); opacity: 0.3; }
+  50% { transform: scale(1.2) rotate(25deg); opacity: 0.9; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card,
+  .eyes i,
+  .spark,
+  .cta {
+    animation: none;
+    transition: none;
+  }
+
+  .cta:hover,
+  .cta:focus-visible {
+    transform: none;
+  }
+}
