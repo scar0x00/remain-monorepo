@@ -12,11 +12,12 @@ mkdir -p "$STATE_DIR"
 # deck the agent writes is visible to main-backend; otherwise each keeps its own local store.
 WRANGLER_STATE="$STATE_DIR/wrangler-state"
 
+# Servers bind to 0.0.0.0 so they are reachable from other devices on the local network.
 # name | directory | bun script | port argument
 SERVERS=(
-  "main-backend|$ROOT/main-backend|dev|--port 8787 --inspector-port 9230 --persist-to $WRANGLER_STATE"
-  "flashcard-generator-agent|$ROOT/flashcard-generator-agent|dev|--port 8788 --persist-to $WRANGLER_STATE"
-  "frontend|$ROOT/frontend|start|--port 4200"
+  "main-backend|$ROOT/main-backend|dev|--ip 0.0.0.0 --port 8787 --inspector-port 9230 --persist-to $WRANGLER_STATE"
+  "flashcard-generator-agent|$ROOT/flashcard-generator-agent|dev|--ip 0.0.0.0 --port 8788 --persist-to $WRANGLER_STATE"
+  "frontend|$ROOT/frontend|start|--host 0.0.0.0 --port 4200"
 )
 
 pid_file() { echo "$STATE_DIR/$1.pid"; }
