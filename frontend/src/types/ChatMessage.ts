@@ -1,12 +1,17 @@
+export interface ChatAttachment {
+  name: string;
+  size: number;
+}
+
 export interface UserChatMessage {
-  id: number;
+  id: string;
   role: 'user';
   text: string;
-  attachments: string[];
+  attachments: ChatAttachment[];
 }
 
 export interface AssistantChatMessage {
-  id: number;
+  id: string;
   role: 'assistant';
   state: 'pending' | 'done' | 'error';
   text: string;

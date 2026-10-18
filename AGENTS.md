@@ -31,6 +31,7 @@ Deck files are `<deckName>.json` or `<deckName>.yaml` objects in R2: an array of
 - **Browse decks**: `GET /api/v1/decks?searchTerm=` does a prefix `ILIKE` on `decks.name` and returns `DeckEntry[]` (`deckName`, `size`, `uploaded`, `etag`).
 - **Study a deck**: `GET /api/v1/deck/:key` streams the object from R2 with etag and range support.
 - **Delete**: `DELETE /api/v1/deck/:key` removes the R2 object and the row.
+- **Chat history**: every conversation is saved in Postgres (`chat_sessions`, `chat_messages`). The chat route creates the session on the first message (`POST /api/v1/chats`), saves the user message plus a `pending` assistant message (`POST /api/v1/chats/:id/messages`), then sends the generate request with `x-chat-session-id`, `x-chat-message-id` and `x-chat-refine` headers. `POST /flashcards/:deckName` settles that assistant message itself (without parsing the form), so the history is complete even if the tab closes. `flashcard-chat/:sessionId` reopens a session; its deck becomes the active deck, so messages refine it. Pending messages older than 5 minutes are listed as interrupted.
 
 ## Packages
 
@@ -40,6 +41,7 @@ Deck files are `<deckName>.json` or `<deckName>.yaml` objects in R2: an array of
   | Path | Route component | Notes |
   |---|---|---|
   | `flashcard-chat` | `flashcard-chat-route/` | Chat UI. Uses `chat-composer/`, `chat-bubble/`; request building in `flashcard-chat.utils.ts` |
+  | `flashcard-chat/:sessionId` | same component | Reopens a saved conversation (`chat-history/` service, `chat-session-list/` drawer opened from the nav bar menu) |
   | `deck-upload` | `deck-upload-route/` | Uses `file-input/` |
   | `deck-browse` | `browse-decks-route/` | Uses `deck-list/`, `search-deck-field/`; search state in `deck-search-term.ts` |
   | `deck-study/:id` | `deck-study-route/` | Uses `flashcard/`, `study-controller/` |
@@ -49,10 +51,11 @@ Deck files are `<deckName>.json` or `<deckName>.yaml` objects in R2: an array of
 
 ### `main-backend/` (Hono Worker)
 - Everything is in `src/index.ts`. The routes are listed under "Request flows". All except `GET /deck/:key` go through `pgDbMiddleware`, which opens a `pg` client per request from the `PG` Hyperdrive binding.
+- Chat history lives in `src/chat-routes.ts` (routes under `/api/v1/chats`) and `src/lib/chat-store.ts` (SQL). Every chat query is scoped by `c.get("userId")`, set by `currentUserMiddleware` in `src/lib/current-user.ts`. Until auth lands it always sets `SYSTEM_USER_ID`; replace that one function with the session lookup.
 - Bindings (`src/types.ts`, `wrangler.jsonc`): `DECKS` (R2), `PG` (Hyperdrive), `FLASHCARD_AGENT` (service binding to the agent). Regenerate worker types with `bun run cf-typegen`.
 - Auth: better-auth is configured in `src/lib/auth.ts` (email and password, Postgres), but no auth routes are mounted in `index.ts` yet. Every deck row is owned by the placeholder user `system` (`SYSTEM_USER_ID`), created in `migrations/0001_decks_metadata.sql`.
 - Schema changes go in `migrations/` (the `decks` table: `name` unique, `user_id`, `size`, `etag`, `createdAt`). better-auth tables go in `better-auth_migrations/`.
-- Tests: `test/unit/deck-api.test.ts` uses fakes from `test/helpers/` (`fake-pg.ts`, `fake-r2.ts`). `test/e2e/dev-server.test.ts` needs the running stack.
+- Tests: `test/unit/deck-api.test.ts` and `test/unit/chat-api.test.ts` use fakes from `test/helpers/` (`fake-pg.ts`, `fake-r2.ts`) through `test/helpers/app.ts`. Run the chat tests against a real Postgres (migrations applied, a `user` table, and a `decks` table) with `TEST_PG_URL=postgres://... bun test test/unit/chat-api.test.ts`. `test/e2e/dev-server.test.ts` needs the running stack.
 
 ### `flashcard-generator-agent/` (Cloudflare Agents SDK Worker)
 - `src/index.ts` routes requests with `routeAgentRequest`. `src/agent.ts` holds the `FlashcardAgent` Durable Object. `onRequest` accepts only `POST`, then calls `createDeck` or `refineDeck`.
