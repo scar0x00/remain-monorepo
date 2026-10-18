@@ -81,6 +81,10 @@ Playwright browser tests (`app.e2e.test.ts`) that run against the live stack (`b
 - main-backend: `bun run dev`, `bun run test` (unit), `bun run test:e2e`, `bun run cf-typegen`.
 - flashcard-generator-agent: `bun run dev`, `bun run typecheck`, `bun run test`, `bun run test:smoke`, `bun run types`.
 
+## Environments (dev vs prod)
+- Both `wrangler.jsonc` files treat the top level as **dev** (workers `main-backend-dev`, `flashcard-generator-agent-dev`, R2 `remain-decks-dev`, no routes) and `env.production` as **prod** (original names, `remain-decks`, route, Supabase Hyperdrive). `bun run dev` uses dev; `bun run deploy` passes `--env production`.
+- Dev Postgres is the Neon database: copy `main-backend/.env.example` to `main-backend/.env` and set `CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_PG`. Never commit it.
+
 ## Gotchas
 - main-backend and the agent must share local R2 state. Run both with `wrangler dev --persist-to <same dir>` (`./dev-server start` does this), or generation returns 500.
 - `frontend/` has both `package-lock.json` and `pnpm-lock.yaml`. Use `bun` for installs anyway.

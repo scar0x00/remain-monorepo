@@ -1,6 +1,9 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "flashcard-generator-agent",
+  // Top level = DEV (used by `wrangler dev`); prod is `env.production`, deployed with `--env production`.
+  // Bindings are not inherited across environments, so they are declared in both.
+  // Name must match the `FLASHCARD_AGENT` service in main-backend's dev config.
+  "name": "flashcard-generator-agent-dev",
   "main": "src/index.ts",
   "compatibility_date": "2026-10-10",
   "compatibility_flags": ["nodejs_compat"],
@@ -13,7 +16,7 @@
   "r2_buckets": [
     {
       "binding": "DECKS",
-      "bucket_name": "remain-decks",
+      "bucket_name": "remain-decks-dev",
     },
   ],
   "durable_objects": {
@@ -32,5 +35,39 @@
   ],
   "observability": {
     "enabled": true,
+  },
+  "env": {
+    "production": {
+      // Keep the existing deployed worker name (and its Durable Object state).
+      "name": "flashcard-generator-agent",
+      "workers_dev": false,
+      "preview_urls": false,
+      "ai": {
+        "binding": "AI",
+      },
+      "r2_buckets": [
+        {
+          "binding": "DECKS",
+          "bucket_name": "remain-decks",
+        },
+      ],
+      "durable_objects": {
+        "bindings": [
+          {
+            "name": "FlashcardAgent",
+            "class_name": "FlashcardAgent",
+          },
+        ],
+      },
+      "migrations": [
+        {
+          "tag": "v1",
+          "new_sqlite_classes": ["FlashcardAgent"],
+        },
+      ],
+      "observability": {
+        "enabled": true,
+      },
+    },
   },
 }

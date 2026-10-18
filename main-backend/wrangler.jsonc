@@ -1,6 +1,10 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "main-backend",
+  // Top level = DEV. `wrangler dev` (and ./dev-server) use it, so local runs can never pick up
+  // the prod bucket, routes or database by accident. Prod lives under `env.production` and is only
+  // used with `--env production` (`bun run deploy`). Wrangler does not inherit bindings across
+  // environments, so every binding is declared in both places.
+  "name": "main-backend-dev",
   "main": "src/index.ts",
   "compatibility_date": "2026-08-30",
   "compatibility_flags": [
@@ -8,46 +12,30 @@
   ],
   "workers_dev": false,
   "preview_urls": false,
-  "routes": [
-    { "pattern": "remain.scar0x00.click/api/v1/*", "zone_name": "scar0x00.click" }
-  ],
-  // "vars": {
-  //   "MY_VAR": "my-variable"
-  // },
-  // "kv_namespaces": [
-  //   {
-  //     "binding": "MY_KV_NAMESPACE",
-  //     "id": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-  //   }
-  // ],
   "r2_buckets": [
     {
       "binding": "DECKS",
-      "bucket_name": "remain-decks"
+      // Local runs use Miniflare state (--persist-to); this bucket only matters for a remote dev deploy.
+      "bucket_name": "remain-decks-dev"
     }
   ],
   "services": [
     {
       "binding": "FLASHCARD_AGENT",
-      "service": "flashcard-generator-agent"
+      // Must match the dev agent's top-level `name` so the local service binding resolves.
+      "service": "flashcard-generator-agent-dev"
     }
   ],
   "hyperdrive": [
     {
       "binding": "PG",
-      "id": "b88dd980fff34df78181d1cfcfbf04c7"
+      // TODO(#5): id of a Hyperdrive config whose origin is the Neon dev database. Only needed for a
+      // remote dev deploy; `wrangler dev` ignores it and uses the connection string below.
+      "id": "00000000000000000000000000000000"
+      // Local connection string (Neon dev DB) comes from the gitignored `.env`:
+      // CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_PG, see .env.example.
     }
   ],
-  // "d1_databases": [
-  //   {
-  //     "binding": "MY_DB",
-  //     "database_name": "my-database",
-  //     "database_id": ""
-  //   }
-  // ],
-  // "ai": {
-  //   "binding": "AI"
-  // },
   "observability": {
     "enabled": true,
     "head_sampling_rate": 1,
@@ -63,4 +51,49 @@
       "head_sampling_rate": 1
     }
   },
+  "env": {
+    "production": {
+      // Keep the existing deployed worker name rather than wrangler's default `main-backend-production`.
+      "name": "main-backend",
+      "workers_dev": false,
+      "preview_urls": false,
+      "routes": [
+        { "pattern": "remain.scar0x00.click/api/v1/*", "zone_name": "scar0x00.click" }
+      ],
+      "r2_buckets": [
+        {
+          "binding": "DECKS",
+          "bucket_name": "remain-decks"
+        }
+      ],
+      "services": [
+        {
+          "binding": "FLASHCARD_AGENT",
+          "service": "flashcard-generator-agent"
+        }
+      ],
+      "hyperdrive": [
+        {
+          "binding": "PG",
+          // Hyperdrive config pointing at the Supabase prod database.
+          "id": "b88dd980fff34df78181d1cfcfbf04c7"
+        }
+      ],
+      "observability": {
+        "enabled": true,
+        "head_sampling_rate": 1,
+        "logs": {
+          "enabled": true,
+          "head_sampling_rate": 1,
+          "persist": true,
+          "invocation_logs": true,
+        },
+        "traces": {
+          "enabled": true,
+          "persist": true,
+          "head_sampling_rate": 1
+        }
+      }
+    }
+  }
 }
