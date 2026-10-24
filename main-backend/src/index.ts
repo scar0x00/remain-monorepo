@@ -2,7 +2,18 @@ import { Hono, MiddlewareHandler } from "hono";
 import { Client } from "pg";
 import { createMcpHandler } from "agents/mcp/server";
 import { accessAuth } from "./lib/access-auth";
-import { deleteDeck, listDecks, putDeck, upsertDeckRow } from "./lib/decks";
+import { SYSTEM_USER_ID, deleteDeck, listDecks, putDeck, upsertDeckRow } from "./lib/decks";
+import {
+  AnswersSchema,
+  CreateSessionSchema,
+  createSession,
+  finishSession,
+  getAnswers,
+  getSession,
+  listDeckStats,
+  listSessions,
+  saveAnswers,
+} from "./lib/study-sessions";
 import { createServer } from "./mcp";
 import { type Env } from "./types";
 
@@ -120,12 +131,75 @@ app.delete("/api/v1/deck/:key", pgDbMiddleware, async (c) => {
 });
 
 app.get("/api/v1/decks", pgDbMiddleware, async (c) => {
-  const decks = await listDecks(
-    { bucket: c.env.DECKS, pg: c.get("pg") },
-    c.req.query("searchTerm"),
-  );
+  const pg = c.get("pg");
+  const [decks, stats] = await Promise.all([
+    listDecks({ bucket: c.env.DECKS, pg }, c.req.query("searchTerm")),
+    listDeckStats(pg, SYSTEM_USER_ID),
+  ]);
 
-  return c.json(decks);
+  return c.json(decks.map((deck) => ({ ...deck, ...stats.get(deck.deckName) })));
+});
+
+// Study sessions. Decks are all owned by SYSTEM_USER_ID until users land (#12), so sessions are too.
+app.use("/api/v1/study-sessions/*", pgDbMiddleware);
+app.use("/api/v1/study-sessions", pgDbMiddleware);
+
+app.post("/api/v1/study-sessions", async (c) => {
+  const parsed = CreateSessionSchema.safeParse(await c.req.json().catch(() => null));
+  if (!parsed.success) {
+    return c.json({ error: parsed.error.message }, 400);
+  }
+
+  const id = await createSession(c.get("pg"), SYSTEM_USER_ID, parsed.data);
+  return c.json({ id }, 201);
+});
+
+app.get("/api/v1/study-sessions", async (c) => {
+  const limit = c.req.query("limit");
+  const result = await listSessions(c.get("pg"), SYSTEM_USER_ID, {
+    deckName: c.req.query("deckName"),
+    limit: limit ? Number(limit) : undefined,
+    cursor: c.req.query("cursor"),
+  });
+  return c.json(result);
+});
+
+app.get("/api/v1/study-sessions/:id", async (c) => {
+  const pg = c.get("pg");
+  const session = await getSession(pg, SYSTEM_USER_ID, c.req.param("id"));
+  if (!session) {
+    return c.text("Session Not Found", 404);
+  }
+
+  return c.json({ ...session, answers: await getAnswers(pg, session.id) });
+});
+
+app.post("/api/v1/study-sessions/:id/answers", async (c) => {
+  const parsed = AnswersSchema.safeParse(await c.req.json().catch(() => null));
+  if (!parsed.success) {
+    return c.json({ error: parsed.error.message }, 400);
+  }
+
+  const pg = c.get("pg");
+  const session = await getSession(pg, SYSTEM_USER_ID, c.req.param("id"));
+  if (!session) {
+    return c.text("Session Not Found", 404);
+  }
+  if (session.status === "completed") {
+    return c.text("Session is already finished", 409);
+  }
+
+  await saveAnswers(pg, session.id, parsed.data.answers);
+  return c.body(null, 204);
+});
+
+app.post("/api/v1/study-sessions/:id/finish", async (c) => {
+  const session = await finishSession(c.get("pg"), SYSTEM_USER_ID, c.req.param("id"));
+  if (!session) {
+    return c.text("Session Not Found", 404);
+  }
+
+  return c.json(session);
 });
 
 app.all("/mcp", accessAuth, (c) =>
