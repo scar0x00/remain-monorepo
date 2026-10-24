@@ -3,10 +3,18 @@
         @for (deck of searchTerm.deck.value(); track deck.etag) {
             <li class="flex flex-col gap-3 rounded-xl rounded-l-none border border-app-border border-l-4 bg-app-card/40 p-4"
                 [class]="borderClasses(deck.recentAccuracy)">
-                <a class="text-base sm:text-lg font-medium wrap-break-word text-app-text hover:underline"
-                    [routerLink]="['/deck-study/', getDeckPath(deck.deckName)]">
-                    {{ deck.deckName.replace(/\.json$/i, "") }}
-                </a>
+                <div class="flex items-start justify-between gap-2">
+                    <a class="text-base sm:text-lg font-medium wrap-break-word text-app-text hover:underline"
+                        [routerLink]="['/deck-study/', getDeckPath(deck.deckName)]">
+                        {{ deck.deckName.replace(/\.json$/i, "") }}
+                    </a>
+                    <!-- Placeholder for a future deck actions menu; does nothing yet. -->
+                    <button type="button" class="-mx-1.5 -mt-3 -mb-1.5 shrink-0 p-1.5 rounded-full hover:bg-app-card-hover"
+                        [attr.aria-label]="'More options for ' + getDeckPath(deck.deckName)"
+                        title="More options">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>
+                    </button>
+                </div>
                 <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
                     @if (deck.studyCount) {
                         <span>Studied {{ deck.studyCount }}×</span>
