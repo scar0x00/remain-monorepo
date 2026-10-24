@@ -31,6 +31,7 @@ Deck files are `<deckName>.json` or `<deckName>.yaml` objects in R2: an array of
 - **Browse decks**: `GET /api/v1/decks?searchTerm=` does a prefix `ILIKE` on `decks.name` and returns `DeckEntry[]` (`deckName`, `size`, `uploaded`, `etag`).
 - **Study a deck**: `GET /api/v1/deck/:key` streams the object from R2 with etag and range support.
 - **Delete**: `DELETE /api/v1/deck/:key` removes the R2 object and the row.
+- **Study stats**: `GET /api/v1/stats/{overview,activity,decks,decks/:name,hardest-cards}` aggregate `study_sessions`/`study_answers` (`src/lib/stats.ts`). Every answered card counts, whatever the session status; `days` is the window and `tz` the IANA zone days are bucketed in. `decks.card_count` is written on every deck write and backfilled from R2 by `/stats/decks`.
 - **MCP client (claude.ai, Claude Code, ...)**: the client calls `POST /mcp` on main-backend, which runs a tool against the same deck store as the REST routes. See "MCP server".
 
 ## MCP server
@@ -58,6 +59,11 @@ main-backend serves a stateless MCP endpoint at `https://remain.scar0x00.click/m
   | `deck-upload` | `deck-upload-route/` | Uses `file-input/` |
   | `deck-browse` | `browse-decks-route/` | Uses `deck-list/`, `search-deck-field/`; search state in `deck-search-term.ts` |
   | `deck-study/:id` | `deck-study-route/` | Uses `flashcard/`, `study-controller/` |
+  | `dashboard` | `dashboard-route/` | Lazy. Study stats: `stat-tile/`, `activity-heatmap/`, `weekday-chart/`, `deck-stats-table/`, `needs-review/`, `hardest-cards/` |
+  | `dashboard/decks/:name` | `deck-stats-route/` | Lazy. One deck's stats; `accuracy-chart/` |
+
+- Dashboard data comes from `stats/stats.service.ts` (one `httpResource` per `/api/v1/stats/*` endpoint), provided on the `dashboard` route together with ECharts. Charts use ngx-echarts with the tree-shaken build in `stats/echarts.ts` (SVG renderer, lazy-loaded); `stats/chart-theme.ts` turns the `--app-*` tokens into colours and follows the colour scheme.
+- The nav bar's hamburger opens a native `popover` menu (`nav-bar/`), which is where Dashboard lives.
 
 - Shared types are in `src/types/` (`Card`, `Deck`, `DeckEntry`, `ChatMessage`, `FlashcardAgent` for the generate request/result).
 - All HTTP goes to `/api/v1/*`. `proxy.conf.json` forwards `/api/**` to `localhost:8787`.

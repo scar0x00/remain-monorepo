@@ -2,7 +2,17 @@ import { Hono, MiddlewareHandler } from "hono";
 import { Client } from "pg";
 import { createMcpHandler } from "agents/mcp/server";
 import { accessAuth } from "./lib/access-auth";
-import { SYSTEM_USER_ID, deleteDeck, listDecks, putDeck, upsertDeckRow } from "./lib/decks";
+import { SYSTEM_USER_ID, backfillCardCounts, deleteDeck, listDecks, putDeck, upsertDeckRow } from "./lib/decks";
+import {
+  type StatsRange,
+  getActivity,
+  getOverview,
+  listDeckSessions,
+  listDeckStats as listDeckStatsInRange,
+  listHardestCards,
+  parseDays,
+  parseTimeZone,
+} from "./lib/stats";
 import {
   AnswersSchema,
   CreateSessionSchema,
@@ -104,14 +114,14 @@ app.post("/api/v1/flashcards/:deckName", pgDbMiddleware, async (c) => {
   }
 
   const text = await upstream.text();
-  const { key } = JSON.parse(text) as { key: string };
+  const { key, cardCount } = JSON.parse(text) as { key: string; cardCount?: number };
 
   const object = await c.env.DECKS.head(key);
   if (!object) {
     return c.text(`Generated deck ${key} could not be found`, 500);
   }
 
-  await upsertDeckRow(c.get("pg"), key, object);
+  await upsertDeckRow(c.get("pg"), key, object, cardCount ?? null);
 
   return new Response(text, {
     status: upstream.status,
@@ -200,6 +210,49 @@ app.post("/api/v1/study-sessions/:id/finish", async (c) => {
   }
 
   return c.json(session);
+});
+
+// Dashboard stats. Every answered card counts, whatever the session status. `days` is the window in
+// local days (today included) and `tz` the IANA zone the days are bucketed in.
+app.use("/api/v1/stats/*", pgDbMiddleware);
+
+const statsRange = (c: { req: { query: (key: string) => string | undefined } }, fallbackDays = 30): StatsRange => ({
+  days: parseDays(c.req.query("days"), fallbackDays),
+  tz: parseTimeZone(c.req.query("tz")),
+});
+
+app.get("/api/v1/stats/overview", async (c) => {
+  return c.json(await getOverview(c.get("pg"), SYSTEM_USER_ID, statsRange(c)));
+});
+
+app.get("/api/v1/stats/activity", async (c) => {
+  return c.json(await getActivity(c.get("pg"), SYSTEM_USER_ID, statsRange(c, 84)));
+});
+
+app.get("/api/v1/stats/decks", async (c) => {
+  const pg = c.get("pg");
+  await backfillCardCounts({ bucket: c.env.DECKS, pg });
+  return c.json(await listDeckStatsInRange(pg, SYSTEM_USER_ID, statsRange(c)));
+});
+
+app.get("/api/v1/stats/decks/:name", async (c) => {
+  const pg = c.get("pg");
+  const name = c.req.param("name");
+  const [deck] = await listDeckStatsInRange(pg, SYSTEM_USER_ID, statsRange(c), name);
+  if (!deck) {
+    return c.text("Deck Not Found", 404);
+  }
+
+  return c.json({
+    ...deck,
+    recentSessions: await listDeckSessions(pg, SYSTEM_USER_ID, name),
+    hardestCards: await listHardestCards(pg, SYSTEM_USER_ID, { deckName: name }),
+  });
+});
+
+app.get("/api/v1/stats/hardest-cards", async (c) => {
+  const limit = parseDays(c.req.query("limit"), 5, 50);
+  return c.json(await listHardestCards(c.get("pg"), SYSTEM_USER_ID, { limit }));
 });
 
 app.all("/mcp", accessAuth, (c) =>
