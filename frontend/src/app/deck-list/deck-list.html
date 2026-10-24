@@ -1,47 +1,47 @@
 @if (searchTerm.deck.value()) {
-    <div class="text-app-text-muted">
-        <ul class="flex flex-col justify-start items-start gap-y-2">
-            @for (deck of searchTerm.deck.value(); track deck.etag) {
-                <li class="grid grid-cols-2 gap-4 w-full border-b border-b-app-border py-3">
-                    <div class="text-sm sm:text-lg wrap-break-word font-medium">
-                        <a [routerLink]="['/deck-study/', getDeckPath(deck.deckName)]">
-                            {{ deck.deckName.replace(/\.json$/i, "") }}
-                        </a>
-                    </div>
-                    <div class="flex justify-end items-center gap-2 sm:gap-4">
-                        <span class="text-xs font-mono text-nowrap">{{ convertToDate(deck.uploaded) | date:'dd-MM-yyyy' }}</span>
-                        <a class="p-2 rounded-full hover:bg-app-card-hover"
+    <ul class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-app-text-muted">
+        @for (deck of searchTerm.deck.value(); track deck.etag) {
+            <li class="flex flex-col gap-3 rounded-xl rounded-l-none border border-app-border border-l-4 bg-app-card/40 p-4"
+                [class]="borderClasses(deck.recentAccuracy)">
+                <a class="text-base sm:text-lg font-medium wrap-break-word text-app-text hover:underline"
+                    [routerLink]="['/deck-study/', getDeckPath(deck.deckName)]">
+                    {{ deck.deckName.replace(/\.json$/i, "") }}
+                </a>
+                <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
+                    @if (deck.studyCount) {
+                        <span>Studied {{ deck.studyCount }}×</span>
+                        @if (deck.recentAccuracy != null) {
+                            <span class="rounded-full px-2 py-0.5 font-medium"
+                                [class]="scoreClasses(deck.recentAccuracy)"
+                                title="Average of your last 3 sessions">
+                                Last 3: {{ deck.recentAccuracy | percent: '1.0-0' }}
+                            </span>
+                        }
+                    } @else {
+                        <span class="opacity-70">Not studied yet</span>
+                    }
+                </div>
+                <div class="flex items-center justify-between gap-2">
+                    <span class="text-xs font-mono text-nowrap">{{ convertToDate(deck.uploaded) | date:'dd-MM-yyyy' }}</span>
+                    <div class="flex items-center gap-2">
+                        <a class="p-1.5 rounded-full hover:bg-app-card-hover"
                             [attr.href]="'/api/v1/deck/' + deck.deckName"
                             [attr.download]="deck.deckName"
                             [attr.aria-label]="'Download ' + getDeckPath(deck.deckName)"
                             title="Download deck">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-download-icon lucide-download"><path d="M12 15V3"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/></svg>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V3"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/></svg>
                         </a>
-                        <button type="button" class="p-2 rounded-full hover:bg-app-card-hover"
+                        <a class="inline-flex items-center gap-1.5 rounded-full bg-app-text-muted text-app-bg px-4 py-1.5 text-sm font-bold"
                             [routerLink]="['/deck-study/', getDeckPath(deck.deckName)]"
-                            [attr.aria-label]="'Study ' + getDeckPath(deck.deckName)"
-                            title="Study deck">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-notebook-pen-icon lucide-notebook-pen"><path d="M13.4 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7.4"/><path d="M2 6h4"/><path d="M2 10h4"/><path d="M2 14h4"/><path d="M2 18h4"/><path d="M21.378 5.626a1 1 0 1 0-3.004-3.004l-5.01 5.012a2 2 0 0 0-.506.854l-.837 2.87a.5.5 0 0 0 .62.62l2.87-.837a2 2 0 0 0 .854-.506z"/></svg>
-                        </button>
+                            [attr.aria-label]="'Study ' + getDeckPath(deck.deckName)">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13.4 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7.4"/><path d="M21.378 5.626a1 1 0 1 0-3.004-3.004l-5.01 5.012a2 2 0 0 0-.506.854l-.837 2.87a.5.5 0 0 0 .62.62l2.87-.837a2 2 0 0 0 .854-.506z"/></svg>
+                            Study
+                        </a>
                     </div>
-                    <div class="col-span-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
-                        @if (deck.studyCount) {
-                            <span>Studied {{ deck.studyCount }}×</span>
-                            @if (deck.recentAccuracy != null) {
-                                <span class="rounded-full px-2 py-0.5 font-medium"
-                                    [class]="scoreClasses(deck.recentAccuracy)"
-                                    title="Average of your last 3 sessions">
-                                    Last 3: {{ deck.recentAccuracy | percent: '1.0-0' }}
-                                </span>
-                            }
-                        } @else {
-                            <span class="opacity-70">Not studied yet</span>
-                        }
-                    </div>
-                </li>
-            }
-        </ul>
-    </div>
+                </div>
+            </li>
+        }
+    </ul>
 } @else {
     <div class="grid place-items-center">
         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"

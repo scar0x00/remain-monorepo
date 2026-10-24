@@ -17,9 +17,17 @@ export class DeckList {
 
   // Color hint for the recent score: green from 80%, amber from 50%, red below.
   scoreClasses(accuracy: number): string {
-    if (accuracy >= 0.8) return "bg-green-500/15 text-green-400";
-    if (accuracy >= 0.5) return "bg-amber-500/15 text-amber-400";
-    return "bg-red-500/15 text-red-400";
+    if (accuracy >= 0.8) return "bg-green-900/15 text-green-900 dark:bg-green-500/15 dark:text-green-400";
+    if (accuracy >= 0.5) return "bg-amber-900/15 text-amber-900 dark:bg-amber-500/15 dark:text-amber-400";
+    return "bg-red-900/15 text-red-900 dark:bg-red-500/15 dark:text-red-400";
+  }
+
+  // Left border of the card, same thresholds as the score pill; neutral until the deck has a score.
+  borderClasses(accuracy?: number | null): string {
+    if (accuracy == null) return "border-l-app-border";
+    if (accuracy >= 0.8) return "border-l-green-500";
+    if (accuracy >= 0.5) return "border-l-amber-500";
+    return "border-l-red-500";
   }
 
   convertToDate(dateString: string) {
