@@ -2,6 +2,7 @@ type DeckRecord = {
   name: string;
   size: number;
   etag: string;
+  cardCount: number | null;
   createdAt: Date;
 };
 
@@ -62,12 +63,13 @@ export class FakeClient {
     const normalized = sql.replace(/\s+/g, " ").trim();
 
     if (normalized.startsWith("INSERT INTO public.decks")) {
-      const [name, , size, etag] = params as [string, string, number, string];
+      const [name, , size, etag, cardCount] = params as [string, string, number, string, number | null];
       const existing = decks.get(name);
       decks.set(name, {
         name,
         size: Number(size),
         etag,
+        cardCount: cardCount ?? null,
         createdAt: existing?.createdAt ?? new Date(),
       });
       return { rows: [] };
