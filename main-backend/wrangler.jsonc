@@ -9,11 +9,16 @@
   "workers_dev": false,
   "preview_urls": false,
   "routes": [
-    { "pattern": "remain.scar0x00.click/api/v1/*", "zone_name": "scar0x00.click" }
+    { "pattern": "remain.scar0x00.click/api/v1/*", "zone_name": "scar0x00.click" },
+    // MCP endpoint. Protected by Cloudflare Access with Managed OAuth enabled.
+    { "pattern": "remain.scar0x00.click/mcp", "zone_name": "scar0x00.click" }
   ],
-  // "vars": {
-  //   "MY_VAR": "my-variable"
-  // },
+  // Used to verify the Access JWT on /mcp. AUD is the Application Audience (AUD) tag of the
+  // Access application that covers /mcp; fill it in from Zero Trust > Access > Applications.
+  "vars": {
+    "ACCESS_TEAM_DOMAIN": "https://scar0x00.cloudflareaccess.com",
+    "ACCESS_AUD": ""
+  },
   // "kv_namespaces": [
   //   {
   //     "binding": "MY_KV_NAMESPACE",

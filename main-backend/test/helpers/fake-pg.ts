@@ -12,7 +12,7 @@ export function resetDecks() {
 }
 
 // Minimal stand-in for `pg.Client` that understands only the SQL statements
-// used by src/index.ts. Installed with `mock.module("pg", ...)` in tests.
+// used by src/index.ts and src/lib/decks.ts. Installed with `mock.module("pg", ...)` in tests.
 export class FakeClient {
   constructor(_config?: unknown) {}
 
