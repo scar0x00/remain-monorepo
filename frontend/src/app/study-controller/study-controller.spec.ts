@@ -1,22 +1,97 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { provideHttpClient } from '@angular/common/http';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/router';
+import { BehaviorSubject } from 'rxjs';
+import { provideMarkdown } from 'ngx-markdown';
 
 import { StudyController } from './study-controller';
+import { cardId } from '../study-session/card-id';
+
+const DECK = [
+  { front: 'one', back: '1' },
+  { front: 'two', back: '2' },
+];
 
 describe('StudyController', () => {
-  let component: StudyController;
   let fixture: ComponentFixture<StudyController>;
+  let component: StudyController;
+  let http: HttpTestingController;
+  let queryParams: BehaviorSubject<ReturnType<typeof convertToParamMap>>;
 
-  beforeEach(async () => {
+  let createBody: unknown;
+
+  async function setup(cardIds?: string, createStatus = 201) {
+    queryParams = new BehaviorSubject(convertToParamMap(cardIds ? { cardIds } : {}));
     await TestBed.configureTestingModule({
       imports: [StudyController],
+      providers: [
+        provideRouter([]),
+        provideMarkdown(),
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        {
+          provide: ActivatedRoute,
+          useValue: {
+            paramMap: new BehaviorSubject(convertToParamMap({ id: 'alpha' })),
+            queryParamMap: queryParams,
+          },
+        },
+      ],
     }).compileComponents();
 
+    http = TestBed.inject(HttpTestingController);
     fixture = TestBed.createComponent(StudyController);
     component = fixture.componentInstance;
+    fixture.detectChanges();
+    http.expectOne('/api/v1/deck/alpha.json').flush(DECK, { headers: { etag: '"e1"' } });
     await fixture.whenStable();
+
+    const create = http.expectOne('/api/v1/study-sessions');
+    createBody = create.request.body;
+    if (createStatus === 201) create.flush({ id: 's1' }, { status: 201, statusText: 'Created' });
+    else create.flush('boom', { status: createStatus, statusText: 'err' });
+    await fixture.whenStable();
+  }
+
+  afterEach(() => http?.verify());
+
+  it('should create', async () => {
+    await setup();
+    expect(component).toBeTruthy();
   });
 
-  it('should create', () => {
-    expect(component).toBeTruthy();
+  it('starts a session and sends one answer per click with the card id', async () => {
+    await setup();
+    expect(createBody).toEqual({ deckName: 'alpha.json', deckEtag: '"e1"', cardTotal: 2 });
+
+    const first = component.currentMd()!;
+    component.flipCard();
+    component.rightAnswer();
+    await fixture.whenStable();
+
+    const req = http.expectOne('/api/v1/study-sessions/s1/answers');
+    expect(req.request.body.answers).toEqual([
+      expect.objectContaining({ position: 0, cardId: cardId(first), correct: true }),
+    ]);
+    req.flush(null);
+  });
+
+  it('keeps studying when saving fails', async () => {
+    await setup(undefined, 500);
+
+    component.rightAnswer();
+    component.wrongAnswer();
+
+    expect(component.finished()).toBe(true);
+    expect(component.missed()).toHaveLength(1);
+    expect(component['sessions'].saveFailed()).toBe(true);
+  });
+
+  it('only studies the requested cards in missed-cards mode', async () => {
+    await setup(cardId(DECK[1]));
+
+    expect(component.shuffledIndexes()).toEqual([1]);
+    expect(component.currentMd()).toEqual(DECK[1]);
   });
 });
