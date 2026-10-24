@@ -1,12 +1,37 @@
 <div class="text-app-text">
+    @if (this.sessions.saveFailed() && !this.finished()) {
+        <p class="text-sm text-app-text-muted text-center mb-2">Results not saved, you can keep studying.</p>
+    }
     @defer (on immediate) {
-        @if (this.currentCard() === this.shuffledIndexes()?.length) {
+        @if (this.finished()) {
             <div class="flex justify-start flex-col items-center gap-8">
                 <p class="text-3xl">You're done!</p>
-                <ul>
+                <ul class="text-center">
                     <li>Right: {{ this.rightCounter() }}</li>
                     <li>Wrong: {{ this.wrongCounter() }}</li>
+                    <li>Accuracy: {{ this.accuracy() | percent: '1.0-0' }}</li>
+                    <li>Time: {{ this.elapsedMs() / 1000 | number: '1.0-0' }}s</li>
+                    @if (this.previousRun(); as previous) {
+                        @if (previous.accuracy !== null) {
+                            <li class="text-app-text-muted">Last run: {{ previous.accuracy | percent: '1.0-0' }}</li>
+                        }
+                    }
                 </ul>
+                @if (this.missed().length) {
+                    <div class="flex flex-col items-center gap-3">
+                        <p class="text-xl">Missed cards</p>
+                        <ul class="list-disc text-left max-w-md">
+                            @for (answer of this.missed(); track answer.position) {
+                                <li><markdown katex [data]="answer.cardFront"></markdown></li>
+                            }
+                        </ul>
+                        <a class="font-bold bg-app-text-muted text-app-bg px-6 py-2 rounded-2xl"
+                            [routerLink]="[]" [queryParams]="{ cardIds: this.missedIds() }">Study missed cards</a>
+                    </div>
+                }
+                @if (this.sessions.saveFailed()) {
+                    <p class="text-sm text-app-text-muted">Results could not be saved.</p>
+                }
                 <a class="text-lg inline-flex items-center gap-2" routerLink="/deck-browse">
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-move-left-icon lucide-move-left"><path d="M6 8L2 12L6 16"/><path d="M2 12H22"/></svg> Back to decks
                 </a>
@@ -35,11 +60,11 @@
     }
 </div>
 <div class="text-app-bg text-lg fixed w-full flex justify-center left-0 bottom-12 gap-12 items-center bg-transparent">
-    @if (!hideBack() && this.currentCard() !== this.shuffledIndexes()?.length) {
+    @if (!hideBack() && !this.finished()) {
         <button class="font-bold bg-app-text-muted px-6 py-2 rounded-2xl" (click)="rightAnswer()">Right</button>
         <button class="font-bold bg-app-text-muted px-6 py-2 rounded-2xl" (click)="wrongAnswer()">Wrong</button>
     }
-    @if (hideBack() && this.currentCard() !== this.shuffledIndexes()?.length) {
+    @if (hideBack() && !this.finished()) {
         <button class="font-bold bg-app-text-muted px-6 py-2 rounded-2xl" (click)="flipCard()">Show back</button>
     }
 </div>
