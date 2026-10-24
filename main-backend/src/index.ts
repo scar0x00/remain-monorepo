@@ -245,7 +245,7 @@ app.get("/api/v1/stats/decks/:name", async (c) => {
 
   return c.json({
     ...deck,
-    sessions: await listDeckSessions(pg, SYSTEM_USER_ID, name),
+    recentSessions: await listDeckSessions(pg, SYSTEM_USER_ID, name),
     hardestCards: await listHardestCards(pg, SYSTEM_USER_ID, { deckName: name }),
   });
 });
