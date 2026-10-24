@@ -17,7 +17,7 @@
   // Access application that covers /mcp; fill it in from Zero Trust > Access > Applications.
   "vars": {
     "ACCESS_TEAM_DOMAIN": "https://scar0x00.cloudflareaccess.com",
-    "ACCESS_AUD": ""
+    "ACCESS_AUD": "0c24cfd80b60bd24ef9f666a5bd0348b71c81c2d42577c7683d5c4a907ffa656"
   },
   // "kv_namespaces": [
   //   {
