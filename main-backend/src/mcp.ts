@@ -62,6 +62,22 @@ async function loadCards(
   return { cards, format };
 }
 
+async function saveCards(env: Bindings, key: string, format: DeckFormat, cards: Card[]) {
+  return withStore(env, (store) =>
+    putDeck(store, key, serializeDeck(cards, format), CONTENT_TYPES[format]),
+  );
+}
+
+const CardEdit = z
+  .object({
+    index: z.number().int().min(0).describe("Zero-based position of the card, as shown by read_deck"),
+    front: CardSchema.shape.front.optional(),
+    back: CardSchema.shape.back.optional(),
+  })
+  .refine((edit) => edit.front !== undefined || edit.back !== undefined, {
+    message: "provide front, back or both",
+  });
+
 export function createServer(env: Bindings) {
   const server = new McpServer({ name: "remain", version: "1.0.0" });
 
@@ -80,14 +96,18 @@ export function createServer(env: Bindings) {
   server.registerTool(
     "read_deck",
     {
-      description: "Read every card of a deck.",
+      description: "Read every card of a deck. Each card includes its zero-based index, used by edit_cards.",
       inputSchema: z.object({ key: DeckKey }),
       annotations: { readOnlyHint: true },
     },
     async ({ key }) => {
       const loaded = await loadCards(env.DECKS, key);
       if (!("cards" in loaded)) return failure(loaded.error);
-      return text({ key, cardCount: loaded.cards.length, cards: loaded.cards });
+      return text({
+        key,
+        cardCount: loaded.cards.length,
+        cards: loaded.cards.map((card, index) => ({ index, ...card })),
+      });
     },
   );
 
@@ -106,10 +126,7 @@ export function createServer(env: Bindings) {
       const key = `${name}.${format}`;
       if (await env.DECKS.head(key)) return failure(`Deck '${key}' already exists`);
 
-      const object = await withStore(env, (store) =>
-        putDeck(store, key, serializeDeck(cards, format), CONTENT_TYPES[format]),
-      );
-      if (!object) return failure("Upload failed");
+      if (!(await saveCards(env, key, format, cards))) return failure("Upload failed");
       return text({ key, format, cardCount: cards.length });
     },
   );
@@ -127,11 +144,60 @@ export function createServer(env: Bindings) {
       if (!format) return failure(`'${key}' is not a .json or .yaml deck`);
       if (!(await env.DECKS.head(key))) return failure(`Deck '${key}' not found`);
 
-      const object = await withStore(env, (store) =>
-        putDeck(store, key, serializeDeck(cards, format), CONTENT_TYPES[format]),
-      );
-      if (!object) return failure("Upload failed");
+      if (!(await saveCards(env, key, format, cards))) return failure("Upload failed");
       return text({ key, format, cardCount: cards.length });
+    },
+  );
+
+  server.registerTool(
+    "add_cards",
+    {
+      description: "Append cards to the end of an existing deck, keeping the cards already in it.",
+      inputSchema: z.object({ key: DeckKey, cards: z.array(CardSchema).min(1) }),
+    },
+    async ({ key, cards }) => {
+      const loaded = await loadCards(env.DECKS, key);
+      if (!("cards" in loaded)) return failure(loaded.error);
+
+      const all = [...loaded.cards, ...cards];
+      if (!(await saveCards(env, key, loaded.format, all))) return failure("Upload failed");
+      return text({
+        key,
+        added: cards.length,
+        cardCount: all.length,
+        firstNewIndex: loaded.cards.length,
+      });
+    },
+  );
+
+  server.registerTool(
+    "edit_cards",
+    {
+      description:
+        "Change the front and/or back of one or more cards, addressed by the index from read_deck. Fields you omit stay as they are. All edits are applied together or none are.",
+      inputSchema: z.object({ key: DeckKey, edits: z.array(CardEdit).min(1) }),
+      annotations: { idempotentHint: true },
+    },
+    async ({ key, edits }) => {
+      const loaded = await loadCards(env.DECKS, key);
+      if (!("cards" in loaded)) return failure(loaded.error);
+
+      const seen = new Set<number>();
+      for (const { index } of edits) {
+        if (index >= loaded.cards.length) {
+          return failure(`Card index ${index} is out of range: '${key}' has ${loaded.cards.length} cards`);
+        }
+        if (seen.has(index)) return failure(`Card index ${index} appears more than once`);
+        seen.add(index);
+      }
+
+      const cards = loaded.cards.map((card, index) => {
+        const edit = edits.find((e) => e.index === index);
+        return edit ? { front: edit.front ?? card.front, back: edit.back ?? card.back } : card;
+      });
+
+      if (!(await saveCards(env, key, loaded.format, cards))) return failure("Upload failed");
+      return text({ key, edited: edits.length, cardCount: cards.length });
     },
   );
 
