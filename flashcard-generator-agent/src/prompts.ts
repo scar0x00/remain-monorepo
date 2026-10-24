@@ -9,7 +9,9 @@ Each card has a "front" (a clear question or prompt) and a "back" (a concise, ac
 - Write the cards in the same language as the source material.
 - You must put math formulas using LaTex syntax, as typical in Markdown, using \`$\` for inline formulas and \`$$\` for block formulas. 
 - Prefer block formulas unless the formula you want to put is really short and wont cause weird layout shifts within paragraphs.
-- Never put equation numbers or page numbers on a card to give context to the user about the formula, concepts, theorem or definition that they must recall, put the context information (or a short-summary of the information if it is lengthy) on the card itself`;
+- Never put equation numbers or page numbers on a card to give context to the user about the formula, concepts, theorem or definition that they must recall, put the context information (or a short-summary of the information if it is lengthy) on the card itself
+- When the source states a page, equation, theorem, definition, figure or section number for what a card covers, report it in the card's "refs" instead, with the label exactly as the source writes it and the source file name. Leave "refs" out when the source gives no number. Never guess one.
+- Give the deck a short "title", a one-sentence "description" and the "language" code of the cards.`;
 
 export type SourceDocument = { name: string; content: string };
 
@@ -86,16 +88,21 @@ export function buildRefinePrompt(options: {
   instructions?: string;
   sourceText?: string;
 }): string {
+  const cards = options.currentDeck.cards.map(({ id, front, back, meta }) =>
+    meta?.refs ? { id, front, back, refs: meta.refs } : { id, front, back },
+  );
+
   return [
     "Revise the existing flashcard deck below.",
     "Apply the requested change, keep every card the change does not affect exactly as it is, and return the complete revised deck.",
+    'Every existing card has an "id". Return it unchanged on each card you keep or revise. Leave "id" out on new cards, and never make one up. Cards you leave out are removed from the deck.',
     options.instructions
       ? `Requested change: ${options.instructions}`
       : undefined,
     options.sourceText
       ? "Use the additional source material below to add or correct cards where it is relevant."
       : undefined,
-    `<current_deck>\n${JSON.stringify(options.currentDeck, null, 2)}\n</current_deck>`,
+    `<current_deck>\n${JSON.stringify(cards, null, 2)}\n</current_deck>`,
     options.sourceText,
   ]
     .filter(Boolean)

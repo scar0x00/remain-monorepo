@@ -37,7 +37,7 @@
                 </a>
             </div>
         } @else {
-            <app-flashcard class="text-md" [front]="currentMd()?.front" [back]="currentMd()?.back" [hideBack]="hideBack()" />
+            <app-flashcard class="text-md" [front]="currentMd()?.front" [back]="currentMd()?.back" [refs]="currentMd()?.meta?.refs" [hideBack]="hideBack()" />
         }
     } @placeholder {
         <div class="grid place-items-center">

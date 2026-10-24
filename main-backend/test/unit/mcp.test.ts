@@ -65,19 +65,25 @@ describe("/mcp tools", () => {
   it("creates, lists, reads, updates and deletes a deck", async () => {
     const cards = [{ front: "hola", back: "hello" }];
 
-    const created = await callTool("create_deck", { name: "spanish", cards });
+    const created = await callTool("create_deck", { name: "spanish", cards, title: "Spanish" });
     expect(created.isError).toBeFalsy();
     expect(decks.has("spanish.json")).toBe(true);
 
     expect((await callTool("create_deck", { name: "spanish", cards })).isError).toBe(true);
 
     const listed = await callTool("list_decks", {});
-    expect(JSON.parse(listed.content[0].text)[0].deckName).toBe("spanish.json");
+    expect(JSON.parse(listed.content[0].text)[0]).toMatchObject({
+      deckName: "spanish.json",
+      title: "Spanish",
+      cardCount: 1,
+      tool: { kind: "mcp" },
+    });
 
-    const read = await callTool("read_deck", { key: "spanish.json" });
-    expect(JSON.parse(read.content[0].text).cards).toEqual([{ index: 0, ...cards[0] }]);
+    const read = JSON.parse((await callTool("read_deck", { key: "spanish.json" })).content[0].text);
+    expect(read.cards).toEqual([{ index: 0, id: expect.stringMatching(/^c_/), ...cards[0] }]);
+    expect(read.meta.title).toBe("Spanish");
 
-    const more = [...cards, { front: "adiós", back: "bye" }];
+    const more = [{ id: read.cards[0].id, ...cards[0] }, { front: "adiós", back: "bye" }];
     await callTool("update_deck", { key: "spanish.json", cards: more });
     const reread = await callTool("read_deck", { key: "spanish.json" });
     expect(JSON.parse(reread.content[0].text).cardCount).toBe(2);
@@ -90,6 +96,88 @@ describe("/mcp tools", () => {
 const stored = (key: string) =>
   JSON.parse(new TextDecoder().decode(DECKS.objects.get(key)!.bytes));
 
+describe("/mcp create_deck", () => {
+  it("writes a v2 deck with server-assigned ids, tool and timestamp", async () => {
+    const before = Date.now();
+    await callTool("create_deck", {
+      name: "d",
+      cards: [
+        { front: "a", back: "1", refs: [{ kind: "page", label: "4", source: "notes.pdf" }] },
+        { front: "b", back: "2" },
+      ],
+    });
+
+    const deck = stored("d.json");
+    expect(deck.version).toBe(2);
+    expect(deck.meta).toEqual({ author: null, tool: { kind: "mcp", generatedAt: expect.any(String) } });
+    expect(Date.parse(deck.meta.tool.generatedAt)).toBeGreaterThanOrEqual(before - 1000);
+    expect(deck.cards).toEqual([
+      { id: expect.stringMatching(/^c_[0-9a-f]{12}$/), front: "a", back: "1", meta: { refs: [{ kind: "page", label: "4", source: "notes.pdf" }] } },
+      { id: expect.stringMatching(/^c_[0-9a-f]{12}$/), front: "b", back: "2" },
+    ]);
+    expect(deck.cards[0].id).not.toBe(deck.cards[1].id);
+  });
+
+  it("does not accept ids, a tool or a timestamp from the client", async () => {
+    await callTool("create_deck", {
+      name: "d",
+      cards: [{ id: "mine", front: "a", back: "1" }],
+      tool: { kind: "manual" },
+      generatedAt: "2000-01-01T00:00:00.000Z",
+    });
+
+    const deck = stored("d.json");
+    expect(deck.cards[0].id).not.toBe("mine");
+    expect(deck.meta.tool.kind).toBe("mcp");
+    expect(deck.meta.tool.generatedAt).not.toBe("2000-01-01T00:00:00.000Z");
+  });
+});
+
+describe("/mcp update_deck", () => {
+  let ids: string[];
+
+  beforeEach(async () => {
+    await callTool("create_deck", {
+      name: "d",
+      cards: [
+        { front: "a", back: "1", refs: [{ kind: "equation", label: "2.1" }] },
+        { front: "b", back: "2" },
+      ],
+    });
+    ids = stored("d.json").cards.map((c: any) => c.id);
+  });
+
+  it("keeps the ids and refs of cards sent with their id and gives new cards new ids", async () => {
+    const tool = stored("d.json").meta.tool;
+    const res = await callTool("update_deck", {
+      key: "d.json",
+      cards: [{ id: ids[0], front: "a", back: "one" }, { front: "c", back: "3" }],
+    });
+
+    expect(res.isError).toBeFalsy();
+    const deck = stored("d.json");
+    expect(deck.meta.tool).toEqual(tool);
+    expect(deck.cards).toEqual([
+      { id: ids[0], front: "a", back: "one", meta: { refs: [{ kind: "equation", label: "2.1" }] } },
+      { id: expect.stringMatching(/^c_/), front: "c", back: "3" },
+    ]);
+    expect(deck.cards[1].id).not.toBe(ids[1]);
+  });
+
+  it("rejects ids that are not in the deck or appear twice, and writes nothing", async () => {
+    const before = stored("d.json");
+
+    expect((await callTool("update_deck", { key: "d.json", cards: [{ id: "c_madeup", front: "x", back: "y" }] })).isError).toBe(true);
+    expect(
+      (await callTool("update_deck", {
+        key: "d.json",
+        cards: [{ id: ids[0], front: "x", back: "y" }, { id: ids[0], front: "z", back: "w" }],
+      })).isError,
+    ).toBe(true);
+    expect(stored("d.json")).toEqual(before);
+  });
+});
+
 describe("/mcp add_cards", () => {
   beforeEach(async () => {
     await callTool("create_deck", { name: "d", cards: [{ front: "a", back: "1" }] });
@@ -101,9 +189,23 @@ describe("/mcp add_cards", () => {
       cards: [{ front: "b", back: "2" }, { front: "c", back: "3" }],
     });
 
-    expect(JSON.parse(res.content[0].text)).toMatchObject({ added: 2, cardCount: 3, firstNewIndex: 1 });
-    expect(stored("d.json").map((c: any) => c.front)).toEqual(["a", "b", "c"]);
+    const body = JSON.parse(res.content[0].text);
+    expect(body).toMatchObject({ added: 2, cardCount: 3, firstNewIndex: 1 });
+    expect(stored("d.json").cards.map((c: any) => c.front)).toEqual(["a", "b", "c"]);
+    expect(stored("d.json").cards.slice(1).map((c: any) => c.id)).toEqual(body.ids);
     expect(decks.get("d.json")?.size).toBe(DECKS.objects.get("d.json")!.bytes.byteLength);
+    expect(decks.get("d.json")?.cardCount).toBe(3);
+  });
+
+  it("upgrades a legacy deck, keeping deterministic ids for its existing cards", async () => {
+    await DECKS.put("old.json", JSON.stringify([{ front: "a", back: "1" }]));
+    const legacyId = JSON.parse((await callTool("read_deck", { key: "old.json" })).content[0].text).cards[0].id;
+
+    await callTool("add_cards", { key: "old.json", cards: [{ front: "b", back: "2" }] });
+
+    const deck = stored("old.json");
+    expect(deck.version).toBe(2);
+    expect(deck.cards[0]).toEqual({ id: legacyId, front: "a", back: "1" });
   });
 
   it("fails for a deck that does not exist", async () => {
@@ -119,23 +221,37 @@ describe("/mcp edit_cards", () => {
       cards: [
         { front: "a", back: "1" },
         { front: "b", back: "2" },
-        { front: "c", back: "3" },
+        { front: "c", back: "3", refs: [{ kind: "page", label: "9" }] },
       ],
     });
   });
 
-  it("edits several cards and leaves omitted fields and other cards alone", async () => {
+  const fronts = () => stored("d.json").cards.map(({ front, back, meta }: any) => ({ front, back, meta }));
+
+  it("edits several cards and leaves omitted fields, ids and other cards alone", async () => {
+    const ids = stored("d.json").cards.map((c: any) => c.id);
     const res = await callTool("edit_cards", {
       key: "d.json",
       edits: [{ index: 0, back: "one" }, { index: 2, front: "C", back: "three" }],
     });
 
     expect(res.isError).toBeFalsy();
-    expect(stored("d.json")).toEqual([
-      { front: "a", back: "one" },
-      { front: "b", back: "2" },
-      { front: "C", back: "three" },
+    expect(fronts()).toEqual([
+      { front: "a", back: "one", meta: undefined },
+      { front: "b", back: "2", meta: undefined },
+      { front: "C", back: "three", meta: { refs: [{ kind: "page", label: "9" }] } },
     ]);
+    expect(stored("d.json").cards.map((c: any) => c.id)).toEqual(ids);
+  });
+
+  it("replaces or removes refs", async () => {
+    await callTool("edit_cards", {
+      key: "d.json",
+      edits: [{ index: 0, refs: [{ kind: "theorem", label: "1.2" }] }, { index: 2, refs: [] }],
+    });
+
+    expect(fronts()[0].meta).toEqual({ refs: [{ kind: "theorem", label: "1.2" }] });
+    expect(fronts()[2].meta).toBeUndefined();
   });
 
   it("applies nothing when an index is out of range", async () => {
@@ -145,7 +261,7 @@ describe("/mcp edit_cards", () => {
     });
 
     expect(res.isError).toBe(true);
-    expect(stored("d.json")[0].back).toBe("1");
+    expect(fronts()[0].back).toBe("1");
   });
 
   it("rejects duplicate indexes", async () => {
@@ -156,9 +272,9 @@ describe("/mcp edit_cards", () => {
     expect(res.isError).toBe(true);
   });
 
-  it("rejects an edit with neither front nor back", async () => {
+  it("rejects an edit with no field to change", async () => {
     const res = await callTool("edit_cards", { key: "d.json", edits: [{ index: 0 }] });
     expect(res.isError).toBe(true);
-    expect(stored("d.json")[0]).toEqual({ front: "a", back: "1" });
+    expect(fronts()[0]).toEqual({ front: "a", back: "1", meta: undefined });
   });
 });

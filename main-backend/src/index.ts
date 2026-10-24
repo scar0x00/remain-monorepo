@@ -2,7 +2,17 @@ import { Hono, MiddlewareHandler } from "hono";
 import { Client } from "pg";
 import { createMcpHandler } from "agents/mcp/server";
 import { accessAuth } from "./lib/access-auth";
-import { SYSTEM_USER_ID, backfillCardCounts, deleteDeck, listDecks, putDeck, upsertDeckRow } from "./lib/decks";
+import { formatOfKey, readDeck } from "./lib/deck-format";
+import {
+  SYSTEM_USER_ID,
+  backfillDeckRows,
+  deleteDeck,
+  listDecks,
+  putDeck,
+  saveDeck,
+  summarizeDeckFile,
+  upsertDeckRow,
+} from "./lib/decks";
 import {
   type StatsRange,
   getActivity,
@@ -83,12 +93,25 @@ app.put("/api/v1/deck/:key", pgDbMiddleware, async (c) => {
     return c.text("Body is required", 400);
   }
 
-  const object = await putDeck(
-    { bucket: c.env.DECKS, pg: c.get("pg") },
-    key,
-    body,
-    c.req.header("content-type"),
-  );
+  const store = { bucket: c.env.DECKS, pg: c.get("pg") };
+  const format = formatOfKey(key);
+  let object;
+  if (format) {
+    // .json/.yaml files must be decks. They are stored as v2, stamped as an upload unless the file
+    // already says how it was produced.
+    const result = readDeck(new TextDecoder().decode(body), format);
+    if ("error" in result) {
+      return c.text(result.error, 400);
+    }
+    const { deck } = result;
+    deck.meta.tool ??= { kind: "upload", generatedAt: new Date().toISOString() };
+    // No accounts yet (#12), so the uploader is unknown.
+    if (deck.meta.author === undefined) deck.meta.author = null;
+    object = await saveDeck(store, key, format, deck);
+  } else {
+    // Other files (e.g. .apkg) are stored as they are.
+    object = await putDeck(store, key, body, c.req.header("content-type"));
+  }
 
   if (!object) {
     return c.text("Upload failed", 500);
@@ -114,14 +137,14 @@ app.post("/api/v1/flashcards/:deckName", pgDbMiddleware, async (c) => {
   }
 
   const text = await upstream.text();
-  const { key, cardCount } = JSON.parse(text) as { key: string; cardCount?: number };
+  const { key } = JSON.parse(text) as { key: string };
 
-  const object = await c.env.DECKS.head(key);
+  const object = await c.env.DECKS.get(key);
   if (!object) {
     return c.text(`Generated deck ${key} could not be found`, 500);
   }
 
-  await upsertDeckRow(c.get("pg"), key, object, cardCount ?? null);
+  await upsertDeckRow(c.get("pg"), key, object, summarizeDeckFile(key, await object.text()));
 
   return new Response(text, {
     status: upstream.status,
@@ -232,7 +255,7 @@ app.get("/api/v1/stats/activity", async (c) => {
 app.get("/api/v1/stats/decks", async (c) => {
   const pg = c.get("pg");
   // Best effort: a deck file that can't be read must not take the stats down with it.
-  await backfillCardCounts({ bucket: c.env.DECKS, pg }).catch((error) =>
+  await backfillDeckRows({ bucket: c.env.DECKS, pg }).catch((error) =>
     console.error("card_count backfill failed", error),
   );
   return c.json(await listDeckStatsInRange(pg, SYSTEM_USER_ID, statsRange(c)));

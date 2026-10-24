@@ -1,6 +1,6 @@
 import { parse as parseYaml, stringify as toYaml } from "yaml";
 import { z } from "zod";
-import { DeckSchema, type Deck } from "./schema";
+import { DeckFileSchema, normalizeDeck, type Deck } from "./schema";
 
 const DECK_NAME_PATTERN = /^[A-Za-z0-9][A-Za-z0-9_-]{0,99}$/;
 
@@ -79,13 +79,15 @@ export function isPdf(file: File): boolean {
   return file.type === "application/pdf" || /\.pdf$/i.test(file.name);
 }
 
-export function serializeDeck(cards: Deck, format: DeckFormat): string {
+// Always writes the v2 format.
+export function serializeDeck(deck: Deck, format: DeckFormat): string {
   if (format === "json") {
-    return `${JSON.stringify(cards, null, 2)}\n`;
+    return `${JSON.stringify(deck, null, 2)}\n`;
   }
-  return toYaml(cards);
+  return toYaml(deck);
 }
 
+// Reads a legacy array or a v2 deck and returns it as v2. Null when the text is not a valid deck.
 export function parseDeck(text: string, format: DeckFormat): Deck | null {
   let value: unknown;
   try {
@@ -94,6 +96,6 @@ export function parseDeck(text: string, format: DeckFormat): Deck | null {
     return null;
   }
 
-  const parsed = DeckSchema.safeParse(value);
-  return parsed.success ? parsed.data : null;
+  const parsed = DeckFileSchema.safeParse(value);
+  return parsed.success ? normalizeDeck(parsed.data) : null;
 }
