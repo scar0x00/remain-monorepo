@@ -34,6 +34,18 @@ describe("PUT /deck/:key", () => {
     expect(await res.text()).toBe("Put alpha.apkg successfully!");
     expect(DECKS.objects.get("alpha.apkg")?.bytes.byteLength).toBe(10);
     expect(decks.get("alpha.apkg")?.size).toBe(10);
+    expect(decks.get("alpha.apkg")?.cardCount).toBeNull();
+  });
+
+  it("records the card count of a .json or .yaml deck", async () => {
+    await request("/deck/cards.json", {
+      method: "PUT",
+      body: JSON.stringify([{ front: "Q1", back: "A1" }, { front: "Q2", back: "A2" }]),
+    });
+    await request("/deck/cards.yaml", { method: "PUT", body: "- front: Q\n  back: A\n" });
+
+    expect(decks.get("cards.json")?.cardCount).toBe(2);
+    expect(decks.get("cards.yaml")?.cardCount).toBe(1);
   });
 
   it("rejects an empty body with 400 and stores nothing", async () => {
@@ -231,6 +243,7 @@ describe("POST /flashcards/:deckName", () => {
     expect(decks.get("my-deck.json")?.etag).toBe(
       DECKS.objects.get("my-deck.json")?.httpEtag,
     );
+    expect(decks.get("my-deck.json")?.cardCount).toBe(1);
   });
 
   it("encodes the deck name when building the agent path", async () => {
