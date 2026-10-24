@@ -1,4 +1,4 @@
-import { displayDeckName, formatDuration, percent, relativeDay, studyLink, withAlpha } from './format';
+import { blend, displayDeckName, formatDuration, percent, relativeDay, studyLink, withAlpha } from './format';
 
 describe('stats format', () => {
   const now = new Date(2026, 9, 24, 12);
@@ -25,6 +25,12 @@ describe('stats format', () => {
     expect(withAlpha('#ffba08', 0.5)).toBe('rgba(255, 186, 8, 0.5)');
     expect(withAlpha('#fff', 1)).toBe('rgba(255, 255, 255, 1)');
     expect(withAlpha('red', 0.5)).toBe('red');
+  });
+
+  it('blends colours', () => {
+    expect(blend('#ffffff', '#000000', 0.5)).toBe('#808080');
+    expect(blend('#370617', '#03071e', 0.4)).toBe('#18071b');
+    expect(blend('nope', '#03071e', 0.4)).toBe('#03071e');
   });
 
   it('links only .json decks to the study page', () => {

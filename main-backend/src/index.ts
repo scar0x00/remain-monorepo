@@ -231,7 +231,10 @@ app.get("/api/v1/stats/activity", async (c) => {
 
 app.get("/api/v1/stats/decks", async (c) => {
   const pg = c.get("pg");
-  await backfillCardCounts({ bucket: c.env.DECKS, pg });
+  // Best effort: a deck file that can't be read must not take the stats down with it.
+  await backfillCardCounts({ bucket: c.env.DECKS, pg }).catch((error) =>
+    console.error("card_count backfill failed", error),
+  );
   return c.json(await listDeckStatsInRange(pg, SYSTEM_USER_ID, statsRange(c)));
 });
 

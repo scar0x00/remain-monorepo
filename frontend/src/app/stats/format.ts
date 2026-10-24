@@ -40,6 +40,19 @@ export function withAlpha(color: string, alpha: number): string {
   return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }
 
+/** `top` painted at `alpha` over `bottom`, both `#rrggbb`, as `#rrggbb`. Falls back to `bottom` otherwise. */
+export function blend(top: string, bottom: string, alpha: number): string {
+  const rgb = (c: string) => {
+    let hex = c.trim().replace(/^#/, '');
+    if (hex.length === 3) hex = [...hex].map((x) => x + x).join('');
+    return /^[0-9a-f]{6}$/i.test(hex) ? [0, 2, 4].map((i) => parseInt(hex.slice(i, i + 2), 16)) : null;
+  };
+  const t = rgb(top);
+  const b = rgb(bottom);
+  if (!t || !b) return bottom;
+  return `#${t.map((v, i) => Math.round(v * alpha + b[i]! * (1 - alpha)).toString(16).padStart(2, '0')).join('')}`;
+}
+
 /** Deck name as shown to people: the file name without a .json extension. */
 export function displayDeckName(deckName: string): string {
   return deckName.replace(/\.json$/i, '');
