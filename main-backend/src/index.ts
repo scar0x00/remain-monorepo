@@ -1,18 +1,14 @@
 import { Hono, MiddlewareHandler } from "hono";
 import { Client } from "pg";
+import { createMcpHandler } from "agents/mcp/server";
+import { accessAuth } from "./lib/access-auth";
+import { deleteDeck, listDecks, putDeck, upsertDeckRow } from "./lib/decks";
+import { createServer } from "./mcp";
 import { type Env } from "./types";
 
 const app = new Hono<Env>();
 
-const SYSTEM_USER_ID = "system";
 const FLASHCARD_AGENT_ORIGIN = "http://flashcard-agent";
-
-type DeckRow = {
-  name: string;
-  size: string;
-  createdAt: Date;
-  etag: string;
-};
 
 const pgDbMiddleware: MiddlewareHandler = async (c, next) => {
   const client = new Client({
@@ -66,15 +62,16 @@ app.put("/api/v1/deck/:key", pgDbMiddleware, async (c) => {
     return c.text("Body is required", 400);
   }
 
-  const object = await c.env.DECKS.put(key, body, {
-    httpMetadata: { contentType: c.req.header("content-type") },
-  });
+  const object = await putDeck(
+    { bucket: c.env.DECKS, pg: c.get("pg") },
+    key,
+    body,
+    c.req.header("content-type"),
+  );
 
   if (!object) {
     return c.text("Upload failed", 500);
   }
-
-  await upsertDeckRow(c.get("pg"), key, object);
 
   return c.text(`Put ${key} successfully!`);
 });
@@ -113,53 +110,26 @@ app.post("/api/v1/flashcards/:deckName", pgDbMiddleware, async (c) => {
 
 app.delete("/api/v1/deck/:key", pgDbMiddleware, async (c) => {
   const key = c.req.param("key");
-  const existing = await c.env.DECKS.head(key);
+  const deleted = await deleteDeck({ bucket: c.env.DECKS, pg: c.get("pg") }, key);
 
-  if (!existing) {
+  if (!deleted) {
     return c.text("Object Not Found", 404);
   }
-
-  await c.env.DECKS.delete(key);
-
-  const pg = c.get("pg");
-  await pg.query(`DELETE FROM public.decks WHERE name = $1`, [key]);
 
   return c.text(`Deleted ${key} successfully!`);
 });
 
-async function upsertDeckRow(
-  pg: Client,
-  key: string,
-  object: Pick<R2Object, "size" | "httpEtag">,
-) {
-  await pg.query(
-    `INSERT INTO public.decks (name, user_id, size, etag)
-     VALUES ($1, $2, $3, $4)
-     ON CONFLICT (name) DO UPDATE SET size = EXCLUDED.size, etag = EXCLUDED.etag`,
-    [key, SYSTEM_USER_ID, object.size, object.httpEtag],
-  );
-}
-
 app.get("/api/v1/decks", pgDbMiddleware, async (c) => {
-  const searchTerm = c.req.query("searchTerm") ?? "";
-  const pg = c.get("pg");
-
-  const { rows } = await pg.query<DeckRow>(
-    `SELECT name, size, "createdAt", etag
-     FROM public.decks
-     WHERE name ILIKE $1
-     ORDER BY name`,
-    [`${searchTerm}%`],
+  const decks = await listDecks(
+    { bucket: c.env.DECKS, pg: c.get("pg") },
+    c.req.query("searchTerm"),
   );
-
-  const decks = rows.map((row) => ({
-    deckName: row.name,
-    size: Number(row.size),
-    uploaded: row.createdAt,
-    etag: row.etag,
-  }));
 
   return c.json(decks);
 });
+
+app.all("/mcp", accessAuth, (c) =>
+  createMcpHandler(() => createServer(c.env))(c.req.raw, c.env, c.executionCtx as unknown as ExecutionContext),
+);
 
 export default app;
