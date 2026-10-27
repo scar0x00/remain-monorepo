@@ -67,7 +67,7 @@ const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
       <p class="text-sm text-app-text mt-1">All caught up. Every deck you study is fresh and above {{ lowPercent }}%.</p>
     }
   `,
-  host: { class: 'flex flex-col gap-2 rounded-2xl border border-app-border bg-app-card/40 p-4 sm:p-5 min-w-0' },
+  host: { class: 'flex flex-col gap-2 rounded-xl border border-app-border bg-app-card/40 p-4 sm:p-5 min-w-0' },
 })
 export class NeedsReview {
   readonly decks = input.required<DeckStats[]>();

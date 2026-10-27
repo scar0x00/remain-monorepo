@@ -25,7 +25,7 @@
                                 <li><markdown katex [data]="answer.cardFront"></markdown></li>
                             }
                         </ul>
-                        <a class="font-bold bg-app-text-muted text-app-bg px-6 py-2 rounded-2xl"
+                        <a class="font-bold bg-app-text-muted text-app-bg px-6 py-2 rounded-full"
                             [routerLink]="[]" [queryParams]="{ cardIds: this.missedIds() }">Study missed cards</a>
                     </div>
                 }
@@ -56,18 +56,15 @@
             </svg>
         </div>
     } @error {
-        <p>Error loading your deck!</p>
+        <p>We couldn't load this deck. Try again in a moment.</p>
     }
 </div>
 <div class="text-app-bg text-lg fixed w-full flex justify-center left-0 bottom-12 gap-12 items-center bg-transparent">
     @if (!hideBack() && !this.finished()) {
-        <button class="font-bold bg-app-text-muted px-6 py-2 rounded-2xl" (click)="rightAnswer()">Right</button>
-        <button class="font-bold bg-app-text-muted px-6 py-2 rounded-2xl" (click)="wrongAnswer()">Wrong</button>
+        <button class="font-bold bg-app-text-muted px-6 py-2 rounded-full" (click)="rightAnswer()">Right</button>
+        <button class="font-bold bg-app-text-muted px-6 py-2 rounded-full" (click)="wrongAnswer()">Wrong</button>
     }
     @if (hideBack() && !this.finished()) {
-        <button class="font-bold bg-app-text-muted px-6 py-2 rounded-2xl" (click)="flipCard()">Show back</button>
+        <button class="font-bold bg-app-text-muted px-6 py-2 rounded-full" (click)="flipCard()">Show back</button>
     }
 </div>
-<p class="text-white">
-
-</p>

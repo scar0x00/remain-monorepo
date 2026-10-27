@@ -1,5 +1,19 @@
 @import "tailwindcss";
 
+/*
+ * Design system
+ *
+ * Personality: a calm, friendly study companion. Warm colours, a neutral
+ * sans serif (Google Sans) and rounded but not bubbly corners.
+ *
+ * Limit the choices, so every decision is a pick from a short list:
+ *   Corners  - rounded-lg for controls (inputs, selects, chips),
+ *              rounded-xl for containers (cards, panels, menus),
+ *              rounded-full for buttons and pills. Nothing else.
+ *   Spacing  - Tailwind's 4px based scale; values used: 1 2 3 4 5 6 8 10 12 16.
+ *   Weights  - 400 for text, 600/700 for emphasis.
+ */
+
 
 /* 1. Default (DARK MODE) Variables */
 :root {

@@ -10,7 +10,7 @@
         type="button"
         (click)="startNewDeck()"
         [disabled]="pending()"
-        class="min-h-11 rounded-lg border border-app-border px-4 text-sm text-app-text hover:cursor-pointer hover:bg-app-card-hover disabled:cursor-not-allowed disabled:opacity-50"
+        class="min-h-11 rounded-full border border-app-border px-4 text-sm text-app-text hover:cursor-pointer hover:bg-app-card-hover disabled:cursor-not-allowed disabled:opacity-50"
       >
         New deck (currently {{ deck }})
       </button>
