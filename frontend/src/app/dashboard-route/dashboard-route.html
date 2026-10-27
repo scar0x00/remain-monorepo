@@ -1,7 +1,7 @@
 <div class="mx-auto flex w-full max-w-6xl flex-col gap-6 text-app-text pb-12">
     <header class="flex flex-wrap items-end justify-between gap-4">
         <div class="flex flex-col gap-1">
-            <h1 class="text-3xl font-bold">Dashboard</h1>
+            <h1 class="text-2xl font-bold">Dashboard</h1>
             <p class="text-app-text-muted">How your studying is going.</p>
         </div>
         @if (!isEmpty()) {
@@ -36,8 +36,8 @@
         <section class="flex flex-wrap gap-4">
             <div class="flex min-w-0 flex-[999_1_32rem] flex-col gap-3 rounded-xl border border-app-border bg-app-card/40 p-4 sm:p-5">
                 <div class="flex flex-wrap items-baseline justify-between gap-2">
-                    <h2 class="text-lg font-semibold">Activity</h2>
-                    <p class="text-sm text-app-text-muted">Last 12 weeks · {{ activityTotal().toLocaleString() }} cards</p>
+                    <h2 class="text-base font-semibold">Activity</h2>
+                    <p class="text-sm text-app-text-subtle">Last 12 weeks · {{ activityTotal().toLocaleString() }} cards</p>
                 </div>
                 @if (stats.activity.hasValue()) {
                     <app-activity-heatmap [days]="stats.activity.value()" [span]="activityDays" />
@@ -48,8 +48,8 @@
             </div>
             <div class="flex min-w-0 flex-[1_1_16rem] flex-col gap-3 rounded-xl border border-app-border bg-app-card/40 p-4 sm:p-5">
                 <div class="flex items-baseline justify-between gap-2">
-                    <h2 class="text-lg font-semibold">By weekday</h2>
-                    <p class="text-sm text-app-text-muted">cards, {{ stats.days() }} days</p>
+                    <h2 class="text-base font-semibold">By weekday</h2>
+                    <p class="text-sm text-app-text-subtle">cards, {{ stats.days() }} days</p>
                 </div>
                 @if (stats.overview.hasValue()) {
                     <app-weekday-chart [counts]="stats.overview.value().weekdays" />

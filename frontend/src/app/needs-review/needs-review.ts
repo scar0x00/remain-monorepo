@@ -46,7 +46,7 @@ const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
   selector: 'app-needs-review',
   imports: [RouterLink],
   template: `
-    <h2 class="text-lg font-semibold text-app-text">Needs review</h2>
+    <h2 class="text-base font-semibold text-app-text">Needs review</h2>
     <p class="text-sm text-app-text-muted">Not studied for {{ staleDays }}+ days, or success under {{ lowPercent }}%.</p>
     @if (items().length) {
       <ul class="flex flex-col gap-2 mt-1">
@@ -54,10 +54,10 @@ const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
           <li class="flex items-center justify-between gap-3 rounded-xl border border-app-border px-3 py-2.5">
             <a class="min-w-0" [routerLink]="['/dashboard/decks', item.deckName]">
               <span class="block font-semibold text-sm text-app-text truncate">{{ item.title }}</span>
-              <span class="block text-xs text-app-text-muted">{{ item.reason }}</span>
+              <span class="block text-xs text-app-text-subtle">{{ item.reason }}</span>
             </a>
             @if (item.study) {
-              <a class="shrink-0 inline-flex items-center rounded-full bg-app-text-muted text-app-bg px-4 py-2 text-sm font-bold"
+              <a class="shrink-0 inline-flex items-center rounded-full border border-app-border text-app-text hover:bg-app-card px-4 py-1.5 text-sm font-semibold"
                 [routerLink]="item.study" [attr.aria-label]="'Review ' + item.title">Review</a>
             }
           </li>

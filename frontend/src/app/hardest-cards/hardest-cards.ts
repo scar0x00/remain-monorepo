@@ -8,7 +8,7 @@ import { displayDeckName, percent, studyLink } from '../stats/format';
   selector: 'app-hardest-cards',
   imports: [RouterLink],
   template: `
-    <h2 class="text-lg font-semibold text-app-text">{{ title() }}</h2>
+    <h2 class="text-base font-semibold text-app-text">{{ title() }}</h2>
     <p class="text-sm text-app-text-muted">Lowest success, at least 3 attempts.</p>
     @if (cards().length) {
       <ol class="flex flex-col gap-2 mt-1">
@@ -19,13 +19,13 @@ import { displayDeckName, percent, studyLink } from '../stats/format';
             </span>
             <span class="min-w-0 flex-1">
               <span class="block text-sm text-app-text truncate">{{ card.cardFront || 'Card ' + card.cardId }}</span>
-              <span class="block text-xs text-app-text-muted">
+              <span class="block text-xs text-app-text-subtle">
                 @if (showDeck()) { {{ deckTitle(card.deckName) }} · }
                 {{ card.correct }} of {{ card.attempts }} right
               </span>
             </span>
             @if (study(card.deckName); as link) {
-              <a class="shrink-0 text-sm underline text-app-text" [routerLink]="link" [queryParams]="{ cardIds: card.cardId }"
+              <a class="shrink-0 text-sm font-semibold text-app-text-muted hover:text-app-text hover:underline" [routerLink]="link" [queryParams]="{ cardIds: card.cardId }"
                 [attr.aria-label]="'Practice this card: ' + (card.cardFront || card.cardId)">Practice</a>
             }
           </li>

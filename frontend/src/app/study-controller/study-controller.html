@@ -5,34 +5,34 @@
     @defer (on immediate) {
         @if (this.finished()) {
             <div class="flex justify-start flex-col items-center gap-8">
-                <p class="text-3xl">You're done!</p>
-                <ul class="text-center">
-                    <li>Right: {{ this.rightCounter() }}</li>
-                    <li>Wrong: {{ this.wrongCounter() }}</li>
-                    <li>Accuracy: {{ this.accuracy() | percent: '1.0-0' }}</li>
-                    <li>Time: {{ this.elapsedMs() / 1000 | number: '1.0-0' }}s</li>
+                <div class="flex flex-col items-center gap-1 text-center">
+                    <p class="text-sm font-semibold text-app-text-muted">You're done!</p>
+                    <p class="text-5xl font-bold tabular-nums">{{ this.accuracy() | percent: '1.0-0' }}</p>
+                    <p class="text-app-text-muted">
+                        {{ this.rightCounter() }} right · {{ this.wrongCounter() }} wrong · {{ this.elapsedMs() / 1000 | number: '1.0-0' }}s
+                    </p>
                     @if (this.previousRun(); as previous) {
                         @if (previous.accuracy !== null) {
-                            <li class="text-app-text-muted">Last run: {{ previous.accuracy | percent: '1.0-0' }}</li>
+                            <p class="text-sm text-app-text-subtle">{{ previous.accuracy | percent: '1.0-0' }} last time</p>
                         }
                     }
-                </ul>
+                </div>
                 @if (this.missed().length) {
                     <div class="flex flex-col items-center gap-3">
-                        <p class="text-xl">Missed cards</p>
+                        <h2 class="font-semibold">Missed cards</h2>
                         <ul class="list-disc text-left max-w-md">
                             @for (answer of this.missed(); track answer.position) {
                                 <li><markdown katex [data]="answer.cardFront"></markdown></li>
                             }
                         </ul>
-                        <a class="font-bold bg-app-text-muted text-app-bg px-6 py-2 rounded-full"
+                        <a class="font-bold bg-action text-app-bg px-6 py-2 rounded-full"
                             [routerLink]="[]" [queryParams]="{ cardIds: this.missedIds() }">Study missed cards</a>
                     </div>
                 }
                 @if (this.sessions.saveFailed()) {
-                    <p class="text-sm text-app-text-muted">Results could not be saved.</p>
+                    <p class="text-sm text-app-text-subtle">Results could not be saved.</p>
                 }
-                <a class="text-lg inline-flex items-center gap-2" routerLink="/deck-browse">
+                <a class="inline-flex items-center gap-2 text-app-text-muted hover:text-app-text" routerLink="/deck-browse">
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-move-left-icon lucide-move-left"><path d="M6 8L2 12L6 16"/><path d="M2 12H22"/></svg> Back to decks
                 </a>
             </div>
@@ -61,10 +61,10 @@
 </div>
 <div class="text-app-bg text-lg fixed w-full flex justify-center left-0 bottom-12 gap-12 items-center bg-transparent">
     @if (!hideBack() && !this.finished()) {
-        <button class="font-bold bg-app-text-muted px-6 py-2 rounded-full" (click)="rightAnswer()">Right</button>
-        <button class="font-bold bg-app-text-muted px-6 py-2 rounded-full" (click)="wrongAnswer()">Wrong</button>
+        <button class="font-bold bg-action px-6 py-2 rounded-full" (click)="rightAnswer()">Right</button>
+        <button class="font-bold bg-action px-6 py-2 rounded-full" (click)="wrongAnswer()">Wrong</button>
     }
     @if (hideBack() && !this.finished()) {
-        <button class="font-bold bg-app-text-muted px-6 py-2 rounded-full" (click)="flipCard()">Show back</button>
+        <button class="font-bold bg-action px-6 py-2 rounded-full" (click)="flipCard()">Show back</button>
     }
 </div>

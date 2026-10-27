@@ -23,7 +23,10 @@
   --app-card-hover: #6a040f;   /* Black Cherry */
   --app-border: #6a040f;       /* Black Cherry */
   --app-text: #ffba08;         /* Amber Flame */
-  --app-text-muted: #f48c06;   /* Dark Orange */
+  /* Text: one colour per level of hierarchy, same hue, less contrast each step */
+  --app-text-muted: #c9a066;   /* secondary: hsl(36 45% 59%) */
+  --app-text-subtle: #8f7656;  /* tertiary:  hsl(33 25% 45%) */
+  --app-action: #f48c06;       /* Dark Orange, solid primary buttons */
 
   /* Brand / Action Colors */
   --primary: #d00000;          /* Brick Ember */
@@ -41,7 +44,9 @@
     --app-card-hover: #f48c06; /* Dark Orange */
     --app-border: #e85d04;     /* Autumn Leaf */
     --app-text: #03071e;       /* Ink Black (Dark text on light) */
-    --app-text-muted: #370617; /* Night Bordeaux */
+    --app-text-muted: #5e2e11;  /* secondary: hsl(23 70% 22%) */
+    --app-text-subtle: #7f4c1c; /* tertiary:  hsl(29 64% 30%) */
+    --app-action: #370617;      /* Night Bordeaux, solid primary buttons */
 
     /* Brand / Action Colors */
     --primary: #9d0208;        /* Oxblood */
@@ -59,6 +64,8 @@
   --color-app-border: var(--app-border);
   --color-app-text: var(--app-text);
   --color-app-text-muted: var(--app-text-muted);
+  --color-app-text-subtle: var(--app-text-subtle);
+  --color-action: var(--app-action);
 
   --color-primary: var(--primary);
   --color-primary-hover: var(--primary-hover);
@@ -109,8 +116,8 @@ input[type='checkbox']::after {
   transition: transform 120ms;
 }
 input[type='checkbox']:checked {
-  background: var(--app-text-muted);
-  border-color: var(--app-text-muted);
+  background: var(--app-action);
+  border-color: var(--app-action);
 }
 input[type='checkbox']:checked::after {
   transform: translateY(-1px) rotate(45deg) scale(1);

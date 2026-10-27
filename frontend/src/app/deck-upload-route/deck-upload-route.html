@@ -7,7 +7,7 @@
       </h1>
       <input #fileInput (change)="onFileSelected($event)" class="hidden w-[60vw] bg-primary px-3 py-2 text-center hover:cursor-pointer rounded-lg text-sm"
         type="file" id="deck-file" name="deck-file" accept=".json" multiple />
-      <button type="button" class="bg-app-text-muted *:text-app-bg p-3 rounded-full border-2 border-app-text">
+      <button type="button" class="bg-action *:text-app-bg p-3 rounded-full border-2 border-app-text">
         <svg (click)="fileInput.click()" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
           fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
           class="lucide lucide-upload-icon lucide-upload">
@@ -19,7 +19,7 @@
     </label>
   </div>
   <button type="button" (click)="uploadFile()"
-    class="fixed bottom-3 left-1/2 transform-[translateX(-50%)] bg-app-text-muted text-app-bg text-2xl font-bold px-6 py-2 rounded-full border-app-text border-2 hover:cursor-pointer">Submit</button>
+    class="fixed bottom-3 left-1/2 transform-[translateX(-50%)] bg-action text-app-bg text-2xl font-bold px-6 py-2 rounded-full border-app-text border-2 hover:cursor-pointer">Submit</button>
 </form>
 
 <ul class="*:text-app-text *:py-2 *:px-2 space-y-2 *:bg-linear-to-r *:from-app-border/80 *:to-app-bg font-mono text-sm">

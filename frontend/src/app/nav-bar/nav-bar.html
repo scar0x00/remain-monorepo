@@ -1,7 +1,7 @@
 <nav class="py-3 px-4">
-    <ul class="flex justify-end items-center text-app-text gap-6 *:hover:cursor-pointer">
+    <ul class="flex justify-end items-center text-app-text-subtle gap-6 *:hover:cursor-pointer">
         <li class="mr-auto">
-            <button type="button" popovertarget="nav-menu" aria-label="Open menu" class="p-1 -m-1 cursor-pointer">
+            <button type="button" popovertarget="nav-menu" aria-label="Open menu" class="p-1 -m-1 cursor-pointer hover:text-app-text">
                 <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-menu-icon lucide-menu"><path d="M4 5h16"/><path d="M4 12h16"/><path d="M4 19h16"/></svg>
             </button>
             <div #menu id="nav-menu" popover aria-label="Menu"
@@ -9,8 +9,8 @@
                 <ul class="flex flex-col">
                     @for (item of menuItems; track item.path) {
                         <li>
-                            <a [routerLink]="item.path" routerLinkActive="bg-app-card" ariaCurrentWhenActive="page"
-                                class="flex min-h-11 items-center gap-3 rounded-xl px-3 hover:bg-app-card"
+                            <a [routerLink]="item.path" routerLinkActive="bg-app-card font-semibold !text-app-text" ariaCurrentWhenActive="page"
+                                class="flex min-h-11 items-center gap-3 rounded-xl px-3 text-app-text-muted hover:bg-app-card hover:text-app-text"
                                 (click)="closeMenu()">{{ item.label }}</a>
                         </li>
                     }
@@ -18,17 +18,17 @@
             </div>
         </li>
         <li>
-            <a routerLink="/deck-browse">
+            <a routerLink="/deck-browse" routerLinkActive="text-app-text" class="hover:text-app-text">
                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="size-7 lucide lucide-search-icon lucide-search"><path d="m21 21-4.34-4.34"/><circle cx="11" cy="11" r="8"/></svg>
             </a>
         </li>
         <li>
-            <a routerLink="/flashcard-chat">
+            <a routerLink="/flashcard-chat" routerLinkActive="text-app-text" class="hover:text-app-text">
                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="size-7 lucide lucide-sparkles-icon lucide-sparkles"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/></svg>
             </a>
         </li>
         <li>
-            <a routerLink="/deck-upload">
+            <a routerLink="/deck-upload" routerLinkActive="text-app-text" class="hover:text-app-text">
                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="size-7 lucide lucide-cloud-upload-icon lucide-cloud-upload"><path d="M12 13v8"/><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"/><path d="m8 17 4-4 4 4"/></svg>
             </a>
         </li>
