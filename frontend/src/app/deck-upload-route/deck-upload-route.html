@@ -1,12 +1,12 @@
 <section class="mx-auto flex w-full max-w-md flex-col gap-8 text-app-text">
   <form class="flex flex-col items-center gap-6 text-center" enctype="multipart/form-data">
-    <label for="deck-file" class="flex flex-col items-center gap-6">
-      <h1 class="text-2xl font-bold leading-tight tracking-tight">
-        Upload your deck(s)
-      </h1>
+    <h1 class="text-2xl font-bold leading-tight tracking-tight">
+      Upload your deck(s)
+    </h1>
+    <label for="deck-file" class="flex w-full cursor-pointer flex-col items-center gap-4 rounded-xl bg-app-card px-6 py-12 shadow-inset">
       <input #fileInput (change)="onFileSelected($event)" class="hidden w-[60vw] bg-action px-3 py-2 text-center hover:cursor-pointer rounded-lg text-sm"
         type="file" id="deck-file" name="deck-file" accept=".json" multiple />
-      <button type="button" class="bg-action *:text-app-bg p-4 rounded-full border-2 border-app-text shadow-e3">
+      <button type="button" class="bg-action *:text-app-bg p-4 rounded-full shadow-raised">
         <svg (click)="fileInput.click()" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
           fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
           class="lucide lucide-upload-icon lucide-upload">
@@ -15,10 +15,14 @@
           <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
         </svg>
       </button>
+      <span class="flex flex-col gap-1">
+        <span class="font-semibold">Choose deck files</span>
+        <span class="text-sm text-app-text-subtle">JSON, one or more at a time</span>
+      </span>
     </label>
   </form>
 
-  <ul class="*:text-app-text *:py-2 *:px-3 space-y-2 *:bg-linear-to-r *:from-app-border/80 *:to-app-bg font-mono text-sm">
+  <ul class="flex flex-col gap-2 font-mono text-sm *:flex *:items-center *:gap-3 *:rounded-lg *:border-l-4 *:border-action *:bg-app-card *:px-3 *:py-2 *:text-app-text *:shadow-e1">
     @if (files()) {
       @for (file of files(); track file.name) {
         <li>{{ file.name }}</li>
@@ -27,5 +31,5 @@
   </ul>
 
   <button type="button" (click)="uploadFile()"
-    class="self-center bg-action text-app-bg text-lg font-bold px-8 py-3 rounded-full border-app-text border-2 shadow-raised hover:cursor-pointer">Submit</button>
+    class="self-center bg-action text-app-bg text-lg font-bold px-8 py-3 rounded-full shadow-raised hover:bg-action-hover hover:cursor-pointer">Submit</button>
 </section>

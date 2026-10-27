@@ -4,7 +4,7 @@
         Sort by
         <!-- Native arrow replaced by our own so it gets the same padding as the text. -->
         <span class="relative inline-flex">
-            <select class="appearance-none bg-app-card shadow-e1 text-app-text border border-app-border rounded-lg pl-3 pr-9 py-1.5 min-h-9 cursor-pointer"
+            <select class="appearance-none bg-app-bg text-app-text border border-app-border rounded-lg pl-3 pr-9 py-1.5 min-h-9 cursor-pointer"
                 [value]="sortKey()" (change)="setSort($any($event.target).value)">
                 <option value="lastStudied">Last studied</option>
                 <option value="accuracy">Success</option>
@@ -59,7 +59,7 @@
                         <td class="px-3 py-3 text-app-text-muted whitespace-nowrap">{{ deck.last }}</td>
                         <td class="px-5 py-3 text-right">
                             @if (deck.exists && deck.study) {
-                                <a class="inline-flex items-center rounded-full border border-app-border text-app-text hover:bg-app-card px-4 py-1.5 text-sm font-semibold"
+                                <a class="inline-flex items-center rounded-full border border-app-border text-app-text hover:bg-app-card-hover px-4 py-1.5 text-sm font-semibold"
                                     [routerLink]="deck.study" [attr.aria-label]="'Study ' + deck.title">Study</a>
                             }
                         </td>
@@ -73,7 +73,7 @@
     <ul class="md:hidden flex flex-col gap-3 px-4 pb-4">
         @for (deck of rows(); track deck.deckName) {
             <li>
-                <a class="flex flex-col gap-2.5 rounded-xl border border-app-border p-4"
+                <a class="flex flex-col gap-2.5 rounded-lg bg-app-bg p-4"
                     [routerLink]="['/dashboard/decks', deck.deckName]">
                     <span class="flex justify-between gap-3">
                         <span class="font-semibold text-app-text truncate">{{ deck.title }}</span>

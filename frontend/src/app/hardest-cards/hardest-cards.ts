@@ -13,7 +13,7 @@ import { displayDeckName, percent, studyLink } from '../stats/format';
     @if (cards().length) {
       <ol class="flex flex-col gap-2 mt-4">
         @for (card of cards(); track card.deckName + card.cardId) {
-          <li class="flex items-center gap-3 rounded-xl border border-app-border px-3 py-2.5">
+          <li class="flex items-center gap-3 rounded-lg bg-app-bg px-3 py-2.5">
             <span class="shrink-0 min-w-11 text-center rounded-full px-2 py-0.5 text-xs font-semibold bg-red-100 text-red-800 dark:bg-red-500/15 dark:text-red-300">
               {{ pct(card.accuracy) }}
             </span>
@@ -35,7 +35,7 @@ import { displayDeckName, percent, studyLink } from '../stats/format';
       <p class="text-sm text-app-text mt-4">Nothing yet. A card shows up here after 3 attempts with a miss.</p>
     }
   `,
-  host: { class: 'flex flex-col gap-1 rounded-xl border border-app-border bg-app-card shadow-e1 p-4 sm:p-5 min-w-0' },
+  host: { class: 'flex flex-col gap-1 rounded-xl bg-app-card shadow-e1 p-4 sm:p-5 min-w-0' },
 })
 export class HardestCards {
   readonly cards = input.required<HardCard[]>();

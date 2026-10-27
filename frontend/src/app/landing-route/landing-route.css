@@ -21,6 +21,18 @@
   width: 16rem;
   height: 15.5rem;
   perspective: 900px;
+  isolation: isolate;
+}
+
+/* A soft, low-contrast glow behind the cards, two nearby hues (honey to a
+   deeper honey) so the hero isn't sitting on a flat background. */
+.stage::before {
+  content: '';
+  position: absolute;
+  inset: -4rem -6rem;
+  z-index: -1;
+  background: radial-gradient(closest-side, color-mix(in srgb, var(--honey-400) 22%, transparent), color-mix(in srgb, var(--honey-600) 8%, transparent) 60%, transparent);
+  pointer-events: none;
 }
 
 .card {

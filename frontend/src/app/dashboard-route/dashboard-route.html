@@ -36,7 +36,7 @@
         </section>
 
         <section class="flex flex-wrap gap-4">
-            <div class="flex min-w-0 flex-[999_1_32rem] flex-col gap-3 rounded-xl border border-app-border bg-app-card shadow-e1 p-4 sm:p-5">
+            <div class="flex min-w-0 flex-[999_1_32rem] flex-col gap-3 rounded-xl bg-app-card shadow-e1 p-4 sm:p-5">
                 <div class="flex flex-wrap items-baseline justify-between gap-2">
                     <h2 class="text-base font-semibold">Activity</h2>
                     <p class="text-sm text-app-text-subtle">Last 12 weeks · {{ activityTotal().toLocaleString() }} cards</p>
@@ -48,7 +48,7 @@
                         [error]="!!stats.activity.error()" (retry)="stats.activity.reload()" />
                 }
             </div>
-            <div class="flex min-w-0 flex-[1_1_16rem] flex-col gap-3 rounded-xl border border-app-border bg-app-card shadow-e1 p-4 sm:p-5">
+            <div class="flex min-w-0 flex-[1_1_16rem] flex-col gap-3 rounded-xl bg-app-card shadow-e1 p-4 sm:p-5">
                 <div class="flex items-baseline justify-between gap-2">
                     <h2 class="text-base font-semibold">By weekday</h2>
                     <p class="text-sm text-app-text-subtle">cards, {{ stats.days() }} days</p>
@@ -63,7 +63,7 @@
         </section>
 
         @if (stats.decks.hasValue()) {
-            <section class="overflow-hidden rounded-xl border border-app-border bg-app-card shadow-e1">
+            <section class="overflow-hidden rounded-xl bg-app-card shadow-e1">
                 <app-deck-stats-table [decks]="stats.decks.value()" [days]="stats.days()" />
             </section>
         } @else {
