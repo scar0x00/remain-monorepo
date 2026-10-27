@@ -247,6 +247,20 @@ input[type='checkbox']:disabled {
 }
 .card-prose :where(th) { font-weight: 600; text-align: left; }
 
+/* Images come from whoever wrote the deck: keep them inside the card, and use
+   a faint inner outline (not a border) so a light image doesn't bleed into a
+   light card. */
+.card-prose :where(img) {
+  display: block;
+  max-width: 100%;
+  max-height: 24rem;
+  height: auto;
+  margin: 1em auto;
+  border-radius: 0.5rem;
+  outline: 1px solid color-mix(in srgb, var(--app-text) 12%, transparent);
+  outline-offset: -1px;
+}
+
 /* The current card sits on a small stack of cards, so the study screen reads
    as a deck: two narrower layers peek out below it (negative spread), and
    the whole stack casts one soft shadow. */
