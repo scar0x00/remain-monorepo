@@ -1,7 +1,7 @@
 @if (searchTerm.deck.value()) {
     <ul class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-app-text-muted">
         @for (deck of searchTerm.deck.value(); track deck.etag) {
-            <li class="flex flex-col gap-2 rounded-xl rounded-l-none border border-app-border border-l-4 bg-app-card/40 p-5"
+            <li class="flex flex-col gap-2 rounded-xl rounded-l-none border border-app-border border-l-4 bg-app-card shadow-e1 p-5 transition-shadow hover:shadow-e3"
                 [class]="borderClasses(deck.recentAccuracy)">
                 <div class="flex flex-col gap-1.5">
                     <div class="flex items-start justify-between gap-2">
@@ -35,7 +35,7 @@
                             title="Download deck">
                             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V3"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/></svg>
                         </a>
-                        <a class="inline-flex items-center gap-1.5 rounded-full bg-action text-app-bg px-4 py-1.5 text-sm font-bold"
+                        <a class="inline-flex items-center gap-1.5 rounded-full bg-action text-app-bg px-4 py-1.5 text-sm font-bold shadow-raised hover:bg-action-hover"
                             [routerLink]="['/deck-study/', getDeckPath(deck.deckName)]"
                             [attr.aria-label]="'Study ' + getDeckPath(deck.deckName)">
                             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13.4 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7.4"/><path d="M21.378 5.626a1 1 0 1 0-3.004-3.004l-5.01 5.012a2 2 0 0 0-.506.854l-.837 2.87a.5.5 0 0 0 .62.62l2.87-.837a2 2 0 0 0 .854-.506z"/></svg>

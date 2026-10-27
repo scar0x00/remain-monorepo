@@ -12,6 +12,8 @@
  *              rounded-full for buttons and pills. Nothing else.
  *   Spacing  - Tailwind's 4px based scale; values used: 1 2 3 4 5 6 8 10 12 16.
  *   Weights  - 400 for text, 600/700 for emphasis.
+ *   Shadows  - five elevations, shadow-e1 (resting cards) to shadow-e5 (modals),
+ *              plus shadow-raised for solid buttons and shadow-inset for inputs.
  *   Type     - xs 12, sm 14, base 16, lg 18, xl 20, 2xl 24, 3xl 30, 5xl 48 (px).
  *              Tight line height and letter spacing on large headings,
  *              relaxed line height on small text and long reading text.
@@ -70,10 +72,15 @@
   --app-action: var(--honey-400);
   --app-action-hover: var(--honey-300);
   --app-accent: var(--ember-500);
+  /* Shadows are tinted with the warm grey; dark surfaces need them stronger */
+  --shadow-hsl: 24 40% 2%;
+  --shadow-strength: 2.5;
 }
 
 @media (prefers-color-scheme: light) {
   :root {
+    --shadow-hsl: 24 30% 20%;
+    --shadow-strength: 1;
     --app-bg: var(--sand-50);
     --app-card: hsl(0 0% 100%);
     --app-card-hover: var(--sand-100);
@@ -122,9 +129,37 @@
   --color-honey-800: var(--honey-800);
   --color-honey-900: var(--honey-900);
 
+  /* Elevation: each shadow has a soft, offset part (direct light) and a tight,
+     dark part (ambient occlusion) that fades as the element rises. */
+  --shadow-e1: 0 1px 3px hsl(var(--shadow-hsl) / calc(0.06 * var(--shadow-strength))),
+    0 1px 2px hsl(var(--shadow-hsl) / calc(0.08 * var(--shadow-strength)));
+  --shadow-e2: 0 4px 6px hsl(var(--shadow-hsl) / calc(0.06 * var(--shadow-strength))),
+    0 2px 4px hsl(var(--shadow-hsl) / calc(0.06 * var(--shadow-strength)));
+  --shadow-e3: 0 10px 20px hsl(var(--shadow-hsl) / calc(0.08 * var(--shadow-strength))),
+    0 3px 6px hsl(var(--shadow-hsl) / calc(0.05 * var(--shadow-strength)));
+  --shadow-e4: 0 15px 25px hsl(var(--shadow-hsl) / calc(0.1 * var(--shadow-strength))),
+    0 5px 10px hsl(var(--shadow-hsl) / calc(0.03 * var(--shadow-strength)));
+  --shadow-e5: 0 20px 40px hsl(var(--shadow-hsl) / calc(0.14 * var(--shadow-strength)));
+
   --font-sans: 'Google Sans', system-ui, -apple-system, sans-serif;
   --font-mono: 'Google Sans Code', monospace;
 }
+/* Light comes from above: a raised button shows a lighter top edge and casts
+   a small, sharp shadow below. Pressing it pushes it back into the page. */
+@utility shadow-raised {
+  box-shadow:
+    inset 0 1px 0 hsl(48 100% 96% / 0.35),
+    0 1px 2px hsl(var(--shadow-hsl) / calc(0.2 * var(--shadow-strength)));
+  &:active:not(:disabled) {
+    box-shadow: inset 0 1px 2px hsl(var(--shadow-hsl) / 0.25);
+  }
+}
+
+/* Inset wells (inputs): the lip above blocks light from the top edge. */
+@utility shadow-inset {
+  box-shadow: inset 0 2px 3px hsl(var(--shadow-hsl) / calc(0.07 * var(--shadow-strength)));
+}
+
 .thin-scrollbar {
   scrollbar-width: thin;
   scrollbar-color: var(--app-border) transparent;
@@ -211,3 +246,15 @@ input[type='checkbox']:disabled {
   background: color-mix(in srgb, currentColor 10%, transparent);
 }
 .card-prose :where(th) { font-weight: 600; text-align: left; }
+
+/* The current card sits on a small stack of cards, so the study screen reads
+   as a deck: two narrower layers peek out below it (negative spread), and
+   the whole stack casts one soft shadow. */
+.card-stack {
+  --layer-1: color-mix(in srgb, var(--app-card) 88%, var(--app-text));
+  --layer-2: color-mix(in srgb, var(--app-card) 76%, var(--app-text));
+  box-shadow:
+    0 6px 0 -3px var(--layer-1),
+    0 12px 0 -6px var(--layer-2),
+    var(--shadow-e3);
+}

@@ -3,7 +3,7 @@ import { NgxEchartsDirective } from 'ngx-echarts';
 import type { EChartsCoreOption } from 'echarts/core';
 import { ActivityDay } from '../../types/Stats';
 import { ChartTheme } from '../stats/chart-theme';
-import { blend, isoDay, withAlpha } from '../stats/format';
+import { isoDay, withAlpha } from '../stats/format';
 import { CHART_INIT_OPTS } from '../stats/provide-echarts';
 
 const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -66,8 +66,8 @@ export class ActivityHeatmap {
         right: 2,
         bottom: 2,
         splitLine: { show: false },
-        // Borders in the card's own colour (bg-app-card/40 over the page) read as gaps between cells.
-        itemStyle: { color: withAlpha(c.text, 0.08), borderColor: blend(c.card, c.bg, 0.4), borderWidth: 3 },
+        // Borders in the card's own colour read as gaps between cells.
+        itemStyle: { color: withAlpha(c.text, 0.08), borderColor: c.card, borderWidth: 3 },
         dayLabel: { firstDay: 1, nameMap: DAY_NAMES, color: c.muted, fontSize: 11 },
         monthLabel: { color: c.muted, fontSize: 11 },
         yearLabel: { show: false },
@@ -77,7 +77,7 @@ export class ActivityHeatmap {
           type: 'heatmap',
           coordinateSystem: 'calendar',
           data: days.map((d) => [d.date, d.answered, d.correct]),
-          itemStyle: { borderColor: blend(c.card, c.bg, 0.4), borderWidth: 3 },
+          itemStyle: { borderColor: c.card, borderWidth: 3 },
         },
       ],
     };

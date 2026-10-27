@@ -4,7 +4,7 @@
         Sort by
         <!-- Native arrow replaced by our own so it gets the same padding as the text. -->
         <span class="relative inline-flex">
-            <select class="appearance-none bg-app-bg text-app-text border border-app-border rounded-lg pl-3 pr-9 py-1.5 min-h-9 cursor-pointer"
+            <select class="appearance-none bg-app-card shadow-e1 text-app-text border border-app-border rounded-lg pl-3 pr-9 py-1.5 min-h-9 cursor-pointer"
                 [value]="sortKey()" (change)="setSort($any($event.target).value)">
                 <option value="lastStudied">Last studied</option>
                 <option value="accuracy">Success</option>

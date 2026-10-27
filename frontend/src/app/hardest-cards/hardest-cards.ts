@@ -35,7 +35,7 @@ import { displayDeckName, percent, studyLink } from '../stats/format';
       <p class="text-sm text-app-text mt-4">Nothing yet. A card shows up here after 3 attempts with a miss.</p>
     }
   `,
-  host: { class: 'flex flex-col gap-1 rounded-xl border border-app-border bg-app-card/40 p-4 sm:p-5 min-w-0' },
+  host: { class: 'flex flex-col gap-1 rounded-xl border border-app-border bg-app-card shadow-e1 p-4 sm:p-5 min-w-0' },
 })
 export class HardestCards {
   readonly cards = input.required<HardCard[]>();

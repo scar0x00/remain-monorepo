@@ -1,5 +1,6 @@
 .cta {
   border-width: 2px;
+  box-shadow: var(--shadow-e2);
   border-radius: 9999px;
   padding: 0.75rem 1.5rem;
   font-size: 1.25rem;
@@ -10,6 +11,7 @@
 .cta:hover,
 .cta:focus-visible {
   transform: translateY(-2px) rotate(-1deg);
+  box-shadow: var(--shadow-e3);
 }
 
 .stage {
@@ -29,7 +31,7 @@
   height: var(--card-h);
   border: 2px solid var(--app-action);
   border-radius: 1rem;
-  box-shadow: 0 0.5rem 1.5rem rgb(0 0 0 / 0.35);
+  box-shadow: var(--shadow-e3);
 }
 
 .card-back-left {
@@ -65,7 +67,7 @@
   border: 2px solid var(--app-action);
   border-radius: 1rem;
   backface-visibility: hidden;
-  box-shadow: 0 0.5rem 1.5rem rgb(0 0 0 / 0.35);
+  box-shadow: var(--shadow-e4);
 }
 
 .face-question {
