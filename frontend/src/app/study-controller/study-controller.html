@@ -1,10 +1,10 @@
-<div class="text-app-text">
+<div class="mx-auto w-full max-w-2xl pb-28 text-app-text">
     @if (this.sessions.saveFailed() && !this.finished()) {
         <p class="text-sm text-app-text-muted text-center mb-2">Results not saved, you can keep studying.</p>
     }
     @defer (on immediate) {
         @if (this.finished()) {
-            <div class="flex justify-start flex-col items-center gap-8">
+            <div class="flex justify-start flex-col items-center gap-10 pt-6">
                 <div class="flex flex-col items-center gap-1 text-center">
                     <p class="text-sm font-semibold text-app-text-muted">You're done!</p>
                     <p class="text-5xl font-bold tabular-nums">{{ this.accuracy() | percent: '1.0-0' }}</p>
@@ -18,7 +18,7 @@
                     }
                 </div>
                 @if (this.missed().length) {
-                    <div class="flex flex-col items-center gap-3">
+                    <div class="flex w-full flex-col items-center gap-4">
                         <h2 class="font-semibold">Missed cards</h2>
                         <ul class="list-disc text-left max-w-md">
                             @for (answer of this.missed(); track answer.position) {
@@ -59,12 +59,12 @@
         <p>We couldn't load this deck. Try again in a moment.</p>
     }
 </div>
-<div class="text-app-bg text-lg fixed w-full flex justify-center left-0 bottom-12 gap-12 items-center bg-transparent">
+<div class="text-app-bg text-lg fixed inset-x-0 bottom-8 mx-auto flex w-full max-w-md items-center justify-center gap-4 px-4 bg-transparent">
     @if (!hideBack() && !this.finished()) {
-        <button class="font-bold bg-action px-6 py-2 rounded-full" (click)="rightAnswer()">Right</button>
-        <button class="font-bold bg-action px-6 py-2 rounded-full" (click)="wrongAnswer()">Wrong</button>
+        <button class="flex-1 font-bold bg-action px-6 py-3 rounded-full" (click)="rightAnswer()">Right</button>
+        <button class="flex-1 font-bold bg-action px-6 py-3 rounded-full" (click)="wrongAnswer()">Wrong</button>
     }
     @if (hideBack() && !this.finished()) {
-        <button class="font-bold bg-action px-6 py-2 rounded-full" (click)="flipCard()">Show back</button>
+        <button class="flex-1 font-bold bg-action px-6 py-3 rounded-full" (click)="flipCard()">Show back</button>
     }
 </div>

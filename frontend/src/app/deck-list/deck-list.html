@@ -1,29 +1,31 @@
 @if (searchTerm.deck.value()) {
-    <ul class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-app-text-muted">
+    <ul class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-app-text-muted">
         @for (deck of searchTerm.deck.value(); track deck.etag) {
-            <li class="flex flex-col gap-3 rounded-xl rounded-l-none border border-app-border border-l-4 bg-app-card/40 p-4"
+            <li class="flex flex-col gap-2 rounded-xl rounded-l-none border border-app-border border-l-4 bg-app-card/40 p-5"
                 [class]="borderClasses(deck.recentAccuracy)">
-                <div class="flex items-start justify-between gap-2">
-                    <a class="text-base sm:text-lg font-medium wrap-break-word text-app-text hover:underline"
-                        [routerLink]="['/deck-study/', getDeckPath(deck.deckName)]">
-                        {{ deck.deckName.replace(/\.json$/i, "") }}
-                    </a>
-                </div>
-                <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
-                    @if (deck.studyCount) {
-                        <span>Studied {{ deck.studyCount }}×</span>
-                        @if (deck.recentAccuracy != null) {
-                            <span class="rounded-full px-2 py-0.5 font-medium"
-                                [class]="scoreClasses(deck.recentAccuracy)"
-                                title="Average of your last 3 sessions">
-                                {{ deck.recentAccuracy | percent: '1.0-0' }} recently
-                            </span>
+                <div class="flex flex-col gap-1.5">
+                    <div class="flex items-start justify-between gap-2">
+                        <a class="text-base sm:text-lg font-medium wrap-break-word text-app-text hover:underline"
+                            [routerLink]="['/deck-study/', getDeckPath(deck.deckName)]">
+                            {{ deck.deckName.replace(/\.json$/i, "") }}
+                        </a>
+                    </div>
+                    <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
+                        @if (deck.studyCount) {
+                            <span>Studied {{ deck.studyCount }}×</span>
+                            @if (deck.recentAccuracy != null) {
+                                <span class="rounded-full px-2 py-0.5 font-medium"
+                                    [class]="scoreClasses(deck.recentAccuracy)"
+                                    title="Average of your last 3 sessions">
+                                    {{ deck.recentAccuracy | percent: '1.0-0' }} recently
+                                </span>
+                            }
+                        } @else {
+                            <span class="text-app-text-subtle">Not studied yet</span>
                         }
-                    } @else {
-                        <span class="text-app-text-subtle">Not studied yet</span>
-                    }
+                    </div>
                 </div>
-                <div class="flex items-center justify-between gap-2">
+                <div class="mt-2 flex items-center justify-between gap-2">
                     <span class="text-xs font-mono text-nowrap text-app-text-subtle">{{ convertToDate(deck.uploaded) | date:'dd-MM-yyyy' }}</span>
                     <div class="flex items-center gap-2">
                         <a class="p-1.5 rounded-full text-app-text-subtle hover:text-app-text hover:bg-app-card-hover"

@@ -11,7 +11,7 @@ import { displayDeckName, percent, studyLink } from '../stats/format';
     <h2 class="text-base font-semibold text-app-text">{{ title() }}</h2>
     <p class="text-sm text-app-text-muted">Lowest success, at least 3 attempts.</p>
     @if (cards().length) {
-      <ol class="flex flex-col gap-2 mt-1">
+      <ol class="flex flex-col gap-2 mt-4">
         @for (card of cards(); track card.deckName + card.cardId) {
           <li class="flex items-center gap-3 rounded-xl border border-app-border px-3 py-2.5">
             <span class="shrink-0 min-w-11 text-center rounded-full px-2 py-0.5 text-xs font-semibold bg-red-900/15 text-red-900 dark:bg-red-500/15 dark:text-red-400">
@@ -32,10 +32,10 @@ import { displayDeckName, percent, studyLink } from '../stats/format';
         }
       </ol>
     } @else {
-      <p class="text-sm text-app-text mt-1">Nothing yet. A card shows up here after 3 attempts with a miss.</p>
+      <p class="text-sm text-app-text mt-4">Nothing yet. A card shows up here after 3 attempts with a miss.</p>
     }
   `,
-  host: { class: 'flex flex-col gap-2 rounded-xl border border-app-border bg-app-card/40 p-4 sm:p-5 min-w-0' },
+  host: { class: 'flex flex-col gap-1 rounded-xl border border-app-border bg-app-card/40 p-4 sm:p-5 min-w-0' },
 })
 export class HardestCards {
   readonly cards = input.required<HardCard[]>();

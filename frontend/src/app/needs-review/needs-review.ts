@@ -49,7 +49,7 @@ const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
     <h2 class="text-base font-semibold text-app-text">Needs review</h2>
     <p class="text-sm text-app-text-muted">Not studied for {{ staleDays }}+ days, or success under {{ lowPercent }}%.</p>
     @if (items().length) {
-      <ul class="flex flex-col gap-2 mt-1">
+      <ul class="flex flex-col gap-2 mt-4">
         @for (item of items(); track item.deckName) {
           <li class="flex items-center justify-between gap-3 rounded-xl border border-app-border px-3 py-2.5">
             <a class="min-w-0" [routerLink]="['/dashboard/decks', item.deckName]">
@@ -64,10 +64,10 @@ const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
         }
       </ul>
     } @else {
-      <p class="text-sm text-app-text mt-1">All caught up. Every deck you study is fresh and above {{ lowPercent }}%.</p>
+      <p class="text-sm text-app-text mt-4">All caught up. Every deck you study is fresh and above {{ lowPercent }}%.</p>
     }
   `,
-  host: { class: 'flex flex-col gap-2 rounded-xl border border-app-border bg-app-card/40 p-4 sm:p-5 min-w-0' },
+  host: { class: 'flex flex-col gap-1 rounded-xl border border-app-border bg-app-card/40 p-4 sm:p-5 min-w-0' },
 })
 export class NeedsReview {
   readonly decks = input.required<DeckStats[]>();
