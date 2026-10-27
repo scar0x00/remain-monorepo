@@ -56,7 +56,7 @@ export class ActivityHeatmap {
         min: 0,
         max,
         dimension: 1,
-        inRange: { color: [withAlpha(c.text, 0.3), c.text] },
+        inRange: { color: [withAlpha(c.accent, 0.3), c.accent] },
       },
       calendar: {
         range: [isoDay(start), isoDay(end)],

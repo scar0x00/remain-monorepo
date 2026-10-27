@@ -49,15 +49,15 @@ export class DeckStatsTable {
 
   // Same colours as the score hints in deck-list.
   protected barClass(level: string) {
-    if (level === 'good') return 'bg-green-900 dark:bg-green-500';
-    if (level === 'ok') return 'bg-amber-900 dark:bg-amber-500';
-    return 'bg-red-900 dark:bg-red-500';
+    if (level === 'good') return 'bg-green-600 dark:bg-green-500';
+    if (level === 'ok') return 'bg-amber-500';
+    return 'bg-red-600 dark:bg-red-500';
   }
 
   protected textClass(level: string) {
-    if (level === 'good') return 'text-green-900 dark:text-green-400';
-    if (level === 'ok') return 'text-amber-900 dark:text-amber-400';
-    if (level === 'low') return 'text-red-900 dark:text-red-400';
+    if (level === 'good') return 'text-green-700 dark:text-green-400';
+    if (level === 'ok') return 'text-amber-700 dark:text-amber-400';
+    if (level === 'low') return 'text-red-700 dark:text-red-400';
     return 'text-app-text-muted';
   }
 }

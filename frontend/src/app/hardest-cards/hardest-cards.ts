@@ -14,7 +14,7 @@ import { displayDeckName, percent, studyLink } from '../stats/format';
       <ol class="flex flex-col gap-2 mt-4">
         @for (card of cards(); track card.deckName + card.cardId) {
           <li class="flex items-center gap-3 rounded-xl border border-app-border px-3 py-2.5">
-            <span class="shrink-0 min-w-11 text-center rounded-full px-2 py-0.5 text-xs font-semibold bg-red-900/15 text-red-900 dark:bg-red-500/15 dark:text-red-400">
+            <span class="shrink-0 min-w-11 text-center rounded-full px-2 py-0.5 text-xs font-semibold bg-red-100 text-red-800 dark:bg-red-500/15 dark:text-red-300">
               {{ pct(card.accuracy) }}
             </span>
             <span class="min-w-0 flex-1">

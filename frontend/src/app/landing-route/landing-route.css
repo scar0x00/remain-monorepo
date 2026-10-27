@@ -27,7 +27,7 @@
   top: 1rem;
   width: var(--card-w);
   height: var(--card-h);
-  border: 2px solid var(--app-text);
+  border: 2px solid var(--app-action);
   border-radius: 1rem;
   box-shadow: 0 0.5rem 1.5rem rgb(0 0 0 / 0.35);
 }
@@ -62,20 +62,20 @@
   align-items: center;
   justify-content: center;
   gap: 1rem;
-  border: 2px solid var(--app-text);
+  border: 2px solid var(--app-action);
   border-radius: 1rem;
   backface-visibility: hidden;
   box-shadow: 0 0.5rem 1.5rem rgb(0 0 0 / 0.35);
 }
 
 .face-question {
-  background: var(--app-text);
+  background: var(--app-action);
   color: var(--app-bg);
 }
 
 .face-answer {
   background: var(--app-card);
-  color: var(--app-text);
+  color: var(--app-action);
   transform: rotateY(180deg);
 }
 
@@ -126,7 +126,7 @@
   width: 0.7rem;
   height: 1rem;
   border-radius: 0.2rem;
-  background: var(--app-text);
+  background: var(--app-action);
   opacity: 0.8;
   animation: twinkle 3s ease-in-out infinite;
 }

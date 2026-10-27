@@ -6,14 +6,17 @@ export interface ChartColors {
   border: string;
   text: string;
   muted: string;
+  /** Data colour (bars, lines, filled heatmap cells). */
+  accent: string;
 }
 
 const FALLBACK: ChartColors = {
-  bg: '#03071e',
-  card: '#370617',
-  border: '#6a040f',
-  text: '#ffba08',
-  muted: '#f48c06',
+  bg: '#130e0b',
+  card: '#1f1914',
+  border: '#30271f',
+  text: '#faf7f2',
+  muted: '#c2b6a8',
+  accent: '#fbb829',
 };
 
 /**
@@ -34,16 +37,32 @@ export class ChartTheme {
 }
 
 function readColors(): ChartColors {
-  if (typeof getComputedStyle === 'undefined') return FALLBACK;
-  const style = getComputedStyle(document.documentElement);
-  const read = (name: string, fallback: string) => style.getPropertyValue(name).trim() || fallback;
-  return {
+  if (typeof getComputedStyle === 'undefined' || typeof document === 'undefined') return FALLBACK;
+  // The tokens are written in HSL. Resolve each through a probe element so ECharts and the
+  // hex helpers in format.ts get plain #rrggbb values.
+  const probe = document.createElement('span');
+  probe.style.display = 'none';
+  document.body.appendChild(probe);
+  const read = (name: string, fallback: string) => {
+    probe.style.color = '';
+    probe.style.color = `var(${name})`;
+    return toHex(getComputedStyle(probe).color) ?? fallback;
+  };
+  const colors = {
     bg: read('--app-bg', FALLBACK.bg),
     card: read('--app-card', FALLBACK.card),
     border: read('--app-border', FALLBACK.border),
     text: read('--app-text', FALLBACK.text),
     muted: read('--app-text-muted', FALLBACK.muted),
+    accent: read('--app-action', FALLBACK.accent),
   };
+  probe.remove();
+  return colors;
+}
+
+function toHex(rgb: string): string | null {
+  const m = rgb.match(/rgba?\(\s*(\d+)[\s,]+(\d+)[\s,]+(\d+)/);
+  return m ? `#${m.slice(1, 4).map((v) => Number(v).toString(16).padStart(2, '0')).join('')}` : null;
 }
 
 /** Same steps as the colour hints in deck-list: 80% and 50%. */

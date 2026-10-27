@@ -61,7 +61,7 @@ export class WeekdayChart {
           name: 'Cards',
           data: this.counts(),
           barMaxWidth: 28,
-          itemStyle: { color: c.text, borderRadius: [6, 6, 2, 2] },
+          itemStyle: { color: c.accent, borderRadius: [6, 6, 2, 2] },
         },
       ],
     };
