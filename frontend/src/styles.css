@@ -12,6 +12,9 @@
  *              rounded-full for buttons and pills. Nothing else.
  *   Spacing  - Tailwind's 4px based scale; values used: 1 2 3 4 5 6 8 10 12 16.
  *   Weights  - 400 for text, 600/700 for emphasis.
+ *   Type     - xs 12, sm 14, base 16, lg 18, xl 20, 2xl 24, 3xl 30, 5xl 48 (px).
+ *              Tight line height and letter spacing on large headings,
+ *              relaxed line height on small text and long reading text.
  */
 
 
@@ -130,3 +133,34 @@ input[type='checkbox']:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
+
+/* Markdown on flashcards: a readable measure and a small heading scale.
+   Card headings act like titles, so they stay close to the body size. */
+.card-prose {
+  display: block;
+  max-width: 65ch;
+  line-height: 1.65;
+}
+.card-prose :where(h1, h2, h3, h4) {
+  font-weight: 700;
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+  margin: 1.5em 0 0.5em;
+}
+.card-prose :where(h1) { font-size: 1.5rem; }
+.card-prose :where(h2) { font-size: 1.25rem; }
+.card-prose :where(h3, h4) { font-size: 1.125rem; }
+.card-prose > :first-child,
+.card-prose > :first-child :where(h1, h2, h3, h4) { margin-top: 0; }
+.card-prose :where(p, ul, ol, pre, table, blockquote) { margin: 0.75em 0; }
+.card-prose :where(ul) { list-style: disc; padding-left: 1.25em; }
+.card-prose :where(ol) { list-style: decimal; padding-left: 1.25em; }
+.card-prose :where(li + li) { margin-top: 0.25em; }
+.card-prose :where(strong) { font-weight: 700; }
+.card-prose :where(:not(pre) > code) {
+  font-size: 0.875em;
+  padding: 0.125em 0.375em;
+  border-radius: 0.375rem;
+  background: color-mix(in srgb, currentColor 10%, transparent);
+}
+.card-prose :where(th) { font-weight: 600; text-align: left; }

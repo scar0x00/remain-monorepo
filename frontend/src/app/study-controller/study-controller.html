@@ -6,8 +6,8 @@
         @if (this.finished()) {
             <div class="flex justify-start flex-col items-center gap-10 pt-6">
                 <div class="flex flex-col items-center gap-1 text-center">
-                    <p class="text-sm font-semibold text-app-text-muted">You're done!</p>
-                    <p class="text-5xl font-bold tabular-nums">{{ this.accuracy() | percent: '1.0-0' }}</p>
+                    <p class="text-xs font-semibold uppercase tracking-widest text-app-text-muted">You're done!</p>
+                    <p class="text-5xl font-bold leading-none tracking-tight tabular-nums">{{ this.accuracy() | percent: '1.0-0' }}</p>
                     <p class="text-app-text-muted">
                         {{ this.rightCounter() }} right · {{ this.wrongCounter() }} wrong · {{ this.elapsedMs() / 1000 | number: '1.0-0' }}s
                     </p>
@@ -20,7 +20,7 @@
                 @if (this.missed().length) {
                     <div class="flex w-full flex-col items-center gap-4">
                         <h2 class="font-semibold">Missed cards</h2>
-                        <ul class="list-disc text-left max-w-md">
+                        <ul class="list-disc pl-5 text-left max-w-md leading-relaxed">
                             @for (answer of this.missed(); track answer.position) {
                                 <li><markdown katex [data]="answer.cardFront"></markdown></li>
                             }
@@ -37,7 +37,7 @@
                 </a>
             </div>
         } @else {
-            <app-flashcard class="text-md" [front]="currentMd()?.front" [back]="currentMd()?.back" [hideBack]="hideBack()" />
+            <app-flashcard class="block text-base sm:text-lg" [front]="currentMd()?.front" [back]="currentMd()?.back" [hideBack]="hideBack()" />
         }
     } @placeholder {
         <div class="grid place-items-center">

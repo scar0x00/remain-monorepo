@@ -5,7 +5,7 @@
                 [class]="borderClasses(deck.recentAccuracy)">
                 <div class="flex flex-col gap-1.5">
                     <div class="flex items-start justify-between gap-2">
-                        <a class="text-base sm:text-lg font-medium wrap-break-word text-app-text hover:underline"
+                        <a class="text-lg font-semibold leading-snug wrap-break-word text-app-text hover:underline"
                             [routerLink]="['/deck-study/', getDeckPath(deck.deckName)]">
                             {{ deck.deckName.replace(/\.json$/i, "") }}
                         </a>
@@ -14,7 +14,7 @@
                         @if (deck.studyCount) {
                             <span>Studied {{ deck.studyCount }}×</span>
                             @if (deck.recentAccuracy != null) {
-                                <span class="rounded-full px-2 py-0.5 font-medium"
+                                <span class="rounded-full px-2 py-0.5 font-semibold"
                                     [class]="scoreClasses(deck.recentAccuracy)"
                                     title="Average of your last 3 sessions">
                                     {{ deck.recentAccuracy | percent: '1.0-0' }} recently
