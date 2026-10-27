@@ -42,10 +42,10 @@
         </section>
 
         <section class="flex flex-wrap gap-4">
-            <div class="flex flex-[1_1_22rem] flex-col gap-3">
+            <div class="flex min-w-0 flex-[1_1_22rem] flex-col gap-3">
                 <app-hardest-cards [cards]="d.hardestCards" [showDeck]="false" title="Hardest cards in this deck" />
                 @if (study() && d.exists && d.hardestCards.length > 1) {
-                    <a class="self-start text-sm underline" [routerLink]="study()" [queryParams]="{ cardIds: practiceIds() }">
+                    <a class="self-start text-sm font-semibold text-app-text-muted hover:text-app-text hover:underline" [routerLink]="study()" [queryParams]="{ cardIds: practiceIds() }">
                         Practice all {{ d.hardestCards.length }} hardest cards
                     </a>
                 }
