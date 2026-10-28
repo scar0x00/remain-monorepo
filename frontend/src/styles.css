@@ -260,15 +260,3 @@ input[type='checkbox']:disabled {
   outline: 1px solid color-mix(in srgb, var(--app-text) 12%, transparent);
   outline-offset: -1px;
 }
-
-/* The current card sits on a small stack of cards, so the study screen reads
-   as a deck: two narrower layers peek out below it (negative spread), and
-   the whole stack casts one soft shadow. */
-.card-stack {
-  --layer-1: color-mix(in srgb, var(--app-card) 88%, var(--app-text));
-  --layer-2: color-mix(in srgb, var(--app-card) 76%, var(--app-text));
-  box-shadow:
-    0 6px 0 -3px var(--layer-1),
-    0 12px 0 -6px var(--layer-2),
-    var(--shadow-e3);
-}

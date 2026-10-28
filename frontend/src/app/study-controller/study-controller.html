@@ -40,7 +40,7 @@
                 </a>
             </div>
         } @else {
-            <app-flashcard class="card-stack block rounded-xl bg-app-card p-6 sm:p-10 text-base sm:text-lg" [front]="currentMd()?.front" [back]="currentMd()?.back" [hideBack]="hideBack()" />
+            <app-flashcard class="block min-h-[calc(100dvh-17rem)] rounded-xl bg-app-card p-6 shadow-e3 sm:min-h-[calc(100dvh-18rem)] sm:p-10 text-base sm:text-lg" [front]="currentMd()?.front" [back]="currentMd()?.back" [hideBack]="hideBack()" />
         }
     } @placeholder {
         <div class="grid place-items-center">
