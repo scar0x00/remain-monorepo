@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, mock } from "bun:test";
 import { FakeClient, decks, resetDecks } from "../helpers/fake-pg";
 import { createFakeR2, type FakeR2 } from "../helpers/fake-r2";
+import { legacyCardId } from "../../src/lib/deck-format";
 
 mock.module("pg", () => ({ Client: FakeClient }));
 
@@ -123,6 +124,148 @@ describe("PUT /deck/:key", () => {
     expect(res.status).toBe(200);
     expect(decks.size).toBe(1);
     expect(decks.get("alpha.apkg")?.size).toBe(21);
+  });
+});
+
+describe("PUT /deck/:key with If-Match (editor saves)", () => {
+  const stored = {
+    version: 2,
+    meta: {
+      title: "Signals",
+      author: { id: "u1", name: "Ada" },
+      tool: { kind: "agent", model: "m", generatedAt: "2026-01-01T00:00:00.000Z" },
+      sources: [{ name: "notes.pdf" }],
+    },
+    cards: [{ id: "c_1", front: "Q", back: "A" }],
+  };
+
+  const seed = async (key = "signals.json", body: unknown = stored) => {
+    const res = await request(`/deck/${key}`, { method: "PUT", body: JSON.stringify(body) });
+    return res.headers.get("etag")!;
+  };
+
+  const save = (key: string, etag: string, deck: unknown) =>
+    request(`/deck/${key}`, {
+      method: "PUT",
+      headers: { "content-type": "application/json", "if-match": etag },
+      body: JSON.stringify(deck),
+    });
+
+  it("saves when the etag matches and returns the new etag", async () => {
+    const etag = await seed();
+    const edited = { ...stored, cards: [{ id: "c_1", front: "Q edited", back: "A" }, { id: "c_2", front: "Q2", back: "A2" }] };
+
+    const res = await save("signals.json", etag, edited);
+
+    expect(res.status).toBe(200);
+    const newEtag = res.headers.get("etag");
+    expect(newEtag).toBe(DECKS.objects.get("signals.json")!.httpEtag);
+    expect(newEtag).not.toBe(etag);
+    expect(decks.get("signals.json")).toMatchObject({ etag: newEtag, cardCount: 2 });
+    expect(JSON.parse(await (await request("/deck/signals.json")).text())).toEqual(edited);
+  });
+
+  it("answers 412 and stores nothing when the deck changed since it was loaded", async () => {
+    const etag = await seed();
+    await seed(); // e.g. the agent refined it meanwhile
+    const current = DECKS.objects.get("signals.json")!.bytes;
+
+    const res = await save("signals.json", etag, { ...stored, cards: [{ id: "c_1", front: "Mine", back: "A" }] });
+
+    expect(res.status).toBe(412);
+    expect(await res.text()).toContain("changed since it was loaded");
+    expect(DECKS.objects.get("signals.json")!.bytes).toBe(current);
+  });
+
+  it("answers 412 when the deck no longer exists", async () => {
+    const res = await save("gone.json", '"some-etag"', stored);
+
+    expect(res.status).toBe(412);
+    expect(DECKS.objects.has("gone.json")).toBe(false);
+  });
+
+  it("answers 412 when R2 rejects the conditional write", async () => {
+    const etag = await seed();
+    const put = DECKS.put.bind(DECKS);
+    // Another write lands between the editor's check and its put.
+    DECKS.put = async (key, value, options) => {
+      DECKS.put = put;
+      await put(key, "[]");
+      return put(key, value, options);
+    };
+
+    const res = await save("signals.json", etag, stored);
+
+    expect(res.status).toBe(412);
+    expect(await (await request("/deck/signals.json")).text()).toBe("[]");
+  });
+
+  it("keeps the stored tool, author and sources whatever the editor sends", async () => {
+    const etag = await seed();
+    const { tool: _tool, sources: _sources, ...meta } = stored.meta;
+
+    await save("signals.json", etag, {
+      ...stored,
+      meta: { ...meta, title: "Renamed", author: { id: "x", name: "Mallory" } },
+    });
+
+    const deck = JSON.parse(await (await request("/deck/signals.json")).text());
+    expect(deck.meta).toEqual({ ...stored.meta, title: "Renamed" });
+  });
+
+  it("upgrades a legacy deck without stamping it as an upload and keeps its card ids", async () => {
+    await DECKS.put("old.json", JSON.stringify([{ front: "Q", back: "A" }]));
+    const etag = DECKS.objects.get("old.json")!.httpEtag;
+    // The editor loads it with `normalizeDeck`, so it sends the id study answers already use.
+    const id = legacyCardId({ front: "Q", back: "A" });
+
+    const res = await save("old.json", etag, { version: 2, meta: { title: "Old" }, cards: [{ id, front: "Q edited", back: "A" }] });
+
+    expect(res.status).toBe(200);
+    expect(JSON.parse(await (await request("/deck/old.json")).text())).toEqual({
+      version: 2,
+      meta: { title: "Old" },
+      cards: [{ id, front: "Q edited", back: "A" }],
+    });
+  });
+
+  it("writes a JSON body to a .yaml deck as YAML", async () => {
+    await request("/deck/cards.yaml", { method: "PUT", body: "- front: Q\n  back: A\n" });
+    const etag = DECKS.objects.get("cards.yaml")!.httpEtag;
+
+    const res = await save("cards.yaml", etag, { version: 2, meta: {}, cards: [{ id: "c_1", front: "Q2", back: "A2" }] });
+
+    expect(res.status).toBe(200);
+    const text = await (await request("/deck/cards.yaml")).text();
+    expect(text).toStartWith("version: 2\n");
+    expect(text).toContain("front: Q2");
+    expect(DECKS.objects.get("cards.yaml")?.contentType).toBe("application/yaml");
+  });
+
+  it("accepts the weak etag Cloudflare sends for a compressed response", async () => {
+    const etag = await seed();
+
+    const res = await save("signals.json", `W/${etag}`, stored);
+
+    expect(res.status).toBe(200);
+  });
+
+  it("still rejects an invalid deck with 400", async () => {
+    const etag = await seed();
+
+    const res = await save("signals.json", etag, { version: 2, meta: {}, cards: [{ id: "c_1", front: "", back: "A" }] });
+
+    expect(res.status).toBe(400);
+    expect(await res.text()).toContain("cards.0.front");
+  });
+
+  it("applies If-Match to other files too", async () => {
+    await request("/deck/alpha.apkg", { method: "PUT", body: "v1" });
+
+    const res = await request("/deck/alpha.apkg", { method: "PUT", headers: { "if-match": '"stale"' }, body: "v2" });
+
+    expect(res.status).toBe(412);
+    expect(await (await request("/deck/alpha.apkg")).text()).toBe("v1");
   });
 });
 

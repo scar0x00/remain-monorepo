@@ -1,8 +1,8 @@
-import { Hono, MiddlewareHandler } from "hono";
+import { type Context, Hono, MiddlewareHandler } from "hono";
 import { Client } from "pg";
 import { createMcpHandler } from "agents/mcp/server";
 import { accessAuth } from "./lib/access-auth";
-import { formatOfKey, readDeck } from "./lib/deck-format";
+import { formatOfKey, parseDeck, readDeck } from "./lib/deck-format";
 import {
   SYSTEM_USER_ID,
   backfillDeckRows,
@@ -85,40 +85,82 @@ app.get("/api/v1/deck/:key", async (c) => {
   });
 });
 
+// Uploads a file, or saves an edited deck when the request has `If-Match` (the editor, #14).
+// With `If-Match` the write only happens if the stored object still has that etag, otherwise 412,
+// e.g. when the agent refined the deck meanwhile. The response's `ETag` is the new object's.
 app.put("/api/v1/deck/:key", pgDbMiddleware, async (c) => {
   const key = c.req.param("key");
   const body = await c.req.arrayBuffer();
+  const ifMatch = c.req.header("if-match");
 
   if (body.byteLength === 0) {
     return c.text("Body is required", 400);
   }
 
+  let stored: R2ObjectBody | null = null;
+  if (ifMatch) {
+    stored = await c.env.DECKS.get(key);
+    if (!stored || !etagsMatch(ifMatch, stored.etag)) {
+      return deckChanged(c);
+    }
+  }
+  // Checked again by R2 at write time, in case another write lands between our read and put.
+  const condition = stored ? { onlyIf: { etagMatches: stored.etag } } : {};
+
   const store = { bucket: c.env.DECKS, pg: c.get("pg") };
   const format = formatOfKey(key);
   let object;
   if (format) {
-    // .json/.yaml files must be decks. They are stored as v2, stamped as an upload unless the file
-    // already says how it was produced.
-    const result = readDeck(new TextDecoder().decode(body), format);
+    // .json/.yaml files must be decks, stored as v2 in the key's format. The editor sends JSON for
+    // any deck key, so a JSON content type wins over the extension.
+    const bodyFormat = c.req.header("content-type")?.startsWith("application/json") ? "json" : format;
+    const result = readDeck(new TextDecoder().decode(body), bodyFormat);
     if ("error" in result) {
       return c.text(result.error, 400);
     }
     const { deck } = result;
-    deck.meta.tool ??= { kind: "upload", generatedAt: new Date().toISOString() };
-    // No accounts yet (#12), so the uploader is unknown.
-    if (deck.meta.author === undefined) deck.meta.author = null;
-    object = await saveDeck(store, key, format, deck);
+    if (stored) {
+      // An edit: how the deck was produced, by whom and from what never changes (#13).
+      const { tool, author, sources } = parseDeck(await stored.text(), format)?.meta ?? {};
+      const { tool: _t, author: _a, sources: _s, ...edited } = deck.meta;
+      deck.meta = {
+        ...edited,
+        ...(tool !== undefined && { tool }),
+        ...(author !== undefined && { author }),
+        ...(sources !== undefined && { sources }),
+      };
+    } else {
+      // An upload is stamped as one unless the file already says how it was produced.
+      deck.meta.tool ??= { kind: "upload", generatedAt: new Date().toISOString() };
+      // No accounts yet (#12), so the uploader is unknown.
+      if (deck.meta.author === undefined) deck.meta.author = null;
+    }
+    object = await saveDeck(store, key, format, deck, condition);
   } else {
     // Other files (e.g. .apkg) are stored as they are.
-    object = await putDeck(store, key, body, c.req.header("content-type"));
+    object = await putDeck(store, key, body, c.req.header("content-type"), condition);
   }
 
   if (!object) {
-    return c.text("Upload failed", 500);
+    // R2 also returns null when the `onlyIf` condition fails.
+    return stored ? deckChanged(c) : c.text("Upload failed", 500);
   }
 
+  c.header("etag", object.httpEtag);
   return c.text(`Put ${key} successfully!`);
 });
+
+const deckChanged = (c: Context<Env>) =>
+  c.text("The deck changed since it was loaded. Reload it, or overwrite it with your version.", 412);
+
+// `If-Match` may list several etags or `*`. Weak etags (`W/"..."`) count as a match: Cloudflare
+// weakens the etag of a response it compresses, so that is what the browser sends back.
+function etagsMatch(ifMatch: string, etag: string) {
+  return ifMatch
+    .split(",")
+    .map((value) => value.trim().replace(/^W\//, "").replace(/^"|"$/g, ""))
+    .some((value) => value === "*" || value === etag);
+}
 
 // Generates a deck (or refines an existing one when `refine` is set) through the flashcard agent,
 // then records the stored deck in Postgres so it shows up in the deck list.
