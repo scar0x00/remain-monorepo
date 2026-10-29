@@ -1,0 +1,9 @@
+[
+  { "name": "card without a back", "deck": [{ "front": "Q?" }] },
+  { "name": "empty front", "deck": [{ "front": "", "back": "A" }] },
+  { "name": "cards wrapped without a version", "deck": { "cards": [{ "front": "Q?", "back": "A" }] } },
+  { "name": "unknown version", "deck": { "version": 3, "meta": {}, "cards": [] } },
+  { "name": "unknown reference kind", "deck": { "version": 2, "meta": {}, "cards": [{ "id": "a", "front": "Q?", "back": "A", "meta": { "refs": [{ "kind": "chapter", "label": "1" }] } }] } },
+  { "name": "unknown tool kind", "deck": { "version": 2, "meta": { "tool": { "kind": "robot" } }, "cards": [] } },
+  { "name": "not a deck", "deck": "hello" }
+]

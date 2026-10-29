@@ -6,12 +6,16 @@ import { BehaviorSubject } from 'rxjs';
 import { provideMarkdown } from 'ngx-markdown';
 
 import { StudyController } from './study-controller';
-import { cardId } from '../study-session/card-id';
+import { legacyCardId } from '../deck-format/deck-format';
 
-const DECK = [
-  { front: 'one', back: '1' },
-  { front: 'two', back: '2' },
-];
+const DECK = {
+  version: 2,
+  meta: { title: 'Alpha' },
+  cards: [
+    { id: 'c_one', front: 'one', back: '1' },
+    { id: 'c_two', front: 'two', back: '2', meta: { refs: [{ kind: 'page', label: '4' }] } },
+  ],
+};
 
 describe('StudyController', () => {
   let fixture: ComponentFixture<StudyController>;
@@ -21,7 +25,7 @@ describe('StudyController', () => {
 
   let createBody: unknown;
 
-  async function setup(cardIds?: string, createStatus = 201) {
+  async function setup(cardIds?: string, createStatus = 201, deck: object = DECK) {
     queryParams = new BehaviorSubject(convertToParamMap(cardIds ? { cardIds } : {}));
     await TestBed.configureTestingModule({
       imports: [StudyController],
@@ -44,7 +48,7 @@ describe('StudyController', () => {
     fixture = TestBed.createComponent(StudyController);
     component = fixture.componentInstance;
     fixture.detectChanges();
-    http.expectOne('/api/v1/deck/alpha.json').flush(DECK, { headers: { etag: '"e1"' } });
+    http.expectOne('/api/v1/deck/alpha.json').flush(deck, { headers: { etag: '"e1"' } });
     await fixture.whenStable();
 
     const create = http.expectOne('/api/v1/study-sessions');
@@ -72,7 +76,7 @@ describe('StudyController', () => {
 
     const req = http.expectOne('/api/v1/study-sessions/s1/answers');
     expect(req.request.body.answers).toEqual([
-      expect.objectContaining({ position: 0, cardId: cardId(first), correct: true }),
+      expect.objectContaining({ position: 0, cardId: first.id, correct: true }),
     ]);
     req.flush(null);
   });
@@ -89,9 +93,17 @@ describe('StudyController', () => {
   });
 
   it('only studies the requested cards in missed-cards mode', async () => {
-    await setup(cardId(DECK[1]));
+    await setup('c_two');
 
     expect(component.shuffledIndexes()).toEqual([1]);
-    expect(component.currentMd()).toEqual(DECK[1]);
+    expect(component.currentMd()).toEqual(DECK.cards[1]);
+  });
+
+  it('studies a legacy deck, using the ids answers had before decks stored them', async () => {
+    const legacy = [{ front: 'one', back: '1' }];
+    await setup(legacyCardId(legacy[0]), 201, legacy);
+
+    expect(component.shuffledIndexes()).toEqual([0]);
+    expect(component.currentMd()).toEqual({ id: legacyCardId(legacy[0]), ...legacy[0] });
   });
 });

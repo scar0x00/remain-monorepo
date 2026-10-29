@@ -2,8 +2,10 @@ import { createOpenRouter } from "@openrouter/ai-sdk-provider";
 import { Agent } from "agents";
 import { createAI } from "agents/models/ai-sdk";
 import { generateText, Output } from "ai";
+import type { z } from "zod";
 import { batchPdfs } from "./pdf";
-import { DeckOutputSchema, type Deck } from "./schema";
+import { buildDeck, mergeRefinedDeck, RefineError } from "./deck";
+import { DeckOutputSchema, RefineOutputSchema, type Deck, type ModelCard } from "./schema";
 import {
   isPdf,
   isPlainText,
@@ -85,24 +87,34 @@ export class FlashcardAgent extends Agent<Env> {
       );
     }
 
-    const cards: Deck = [];
+    // Deck-level fields come from the first job; every job adds cards.
+    let first: Omit<z.infer<typeof DeckOutputSchema>, "cards"> | undefined;
+    const cards: ModelCard[] = [];
     for (const [i, job] of jobs.entries()) {
       const cardCount = input.cardCount
         ? Math.max(1, Math.round(input.cardCount / jobs.length))
         : undefined;
-      cards.push(
-        ...(await this.generateCards(
-          buildCreatePrompt({
-            sourceText: formatSources(job.sources),
-            cardCount,
-            instructions: input.instructions,
-            part: jobs.length > 1 ? { index: i + 1, total: jobs.length } : undefined,
-          }),
-          job.pdfs,
-        )),
+      const { cards: jobCards, ...deckFields } = await this.generate(
+        DeckOutputSchema,
+        buildCreatePrompt({
+          sourceText: formatSources(job.sources),
+          cardCount,
+          instructions: input.instructions,
+          part: jobs.length > 1 ? { index: i + 1, total: jobs.length } : undefined,
+        }),
+        job.pdfs,
       );
+      first ??= deckFields;
+      cards.push(...jobCards);
     }
-    return this.saveDeck(key, input.format, cards, 201);
+
+    const deck = buildDeck({
+      ...first,
+      cards,
+      model: MODEL,
+      sources: [...sources.map((source) => source.name), ...pdfs.map((file) => file.name)],
+    });
+    return this.saveDeck(key, input.format, deck, 201);
   }
 
   private async refineDeck(input: DeckInput, files: File[]): Promise<Response> {
@@ -141,7 +153,8 @@ export class FlashcardAgent extends Agent<Env> {
       );
     }
 
-    const cards = await this.generateCards(
+    const changes = await this.generate(
+      RefineOutputSchema,
       buildRefinePrompt({
         currentDeck,
         instructions: input.instructions,
@@ -149,7 +162,13 @@ export class FlashcardAgent extends Agent<Env> {
       }),
       pdfs,
     );
-    return this.saveDeck(stored.key, stored.format, cards, 200);
+    try {
+      const deck = mergeRefinedDeck(currentDeck, changes, files.map((file) => file.name));
+      return this.saveDeck(stored.key, stored.format, deck, 200);
+    } catch (error) {
+      if (!(error instanceof RefineError)) throw error;
+      return Response.json({ error: `The model returned changes that do not fit the deck: ${error.message}` }, { status: 502 });
+    }
   }
 
   private async loadDeck(
@@ -168,17 +187,17 @@ export class FlashcardAgent extends Agent<Env> {
   private async saveDeck(
     key: string,
     format: DeckFormat,
-    cards: Deck,
+    deck: Deck,
     status: 200 | 201,
   ): Promise<Response> {
-    await this.env.DECKS.put(key, serializeDeck(cards, format), {
+    await this.env.DECKS.put(key, serializeDeck(deck, format), {
       httpMetadata: {
         contentType:
           format === "json" ? "application/json" : "application/yaml",
       },
     });
 
-    return Response.json({ key, format, cardCount: cards.length }, { status });
+    return Response.json({ key, format, cardCount: deck.cards.length }, { status });
   }
 
   // Returns the text sources, plus the PDFs. PDFs are never converted to markdown: they are sent
@@ -218,7 +237,7 @@ export class FlashcardAgent extends Agent<Env> {
     return { sources, pdfs };
   }
 
-  private async generateCards(prompt: string, pdfs: File[]): Promise<Deck> {
+  private async generate<T>(schema: z.ZodType<T>, prompt: string, pdfs: File[]): Promise<T> {
     const ai = createAI({ binding: this.env.AI, id: GATEWAY_ID });
     const openrouter = createOpenRouter({ apiKey: "cloudflare" });
 
@@ -234,7 +253,7 @@ export class FlashcardAgent extends Agent<Env> {
     const result = await generateText({
       model: ai(openrouter(MODEL)),
       output: Output.object({
-        schema: DeckOutputSchema,
+        schema,
         name: "flashcard_deck",
         description: "A deck of flashcards generated from the source material",
       }),
@@ -247,6 +266,6 @@ export class FlashcardAgent extends Agent<Env> {
       ],
     });
 
-    return result.output.cards;
+    return result.output;
   }
 }

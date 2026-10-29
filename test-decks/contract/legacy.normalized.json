@@ -1,0 +1,21 @@
+{
+  "version": 2,
+  "meta": {},
+  "cards": [
+    {
+      "id": "e8c3e327",
+      "front": "What is a closure?",
+      "back": "A function that captures its lexical scope."
+    },
+    {
+      "id": "35b36ce5",
+      "front": "¿Qué es $e^{i\\pi}$?",
+      "back": "$-1$"
+    },
+    {
+      "id": "e8c3e327-2",
+      "front": "What is a closure?",
+      "back": "A function that captures its lexical scope."
+    }
+  ]
+}
