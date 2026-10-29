@@ -278,3 +278,68 @@ describe("/mcp edit_cards", () => {
     expect(fronts()[0]).toEqual({ front: "a", back: "1", meta: undefined });
   });
 });
+
+describe("/mcp update_deck_meta", () => {
+  beforeEach(async () => {
+    await callTool("create_deck", {
+      name: "d",
+      cards: [{ front: "a", back: "1", refs: [{ kind: "page", label: "3" }] }],
+      title: "Old title",
+      description: "Old description",
+      language: "en",
+      tags: ["x"],
+    });
+  });
+
+  it("changes the given fields and keeps the rest, the cards and how the deck was made", async () => {
+    const before = stored("d.json");
+    const res = await callTool("update_deck_meta", { key: "d.json", title: "New title", tags: ["a", "b"] });
+
+    expect(res.isError).toBeFalsy();
+    const deck = stored("d.json");
+    expect(deck.meta).toEqual({ ...before.meta, title: "New title", tags: ["a", "b"] });
+    expect(deck.cards).toEqual(before.cards);
+    expect(decks.get("d.json")).toMatchObject({ title: "New title", cardCount: 1 });
+  });
+
+  it("removes a field with null and the tags with an empty list", async () => {
+    await callTool("update_deck_meta", { key: "d.json", description: null, language: null, tags: [] });
+
+    const { meta } = stored("d.json");
+    expect(meta).not.toHaveProperty("description");
+    expect(meta).not.toHaveProperty("language");
+    expect(meta).not.toHaveProperty("tags");
+    expect(meta.title).toBe("Old title");
+  });
+
+  it("cannot change the tool, author, timestamp, version or sources", async () => {
+    const before = stored("d.json");
+    await callTool("update_deck_meta", {
+      key: "d.json",
+      title: "T",
+      tool: { kind: "manual" },
+      author: { id: "u", name: "U" },
+      sources: [{ name: "x" }],
+      version: 3,
+    });
+
+    const deck = stored("d.json");
+    expect(deck.version).toBe(2);
+    expect(deck.meta.tool).toEqual(before.meta.tool);
+    expect(deck.meta.author).toBeNull();
+    expect(deck.meta.sources).toBeUndefined();
+  });
+
+  it("rejects a call that changes nothing, an empty title and an unknown deck", async () => {
+    expect((await callTool("update_deck_meta", { key: "d.json" })).isError).toBe(true);
+    expect((await callTool("update_deck_meta", { key: "d.json", title: "" })).isError).toBe(true);
+    expect((await callTool("update_deck_meta", { key: "nope.json", title: "T" })).isError).toBe(true);
+    expect(stored("d.json").meta.title).toBe("Old title");
+  });
+
+  it("is listed with the other tools", async () => {
+    const res = await rpc("tools/list", {});
+    const raw = await res.text();
+    expect(raw).toContain("update_deck_meta");
+  });
+});

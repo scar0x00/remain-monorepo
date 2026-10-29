@@ -70,8 +70,8 @@ describe("buildRefinePrompt", () => {
     expect(prompt).toContain(
       `<current_deck>\n${JSON.stringify(
         [
-          { id: "c_1", front: "What is a closure?", back: "A function with captured scope.", refs: [{ kind: "page", label: "4" }] },
-          { id: "c_2", front: "What is hoisting?", back: "Moving declarations up." },
+          { index: 0, front: "What is a closure?", back: "A function with captured scope.", refs: [{ kind: "page", label: "4" }] },
+          { index: 1, front: "What is hoisting?", back: "Moving declarations up." },
         ],
         null,
         2,
@@ -80,11 +80,13 @@ describe("buildRefinePrompt", () => {
     expect(prompt).not.toContain("<source");
   });
 
-  test("asks the model to echo ids and never invent them", () => {
+  test("shows cards by position and never shows ids", () => {
     const prompt = buildRefinePrompt({ currentDeck, instructions: "x" });
 
-    expect(prompt).toContain('Return it unchanged on each card you keep or revise');
-    expect(prompt).toContain("never make one up");
+    expect(prompt).not.toContain("c_1");
+    expect(prompt).not.toContain('"id"');
+    expect(prompt).toContain('Address each existing card by its "index"');
+    expect(prompt).toContain("return only the changes, not the whole deck");
   });
 
   test("includes additional source material when provided", () => {

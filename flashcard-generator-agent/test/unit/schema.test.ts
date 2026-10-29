@@ -32,8 +32,28 @@ describe("DeckOutputSchema", () => {
 });
 
 describe("RefineOutputSchema", () => {
-  test("lets the model echo an existing card id", () => {
-    expect(RefineOutputSchema.parse({ cards: [{ id: "c_1", front: "Q", back: "A" }] }).cards[0]!.id).toBe("c_1");
+  test("accepts changes addressed by position", () => {
+    const parsed = RefineOutputSchema.parse({
+      edits: [{ index: 0, back: "A", refs: [] }],
+      remove: [2],
+      add: [{ front: "Q", back: "A" }],
+    });
+    expect(parsed.edits[0]!.index).toBe(0);
+  });
+
+  test("has no field for ids", () => {
+    const parsed = RefineOutputSchema.parse({
+      edits: [{ index: 0, id: "c_1", back: "A" }],
+      remove: [],
+      add: [{ id: "c_2", front: "Q", back: "A" }],
+    });
+    expect(parsed).toEqual({ edits: [{ index: 0, back: "A" }], remove: [], add: [{ front: "Q", back: "A" }] });
+  });
+
+  test("rejects negative or fractional positions and empty text", () => {
+    expect(RefineOutputSchema.safeParse({ edits: [{ index: -1 }], remove: [], add: [] }).success).toBe(false);
+    expect(RefineOutputSchema.safeParse({ edits: [], remove: [1.5], add: [] }).success).toBe(false);
+    expect(RefineOutputSchema.safeParse({ edits: [{ index: 0, front: "" }], remove: [], add: [] }).success).toBe(false);
   });
 });
 

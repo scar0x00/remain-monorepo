@@ -120,16 +120,25 @@ export const DeckOutputSchema = z.object({
   cards: z.array(ModelCardSchema),
 });
 
+// What the model returns when refining: only the changes, addressed by the position of the card in
+// the deck it was shown (zero-based). It never sees or returns card ids.
 export const RefineOutputSchema = z.object({
-  cards: z.array(
-    ModelCardSchema.extend({
-      id: z
-        .string()
-        .optional()
-        .describe("The id of the existing card this card keeps or revises. Omit it for a new card"),
-    }),
-  ),
+  edits: z
+    .array(
+      z.object({
+        index: z.number().int().min(0).describe("Zero-based position of the card to change"),
+        front: front.optional().describe("The new front. Omit to keep the current one"),
+        back: back.optional().describe("The new back. Omit to keep the current one"),
+        refs: z
+          .array(RefSchema)
+          .optional()
+          .describe("Replaces the card's references; an empty list removes them. Omit to keep them"),
+      }),
+    )
+    .describe("Cards to change. Leave out every card that stays as it is"),
+  remove: z.array(z.number().int().min(0)).describe("Zero-based positions of the cards to delete"),
+  add: z.array(ModelCardSchema).describe("New cards, appended to the end of the deck"),
 });
 
 export type ModelCard = z.infer<typeof ModelCardSchema>;
-export type RefinedCard = z.infer<typeof RefineOutputSchema>["cards"][number];
+export type RefineOutput = z.infer<typeof RefineOutputSchema>;

@@ -1,4 +1,4 @@
-import { newCardId, type Card, type Deck, type DeckMeta, type ModelCard, type RefinedCard } from "./schema";
+import { newCardId, type Card, type Deck, type DeckMeta, type ModelCard, type RefineOutput } from "./schema";
 
 function toCard({ front, back, refs }: ModelCard, id: string, meta?: Card["meta"]): Card {
   const merged = { ...meta, ...(refs ? { refs } : {}) };
@@ -32,22 +32,34 @@ export function buildDeck(options: {
   };
 }
 
-/**
- * Applies the model's revised card list to the current deck. A card whose id matches a card of the
- * current deck keeps that id and its metadata (refs are replaced only when the model sends them).
- * Cards with no id, an unknown id or an id already used get a new id. Deck metadata is kept, and
- * the names of new sources are added to it.
- */
-export function mergeRefinedDeck(current: Deck, revised: RefinedCard[], newSources: string[] = []): Deck {
-  const existing = new Map(current.cards.map((card) => [card.id, card]));
-  const used = new Set<string>();
+/** The model's changes do not fit the deck, e.g. a position that does not exist. */
+export class RefineError extends Error {}
 
-  const cards = revised.map(({ id, ...card }) => {
-    const previous = id && !used.has(id) ? existing.get(id) : undefined;
-    if (!previous) return toCard(card, newCardId());
-    used.add(previous.id);
-    return toCard(card, previous.id, previous.meta);
+/**
+ * Applies the model's changes to the current deck. Edits and removals address cards by position in
+ * `current`. Untouched cards, and the id and metadata of edited ones, never pass through the model.
+ * Refs are replaced only when the edit sends them. Deck metadata is kept, and the names of new
+ * sources are added to it. Throws `RefineError` when a position is out of range or used twice.
+ */
+export function mergeRefinedDeck(current: Deck, changes: RefineOutput, newSources: string[] = []): Deck {
+  const touched = new Set<number>();
+  for (const index of [...changes.edits.map((edit) => edit.index), ...changes.remove]) {
+    if (index >= current.cards.length) {
+      throw new RefineError(`Card ${index} does not exist: the deck has ${current.cards.length} cards`);
+    }
+    if (touched.has(index)) throw new RefineError(`Card ${index} is changed more than once`);
+    touched.add(index);
+  }
+
+  const edits = new Map(changes.edits.map((edit) => [edit.index, edit]));
+  const removed = new Set(changes.remove);
+  const cards = current.cards.flatMap((card, index) => {
+    if (removed.has(index)) return [];
+    const edit = edits.get(index);
+    if (!edit) return [card];
+    return [toCard({ front: edit.front ?? card.front, back: edit.back ?? card.back, refs: edit.refs }, card.id, card.meta)];
   });
+  cards.push(...changes.add.map((card) => toCard(card, newCardId())));
 
   const known = new Set(current.meta.sources?.map((source) => source.name));
   const added = newSources.filter((name) => !known.has(name)).map((name) => ({ name }));

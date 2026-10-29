@@ -7,10 +7,10 @@
                     <div class="flex flex-col min-w-0">
                         <a class="text-base sm:text-lg font-medium wrap-break-word text-app-text hover:underline"
                             [routerLink]="['/deck-study/', getDeckPath(deck.deckName)]">
-                            {{ deck.title || getDeckPath(deck.deckName) }}
+                            {{ getDeckPath(deck.deckName) }}
                         </a>
                         @if (deck.title) {
-                            <span class="text-xs font-mono wrap-break-word">{{ getDeckPath(deck.deckName) }}</span>
+                            <span class="text-sm wrap-break-word">{{ deck.title }}</span>
                         }
                     </div>
                     <!-- Placeholder for a future deck actions menu; does nothing yet. -->

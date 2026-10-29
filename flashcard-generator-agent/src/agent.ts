@@ -4,7 +4,7 @@ import { createAI } from "agents/models/ai-sdk";
 import { generateText, Output } from "ai";
 import type { z } from "zod";
 import { batchPdfs } from "./pdf";
-import { buildDeck, mergeRefinedDeck } from "./deck";
+import { buildDeck, mergeRefinedDeck, RefineError } from "./deck";
 import { DeckOutputSchema, RefineOutputSchema, type Deck, type ModelCard } from "./schema";
 import {
   isPdf,
@@ -153,7 +153,7 @@ export class FlashcardAgent extends Agent<Env> {
       );
     }
 
-    const { cards } = await this.generate(
+    const changes = await this.generate(
       RefineOutputSchema,
       buildRefinePrompt({
         currentDeck,
@@ -162,8 +162,13 @@ export class FlashcardAgent extends Agent<Env> {
       }),
       pdfs,
     );
-    const deck = mergeRefinedDeck(currentDeck, cards, files.map((file) => file.name));
-    return this.saveDeck(stored.key, stored.format, deck, 200);
+    try {
+      const deck = mergeRefinedDeck(currentDeck, changes, files.map((file) => file.name));
+      return this.saveDeck(stored.key, stored.format, deck, 200);
+    } catch (error) {
+      if (!(error instanceof RefineError)) throw error;
+      return Response.json({ error: `The model returned changes that do not fit the deck: ${error.message}` }, { status: 502 });
+    }
   }
 
   private async loadDeck(

@@ -61,11 +61,10 @@ describe("deck browsing", () => {
   it("lists stored decks without the .json suffix", async () => {
     await page.goto(`${BASE}/deck-browse`);
     const res = await fetch(`${API}/decks`);
-    const stored = (await res.json()) as { deckName: string; title?: string }[];
+    const stored = (await res.json()) as { deckName: string }[];
 
-    // A deck is listed by its title when it has one.
-    for (const { deckName, title } of stored) {
-      const name = title ?? deckName.replace(/\.json$/i, "");
+    for (const { deckName } of stored) {
+      const name = deckName.replace(/\.json$/i, "");
       await page.getByRole("link", { name, exact: true }).waitFor();
     }
     expect(await page.getByRole("link", { name: /\.json$/ }).count()).toBe(0);
@@ -120,8 +119,7 @@ describe("study session", () => {
 
     await page.goto(`${BASE}/deck-browse`);
     await page.getByRole("textbox").first().fill(DECK);
-    // Generated decks are listed by their title, so find the deck by its link target.
-    await page.locator(`a[href="/deck-study/${DECK}"]`).first().click();
+    await page.getByRole("link", { name: DECK, exact: true }).click();
     await page.waitForURL(`**/deck-study/${DECK}`);
 
     const card = page.locator("app-flashcard");

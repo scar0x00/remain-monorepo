@@ -88,14 +88,14 @@ export function buildRefinePrompt(options: {
   instructions?: string;
   sourceText?: string;
 }): string {
-  const cards = options.currentDeck.cards.map(({ id, front, back, meta }) =>
-    meta?.refs ? { id, front, back, refs: meta.refs } : { id, front, back },
+  // Cards are shown by position. The model addresses them by it and never sees their ids.
+  const cards = options.currentDeck.cards.map(({ front, back, meta }, index) =>
+    meta?.refs ? { index, front, back, refs: meta.refs } : { index, front, back },
   );
 
   return [
     "Revise the existing flashcard deck below.",
-    "Apply the requested change, keep every card the change does not affect exactly as it is, and return the complete revised deck.",
-    'Every existing card has an "id". Return it unchanged on each card you keep or revise. Leave "id" out on new cards, and never make one up. Cards you leave out are removed from the deck.',
+    'Apply the requested change and return only the changes, not the whole deck. Address each existing card by its "index". Put a card in "edits" only when it changes, with only the fields that change. List the indexes of cards to delete in "remove", and new cards in "add". Every card you do not mention stays exactly as it is. Use an empty list when there is nothing to edit, remove or add.',
     options.instructions
       ? `Requested change: ${options.instructions}`
       : undefined,

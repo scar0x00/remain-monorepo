@@ -272,6 +272,47 @@ export function createServer(env: Bindings) {
   );
 
   server.registerTool(
+    "update_deck_meta",
+    {
+      description:
+        "Change a deck's title, description, language and/or tags. Fields you omit stay as they are; send null to remove a title, description or language, and a list to replace the tags. How the deck was made (tool, author, timestamps) and its cards cannot be changed here.",
+      inputSchema: z
+        .object({
+          key: DeckKey,
+          title: z.string().min(1).nullable().optional(),
+          description: z.string().min(1).nullable().optional(),
+          language: z.string().min(1).nullable().optional().describe("BCP 47 language code of the cards, e.g. 'es'"),
+          tags: z.array(z.string()).optional(),
+        })
+        .refine((edit) => [edit.title, edit.description, edit.language, edit.tags].some((value) => value !== undefined), {
+          message: "provide title, description, language, tags or a combination",
+        }),
+      annotations: { idempotentHint: true },
+    },
+    async ({ key, title, description, language, tags }) => {
+      const loaded = await loadDeck(env.DECKS, key);
+      if (!("deck" in loaded)) return failure(loaded.error);
+
+      const { title: oldTitle, description: oldDescription, language: oldLanguage, tags: oldTags, ...rest } = loaded.deck.meta;
+      // undefined keeps the current value, null removes it.
+      const pick = <T>(next: T | null | undefined, old: T | undefined) => (next === undefined ? old : (next ?? undefined));
+      const newTags = tags === undefined ? oldTags : tags.length > 0 ? tags : undefined;
+      const meta = Object.fromEntries(
+        Object.entries({
+          title: pick(title, oldTitle),
+          description: pick(description, oldDescription),
+          language: pick(language, oldLanguage),
+          ...rest,
+          tags: newTags,
+        }).filter(([, value]) => value !== undefined),
+      );
+
+      if (!(await storeDeck(env, key, loaded.format, { ...loaded.deck, meta }))) return failure("Upload failed");
+      return text({ key, meta });
+    },
+  );
+
+  server.registerTool(
     "delete_deck",
     {
       description: "Permanently delete a deck.",

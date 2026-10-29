@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { buildDeck, mergeRefinedDeck } from "../../src/deck";
+import { buildDeck, mergeRefinedDeck, RefineError } from "../../src/deck";
 import type { Deck } from "../../src/schema";
 
 describe("buildDeck", () => {
@@ -42,37 +42,61 @@ describe("mergeRefinedDeck", () => {
       { id: "c_gone", front: "Q3", back: "A3" },
     ],
   };
+  const none = { edits: [], remove: [], add: [] };
 
-  test("keeps ids and metadata of untouched and revised cards, and drops removed ones", () => {
-    const merged = mergeRefinedDeck(current, [
-      { id: "c_keep", front: "Q1", back: "A1" },
-      { id: "c_edit", front: "Q2", back: "A2, shorter", refs: [{ kind: "equation", label: "2.1" }] },
-      { front: "Q4", back: "A4" },
-    ]);
+  test("changes nothing when the model returns no changes", () => {
+    expect(mergeRefinedDeck(current, none)).toEqual(current);
+  });
+
+  test("edits, removes and adds by position, keeping the ids and metadata of the rest", () => {
+    const merged = mergeRefinedDeck(current, {
+      edits: [{ index: 1, back: "A2, shorter" }],
+      remove: [2],
+      add: [{ front: "Q4", back: "A4" }],
+    });
 
     expect(merged.meta).toEqual(current.meta);
     expect(merged.cards).toEqual([
       current.cards[0]!,
-      { id: "c_edit", front: "Q2", back: "A2, shorter", meta: { refs: [{ kind: "equation", label: "2.1" }] } },
+      { id: "c_edit", front: "Q2", back: "A2, shorter", meta: { refs: [{ kind: "page", label: "2" }] } },
       { id: expect.stringMatching(/^c_[0-9a-f]{12}$/), front: "Q4", back: "A4" },
     ]);
   });
 
-  test("gives new ids for unknown or repeated ids instead of trusting them", () => {
-    const merged = mergeRefinedDeck(current, [
-      { id: "c_keep", front: "Q1", back: "A1" },
-      { id: "c_keep", front: "Q1 copy", back: "A1" },
-      { id: "made-up", front: "Q5", back: "A5" },
-    ]);
+  test("replaces refs only when the edit sends them, and removes them with an empty list", () => {
+    const merged = mergeRefinedDeck(current, {
+      edits: [{ index: 0, refs: [{ kind: "equation", label: "2.1" }] }, { index: 1, refs: [] }],
+      remove: [],
+      add: [],
+    });
 
-    const ids = merged.cards.map((card) => card.id);
-    expect(ids[0]).toBe("c_keep");
-    expect(new Set(ids).size).toBe(3);
-    expect(ids).not.toContain("made-up");
+    expect(merged.cards[0]).toEqual({ id: "c_keep", front: "Q1", back: "A1", meta: { refs: [{ kind: "equation", label: "2.1" }], tags: ["x"] } });
+    expect(merged.cards[1]).toEqual({ id: "c_edit", front: "Q2", back: "A2" });
+  });
+
+  test("addresses cards by their position in the current deck, whatever else changes", () => {
+    const merged = mergeRefinedDeck(current, {
+      edits: [{ index: 2, front: "Q3 edited" }],
+      remove: [0],
+      add: [],
+    });
+
+    expect(merged.cards.map((card) => card.id)).toEqual(["c_edit", "c_gone"]);
+    expect(merged.cards[1]!.front).toBe("Q3 edited");
+  });
+
+  test.each([
+    ["an edit past the end", { edits: [{ index: 3, back: "x" }], remove: [], add: [] }],
+    ["a removal past the end", { edits: [], remove: [3], add: [] }],
+    ["a card edited twice", { edits: [{ index: 0, back: "x" }, { index: 0, back: "y" }], remove: [], add: [] }],
+    ["a card edited and removed", { edits: [{ index: 0, back: "x" }], remove: [0], add: [] }],
+    ["a card removed twice", { edits: [], remove: [1, 1], add: [] }],
+  ])("rejects %s", (_label, changes) => {
+    expect(() => mergeRefinedDeck(current, changes)).toThrow(RefineError);
   });
 
   test("adds the names of new source files to the deck sources", () => {
-    const merged = mergeRefinedDeck(current, [], ["a.pdf", "b.md"]);
+    const merged = mergeRefinedDeck(current, none, ["a.pdf", "b.md"]);
     expect(merged.meta.sources).toEqual([{ name: "a.pdf" }, { name: "b.md" }]);
     expect(merged.meta.tool).toEqual(current.meta.tool);
   });
