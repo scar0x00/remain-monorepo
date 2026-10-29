@@ -30,6 +30,13 @@ export const routes: Routes = [
         component: DeckStudyRoute,
     },
     {
+        // `name` is the file name without `.json`; `?format=yaml` for YAML decks. Lazy, so the editor
+        // stays out of the main bundle.
+        path: "deck-edit/:name",
+        loadComponent: () => import("./deck-edit-route/deck-edit-route").then((m) => m.DeckEditRoute),
+        canDeactivate: [(route: { canLeave(): boolean }) => route.canLeave()],
+    },
+    {
         // Lazy, so ECharts and the stats code stay out of the main bundle.
         // StatsService lives here so the dashboard and a deck's stats share the selected range.
         path: "dashboard",

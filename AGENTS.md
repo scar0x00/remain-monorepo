@@ -67,13 +67,15 @@ main-backend serves a stateless MCP endpoint at `https://remain.scar0x00.click/m
   | `flashcard-chat` | `flashcard-chat-route/` | Chat UI. Uses `chat-composer/`, `chat-bubble/`; request building in `flashcard-chat.utils.ts` |
   | `deck-upload` | `deck-upload-route/` | Uses `file-input/` |
   | `deck-browse` | `browse-decks-route/` | Uses `deck-list/`, `search-deck-field/`; search state in `deck-search-term.ts` |
-  | `deck-study/:id` | `deck-study-route/` | Uses `flashcard/`, `study-controller/` |
+  | `deck-study/:id` | `deck-study-route/` | Uses `flashcard/`, `study-controller/`. The card's pencil opens `card-quick-edit/` |
+  | `deck-edit/:name` | `deck-edit-route/` | Lazy. Deck editor (#14): `name` without `.json`, `?format=yaml` for YAML decks, `?card=<id>` selects a card. Uses `card-editor/`, `markdown-editor/`, `deck-meta-editor/` |
   | `dashboard` | `dashboard-route/` | Lazy. Study stats: `stat-tile/`, `activity-heatmap/`, `weekday-chart/`, `deck-stats-table/`, `needs-review/`, `hardest-cards/` |
   | `dashboard/decks/:name` | `deck-stats-route/` | Lazy. One deck's stats; `accuracy-chart/` |
 
 - Dashboard data comes from `stats/stats.service.ts` (one `httpResource` per `/api/v1/stats/*` endpoint), provided on the `dashboard` route together with ECharts. Charts use ngx-echarts with the tree-shaken build in `stats/echarts.ts` (SVG renderer, lazy-loaded); `stats/chart-theme.ts` turns the `--app-*` tokens into colours and follows the colour scheme.
 - The nav bar's hamburger opens a native `popover` menu (`nav-bar/`), which is where Dashboard lives.
 
+- Editing: `deck-editor/deck-editor.ts` (`DeckEditor`, provided per editor, never in root) holds `original`, `draft` and the loaded etag, and saves the whole deck with `If-Match`; a 412 sets `status` to `conflict` and the UI offers Reload or Overwrite. New cards get `newCardId()` from `deck-format.ts`. The study quick edit saves through the same service and patches the run's cards by id (`StudyController.cardSaved`) without restarting the run. `markdown-editor/` is the only place that knows the field is a `textarea`, so CodeMirror can replace it later. YAML decks are parsed with `yaml`, imported on demand.
 - Shared types are in `src/types/` (`Card`, `Deck` (v2), `DeckEntry`, `ChatMessage`, `FlashcardAgent` for the generate request/result).
 - `deck-format/deck-format.ts` has `normalizeDeck`, which the study controller passes as the `httpResource` `parse` to read legacy and v2 files. Study answers use `card.id`.
 - All HTTP goes to `/api/v1/*`. `proxy.conf.json` forwards `/api/**` to `localhost:8787`.

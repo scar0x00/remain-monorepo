@@ -1,0 +1,51 @@
+<div class="flex flex-col gap-5">
+    <app-markdown-editor label="Front" [fieldId]="'front-' + card().id" [value]="card().front" [error]="errors().front" (valueChange)="setFront($event)" />
+    <app-markdown-editor label="Back" [fieldId]="'back-' + card().id" [value]="card().back" [error]="errors().back" (valueChange)="setBack($event)" />
+
+    @if (!compact()) {
+        <fieldset class="flex min-w-0 flex-col gap-2">
+            <legend class="mb-2 text-sm font-semibold text-app-text-muted">References <span class="font-normal text-app-text-subtle">· shown on the back</span></legend>
+            @for (ref of refs(); track $index; let i = $index) {
+                <div class="flex gap-2">
+                    <div class="relative shrink-0">
+                        <!-- Native select without the browser arrow; our chevron sits inside the padding -->
+                        <select aria-label="Kind" class="appearance-none rounded-lg border-2 border-app-border bg-app-bg py-1.5 pl-3 pr-9 text-sm text-app-text focus:border-action focus:outline-none"
+                            (change)="updateRef(i, { kind: asKind($any($event.target).value) })">
+                            @for (kind of refKinds; track kind) {
+                                <option [value]="kind" [selected]="kind === ref.kind">{{ kind }}</option>
+                            }
+                        </select>
+                        <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-app-text-subtle"><path fill-rule="evenodd" d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06Z" clip-rule="evenodd"/></svg>
+                    </div>
+                    <input aria-label="Label" placeholder="4.2" class="w-20 min-w-0 rounded-lg border-2 bg-app-bg px-2.5 py-1.5 text-sm text-app-text placeholder:text-app-text-subtle focus:border-action focus:outline-none"
+                        [class]="ref.label.trim() ? 'border-app-border' : 'border-red-600 dark:border-red-400'"
+                        [value]="ref.label" (input)="updateRef(i, { label: $any($event.target).value })" />
+                    <input aria-label="Source" placeholder="Source (optional)" class="min-w-0 flex-1 rounded-lg border-2 border-app-border bg-app-bg px-2.5 py-1.5 text-sm text-app-text placeholder:text-app-text-subtle focus:border-action focus:outline-none"
+                        [value]="ref.source ?? ''" (input)="updateRef(i, { source: $any($event.target).value })" />
+                    <button type="button" aria-label="Remove reference" title="Remove reference" (click)="removeRef(i)"
+                        class="grid size-9 shrink-0 place-items-center rounded-full text-app-text-subtle hover:bg-app-card-hover hover:text-app-text">
+                        <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                    </button>
+                </div>
+            }
+            @if (errors().refs) {
+                <p class="text-sm text-red-700 dark:text-red-300">{{ errors().refs }}</p>
+            }
+            <button type="button" class="self-start text-sm font-semibold text-action hover:text-action-hover" (click)="addRef()">+ Add reference</button>
+        </fieldset>
+
+        <div class="flex flex-col gap-2">
+            <label [for]="'tags-' + card().id" class="text-sm font-semibold text-app-text-muted">Tags</label>
+            <div class="flex flex-wrap items-center gap-2 rounded-lg border-2 border-app-border bg-app-bg px-2 py-1.5 focus-within:border-action">
+                @for (tag of tags(); track tag; let i = $index) {
+                    <span class="inline-flex items-center gap-1 rounded-full bg-app-card py-0.5 pl-2.5 pr-1 text-sm text-app-text-muted">
+                        {{ tag }}
+                        <button type="button" [attr.aria-label]="'Remove tag ' + tag" (click)="removeTag(i)" class="grid size-5 place-items-center rounded-full text-app-text-subtle hover:bg-app-card-hover hover:text-app-text">×</button>
+                    </span>
+                }
+                <input #tagInput [id]="'tags-' + card().id" placeholder="Add tag" class="min-w-16 flex-1 bg-transparent py-0.5 text-sm text-app-text placeholder:text-app-text-subtle focus:outline-none"
+                    (keydown)="onTagKeydown($event)" (blur)="addTag(tagInput)" />
+            </div>
+        </div>
+    }
+</div>
