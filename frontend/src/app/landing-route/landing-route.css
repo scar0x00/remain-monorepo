@@ -1,6 +1,7 @@
 .cta {
   border-width: 2px;
-  border-radius: 0.75rem;
+  box-shadow: var(--shadow-e2);
+  border-radius: 9999px;
   padding: 0.75rem 1.5rem;
   font-size: 1.25rem;
   font-weight: 700;
@@ -10,6 +11,7 @@
 .cta:hover,
 .cta:focus-visible {
   transform: translateY(-2px) rotate(-1deg);
+  box-shadow: var(--shadow-e3);
 }
 
 .stage {
@@ -19,6 +21,18 @@
   width: 16rem;
   height: 15.5rem;
   perspective: 900px;
+  isolation: isolate;
+}
+
+/* A soft, low-contrast glow behind the cards, two nearby hues (honey to a
+   deeper honey) so the hero isn't sitting on a flat background. */
+.stage::before {
+  content: '';
+  position: absolute;
+  inset: -4rem -6rem;
+  z-index: -1;
+  background: radial-gradient(closest-side, color-mix(in srgb, var(--honey-400) 22%, transparent), color-mix(in srgb, var(--honey-600) 8%, transparent) 60%, transparent);
+  pointer-events: none;
 }
 
 .card {
@@ -27,9 +41,9 @@
   top: 1rem;
   width: var(--card-w);
   height: var(--card-h);
-  border: 2px solid var(--app-text);
+  border: 2px solid var(--app-action);
   border-radius: 1rem;
-  box-shadow: 0 0.5rem 1.5rem rgb(0 0 0 / 0.35);
+  box-shadow: var(--shadow-e3);
 }
 
 .card-back-left {
@@ -62,20 +76,20 @@
   align-items: center;
   justify-content: center;
   gap: 1rem;
-  border: 2px solid var(--app-text);
+  border: 2px solid var(--app-action);
   border-radius: 1rem;
   backface-visibility: hidden;
-  box-shadow: 0 0.5rem 1.5rem rgb(0 0 0 / 0.35);
+  box-shadow: var(--shadow-e4);
 }
 
 .face-question {
-  background: var(--app-text);
+  background: var(--app-action);
   color: var(--app-bg);
 }
 
 .face-answer {
   background: var(--app-card);
-  color: var(--app-text);
+  color: var(--app-action);
   transform: rotateY(180deg);
 }
 
@@ -126,7 +140,7 @@
   width: 0.7rem;
   height: 1rem;
   border-radius: 0.2rem;
-  background: var(--app-text);
+  background: var(--app-action);
   opacity: 0.8;
   animation: twinkle 3s ease-in-out infinite;
 }

@@ -44,7 +44,7 @@ export class Sparkline {
           data: values,
           silent: true,
           symbol: 'none',
-          lineStyle: { color: c.text, width: 2 },
+          lineStyle: { color: c.accent, width: 2 },
         },
         {
           // Dot on the latest session.
@@ -53,7 +53,7 @@ export class Sparkline {
           silent: true,
           symbol: 'circle',
           symbolSize: 5,
-          itemStyle: { color: c.text },
+          itemStyle: { color: c.accent },
           lineStyle: { opacity: 0 },
         },
       ],

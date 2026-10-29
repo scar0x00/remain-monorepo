@@ -2,7 +2,7 @@
 @if (m.role === 'user') {
   <div class="flex justify-end">
     <div
-      class="max-w-[85%] sm:max-w-[75%] space-y-2 rounded-2xl rounded-br-sm bg-app-card-hover px-4 py-2 text-app-text"
+      class="max-w-[85%] sm:max-w-[75%] space-y-2 rounded-xl rounded-br-sm bg-honey-100 px-4 py-2 text-honey-900 dark:bg-honey-900/40 dark:text-honey-100"
     >
       @if (m.text) {
         <p class="whitespace-pre-wrap break-words text-sm">{{ m.text }}</p>
@@ -10,7 +10,7 @@
       @if (m.attachments.length > 0) {
         <ul class="flex flex-wrap gap-1">
           @for (name of m.attachments; track $index) {
-            <li class="max-w-full truncate rounded bg-app-bg/40 px-2 py-0.5 font-mono text-xs">
+            <li class="max-w-full truncate rounded-lg bg-app-bg/40 px-2 py-0.5 font-mono text-xs">
               {{ name }}
             </li>
           }
@@ -21,7 +21,7 @@
 } @else {
   <div class="flex justify-start">
     <div
-      class="max-w-[85%] sm:max-w-[75%] space-y-2 rounded-2xl rounded-bl-sm border border-app-border bg-app-bg px-4 py-2 text-sm text-app-text"
+      class="max-w-[85%] sm:max-w-[75%] space-y-2 rounded-xl rounded-bl-sm bg-app-card shadow-e1 px-4 py-2 text-sm text-app-text"
     >
       @if (m.state === 'pending') {
         <div class="flex items-center gap-2 text-app-text-muted">
@@ -42,7 +42,7 @@
           <span>{{ m.text }}</span>
         </div>
       } @else if (m.state === 'error') {
-        <p role="alert" class="break-words text-red-400">{{ m.text }}</p>
+        <p role="alert" class="break-words text-red-700 dark:text-red-400">{{ m.text }}</p>
       } @else {
         <p class="break-words">{{ m.text }}</p>
         @if (m.deckName) {

@@ -155,7 +155,6 @@ describe("study session", () => {
     }
 
     await doneMarker.waitFor();
-    await page.getByText(`Right: ${right}`, { exact: true }).waitFor();
-    await page.getByText(`Wrong: ${wrong}`, { exact: true }).waitFor();
+    await page.getByText(new RegExp(`^${right} right · ${wrong} wrong · \\d+s$`)).waitFor();
   }, STUDY_TIMEOUT);
 });

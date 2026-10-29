@@ -1,59 +1,70 @@
-@if (searchTerm.deck.value()) {
-    <ul class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-app-text-muted">
+@if (searchTerm.deck.value()?.length === 0) {
+    <div class="flex flex-col items-center gap-4 rounded-xl bg-app-card px-6 py-16 text-center shadow-e1">
+        <span class="grid size-14 place-items-center rounded-full bg-honey-100 text-honey-800 dark:bg-honey-400/15 dark:text-honey-300">
+            <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="18" x="3" y="4" rx="2"/><path d="M7 2h12a2 2 0 0 1 2 2v14"/></svg>
+        </span>
+        @if (searchTerm.term()) {
+            <h2 class="text-lg font-semibold text-app-text">No decks match “{{ searchTerm.term() }}”</h2>
+            <p class="max-w-sm text-app-text-muted">Deck names are matched from the start. Try fewer letters.</p>
+        } @else {
+            <h2 class="text-lg font-semibold text-app-text">No decks yet</h2>
+            <p class="max-w-sm text-app-text-muted">Let AI turn your notes into flashcards, or upload a deck you already have.</p>
+            <div class="flex w-full max-w-sm flex-col gap-3 sm:flex-row">
+                <a routerLink="/flashcard-chat" class="flex-1 rounded-full bg-action px-5 py-2.5 font-bold text-app-bg shadow-raised hover:bg-action-hover">Create a deck</a>
+                <a routerLink="/deck-upload" class="flex-1 rounded-full border-2 border-app-border px-5 py-2.5 font-bold text-app-text hover:bg-app-card-hover">Upload a deck</a>
+            </div>
+        }
+    </div>
+} @else if (searchTerm.deck.value()) {
+    <ul class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-app-text-muted">
         @for (deck of searchTerm.deck.value(); track deck.etag) {
-            <li class="flex flex-col gap-3 rounded-xl rounded-l-none border border-app-border border-l-4 bg-app-card/40 p-4"
+            <li class="flex flex-col gap-2 rounded-xl rounded-l-none border-l-4 bg-app-card shadow-e1 p-5 transition-shadow hover:shadow-e3"
                 [class]="borderClasses(deck.recentAccuracy)">
-                <div class="flex items-start justify-between gap-2">
-                    <div class="flex flex-col min-w-0">
-                        <a class="text-base sm:text-lg font-medium wrap-break-word text-app-text hover:underline"
+                <div class="flex flex-col gap-1.5">
+                    <div class="flex items-start justify-between gap-2">
+                        <a class="text-lg font-semibold leading-snug wrap-break-word text-app-text hover:underline"
                             [routerLink]="['/deck-study/', getDeckPath(deck.deckName)]">
                             {{ getDeckPath(deck.deckName) }}
                         </a>
-                        @if (deck.title) {
-                            <span class="text-sm wrap-break-word">{{ deck.title }}</span>
+                    </div>
+                    @if (deck.title) {
+                        <span class="text-sm text-app-text-muted wrap-break-word">{{ deck.title }}</span>
+                    }
+                    <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
+                        @if (deck.tool) {
+                            <span class="rounded-full bg-app-bg px-2 py-0.5" [attr.title]="toolTitle(deck.tool)">{{ toolLabel(deck.tool) }}</span>
+                        }
+                        @if (deck.cardCount != null) {
+                            <span>{{ deck.cardCount }} {{ deck.cardCount === 1 ? 'card' : 'cards' }}</span>
+                        }
+                        @if (deck.author) {
+                            <span>by {{ deck.author.name }}</span>
+                        }
+                        @if (deck.studyCount) {
+                            <span>Studied {{ deck.studyCount }}×</span>
+                            @if (deck.recentAccuracy != null) {
+                                <span class="rounded-full px-2 py-0.5 font-semibold"
+                                    [class]="scoreClasses(deck.recentAccuracy)"
+                                    title="Average of your last 3 sessions">
+                                    {{ deck.recentAccuracy | percent: '1.0-0' }} recently
+                                </span>
+                            }
+                        } @else {
+                            <span class="text-app-text-subtle">Not studied yet</span>
                         }
                     </div>
-                    <!-- Placeholder for a future deck actions menu; does nothing yet. -->
-                    <button type="button" class="-mx-1.5 -mt-3 -mb-1.5 shrink-0 p-1.5 rounded-full hover:bg-app-card-hover"
-                        [attr.aria-label]="'More options for ' + getDeckPath(deck.deckName)"
-                        title="More options">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>
-                    </button>
                 </div>
-                <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
-                    @if (deck.tool) {
-                        <span class="rounded-full border border-app-border px-2 py-0.5" [attr.title]="toolTitle(deck.tool)">{{ toolLabel(deck.tool) }}</span>
-                    }
-                    @if (deck.cardCount != null) {
-                        <span>{{ deck.cardCount }} {{ deck.cardCount === 1 ? 'card' : 'cards' }}</span>
-                    }
-                    @if (deck.author) {
-                        <span>by {{ deck.author.name }}</span>
-                    }
-                    @if (deck.studyCount) {
-                        <span>Studied {{ deck.studyCount }}×</span>
-                        @if (deck.recentAccuracy != null) {
-                            <span class="rounded-full px-2 py-0.5 font-medium"
-                                [class]="scoreClasses(deck.recentAccuracy)"
-                                title="Average of your last 3 sessions">
-                                Last 3: {{ deck.recentAccuracy | percent: '1.0-0' }}
-                            </span>
-                        }
-                    } @else {
-                        <span class="opacity-70">Not studied yet</span>
-                    }
-                </div>
-                <div class="flex items-center justify-between gap-2">
-                    <span class="text-xs font-mono text-nowrap">{{ convertToDate(deck.uploaded) | date:'dd-MM-yyyy' }}</span>
+                <div class="mt-2 flex items-center justify-between gap-2">
+                    <span class="text-xs font-mono text-nowrap text-app-text-subtle">{{ convertToDate(deck.uploaded) | date:'dd-MM-yyyy' }}</span>
                     <div class="flex items-center gap-2">
-                        <a class="p-1.5 rounded-full hover:bg-app-card-hover"
+                        <a class="p-1.5 rounded-full text-app-text-subtle hover:text-app-text hover:bg-app-card-hover"
                             [attr.href]="'/api/v1/deck/' + deck.deckName"
                             [attr.download]="deck.deckName"
                             [attr.aria-label]="'Download ' + getDeckPath(deck.deckName)"
                             title="Download deck">
                             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V3"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/></svg>
                         </a>
-                        <a class="inline-flex items-center gap-1.5 rounded-full bg-app-text-muted text-app-bg px-4 py-1.5 text-sm font-bold"
+                        <a class="inline-flex items-center gap-1.5 rounded-full bg-action text-app-bg px-4 py-1.5 text-sm font-bold shadow-raised hover:bg-action-hover"
                             [routerLink]="['/deck-study/', getDeckPath(deck.deckName)]"
                             [attr.aria-label]="'Study ' + getDeckPath(deck.deckName)">
                             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13.4 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7.4"/><path d="M21.378 5.626a1 1 0 1 0-3.004-3.004l-5.01 5.012a2 2 0 0 0-.506.854l-.837 2.87a.5.5 0 0 0 .62.62l2.87-.837a2 2 0 0 0 .854-.506z"/></svg>

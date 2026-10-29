@@ -15,7 +15,7 @@
             type="button"
             (click)="removeFile($index)"
             [attr.aria-label]="'Remove ' + file.name"
-            class="inline-flex size-6 items-center justify-center rounded text-app-text-muted hover:cursor-pointer hover:text-app-text"
+            class="inline-flex size-6 items-center justify-center rounded-full text-app-text-muted hover:cursor-pointer hover:text-app-text"
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -39,7 +39,7 @@
   }
 
   @if (problems().length > 0) {
-    <ul role="alert" class="space-y-1 text-sm text-red-400">
+    <ul role="alert" class="space-y-1 text-sm text-red-700 dark:text-red-400">
       @for (problem of problems(); track problem) {
         <li>{{ problem }}</li>
       }
@@ -68,10 +68,10 @@
           ? 'For example: make the answers shorter, or add a card about photosynthesis'
           : 'Paste text, or describe what to focus on when attaching files'
       "
-      class="thin-scrollbar max-h-60 min-h-24 w-full resize-none rounded-t-2xl border-2 border-b-0 border-app-border bg-transparent px-4 py-3 text-sm placeholder:text-app-text-muted focus:outline-none disabled:opacity-50 [field-sizing:content]"
+      class="thin-scrollbar max-h-60 min-h-24 w-full resize-none rounded-t-xl border-2 border-b-0 border-app-border bg-app-card shadow-inset px-4 py-3 text-sm placeholder:text-app-text-subtle focus:outline-none disabled:opacity-50 [field-sizing:content]"
     ></textarea>
     <div
-      class="flex items-center justify-between gap-2 rounded-b-2xl border-2 border-t-0 border-app-border bg-transparent px-3 py-3"
+      class="flex items-center justify-between gap-2 rounded-b-xl border-2 border-t-0 border-app-border bg-app-card px-3 py-3"
     >
       <app-file-input
         [accept]="accept"
@@ -83,14 +83,14 @@
       <button
         type="submit"
         [disabled]="disabled()"
-        class="min-h-9 rounded-lg border border-app-text bg-app-text-muted px-4 text-sm font-bold text-app-bg hover:cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
+        class="min-h-9 rounded-full border border-action bg-action hover:bg-action-hover shadow-raised px-4 text-sm font-bold text-app-bg hover:cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
       >
         {{ activeDeck() ? 'Update deck' : 'Generate' }}
       </button>
     </div>
   </div>
   @if (!activeDeck()) {
-    <div class="flex flex-wrap items-end gap-x-6 gap-y-2 text-sm text-app-text-muted">
+    <div class="flex flex-wrap items-end gap-x-6 gap-y-4 text-sm text-app-text-muted">
       <label class="flex min-w-40 flex-1 flex-col gap-1 text-xs">
         Deck name
         <input
@@ -101,7 +101,7 @@
           [disabled]="disabled()"
           [ngModel]="deckName()"
           (ngModelChange)="deckName.set($event)"
-          class="min-h-9 rounded-lg border-2 border-app-border bg-transparent px-3 font-mono text-sm text-app-text"
+          class="min-h-9 rounded-lg border-2 border-app-border bg-app-card shadow-inset px-3 font-mono text-sm text-app-text"
         />
       </label>
       <div class="flex items-center gap-2">
@@ -126,7 +126,7 @@
           [disabled]="disabled() || !limitCards()"
           [ngModel]="cardCount()"
           (ngModelChange)="cardCount.set($event)"
-          class="min-h-9 w-20 rounded-lg border-2 border-app-border bg-transparent px-3 text-sm text-app-text disabled:opacity-50"
+          class="min-h-9 w-20 rounded-lg border-2 border-app-border bg-app-card shadow-inset px-3 text-sm text-app-text disabled:opacity-50"
         />
       </div>
       <label class="inline-flex min-h-9 items-center gap-2">
