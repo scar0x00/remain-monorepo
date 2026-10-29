@@ -1,6 +1,6 @@
 import { beforeAll, beforeEach, describe, expect, it } from "bun:test";
 import type { Client } from "pg";
-import { SYSTEM_USER_ID, backfillCardCounts } from "../../src/lib/decks";
+import { SYSTEM_USER_ID, backfillDeckRows } from "../../src/lib/decks";
 import {
   getActivity,
   getOverview,
@@ -282,25 +282,28 @@ describe("listDeckSessions", () => {
   });
 });
 
-describe("backfillCardCounts", () => {
-  it("fills in missing card counts from the deck files", async () => {
+describe("backfillDeckRows", () => {
+  it("fills in missing card counts, titles and metadata from the deck files", async () => {
     const bucket = createFakeR2();
     await bucket.put("old.json", JSON.stringify([{ front: "a", back: "b" }, { front: "c", back: "d" }]));
     await bucket.put("broken.json", "not json");
+    const meta = { title: "Signals", tool: { kind: "agent", model: "m" } };
+    await bucket.put("v2.json", JSON.stringify({ version: 2, meta, cards: [{ id: "c_1", front: "a", back: "b" }] }));
     await pg.query(
-      `INSERT INTO public.decks (name, user_id) VALUES ('old.json', $1), ('broken.json', $1), ('missing.json', $1)`,
+      `INSERT INTO public.decks (name, user_id) VALUES ('old.json', $1), ('broken.json', $1), ('missing.json', $1), ('v2.json', $1)`,
       [SYSTEM_USER_ID],
     );
 
-    await backfillCardCounts({ bucket: bucket as unknown as R2Bucket, pg });
+    await backfillDeckRows({ bucket: bucket as unknown as R2Bucket, pg });
 
     const { rows } = await pg.query<{ name: string; card_count: number | null }>(
-      `SELECT name, card_count FROM public.decks ORDER BY name`,
+      `SELECT name, card_count, title, meta FROM public.decks ORDER BY name`,
     );
     expect(rows).toEqual([
-      { name: "broken.json", card_count: null },
-      { name: "missing.json", card_count: null },
-      { name: "old.json", card_count: 2 },
+      { name: "broken.json", card_count: null, title: null, meta: null },
+      { name: "missing.json", card_count: null, title: null, meta: null },
+      { name: "old.json", card_count: 2, title: null, meta: {} },
+      { name: "v2.json", card_count: 1, title: "Signals", meta },
     ]);
   });
 });

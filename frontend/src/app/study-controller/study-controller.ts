@@ -9,7 +9,7 @@ import { DecimalPipe, PercentPipe } from "@angular/common";
 import { Deck } from "../../types/Deck";
 import { StudyAnswer, StudySession } from "../../types/StudySession";
 import { StudySessionService } from "../study-session/study-session.service";
-import { cardId } from "../study-session/card-id";
+import { normalizeDeck } from "../deck-format/deck-format";
 
 @Component({
     selector: "app-study-controller",
@@ -30,10 +30,14 @@ export class StudyController {
         return raw ? new Set(raw.split(",")) : undefined;
     });
 
-    protected readonly deck = httpResource<Deck>(() => {
-        const id = this.deckId();
-        return id ? `/api/v1/deck/${id}.json` : undefined;
-    });
+    // Legacy decks (a bare array of cards) are upgraded to v2 here, with deterministic card ids.
+    protected readonly deck = httpResource<Deck>(
+        () => {
+            const id = this.deckId();
+            return id ? `/api/v1/deck/${id}.json` : undefined;
+        },
+        { parse: normalizeDeck },
+    );
 
     protected readonly answers = signal<StudyAnswer[]>([]);
     rightCounter = computed(() => this.answers().filter((a) => a.correct).length);
@@ -47,12 +51,12 @@ export class StudyController {
     private startedAt = Date.now();
 
     shuffledIndexes = computed(() => {
-        const deck = this.deck.value();
-        if (!deck?.length) return undefined;
+        const cards = this.deck.value()?.cards;
+        if (!cards?.length) return undefined;
 
         const filter = this.cardIdFilter();
-        const arr = Array.from({ length: deck.length }, (_, i) => i).filter(
-            (i) => !filter || filter.has(cardId(deck[i])),
+        const arr = Array.from({ length: cards.length }, (_, i) => i).filter(
+            (i) => !filter || filter.has(cards[i].id),
         );
 
         for (let i = arr.length - 1; i > 0; i--) {
@@ -63,13 +67,13 @@ export class StudyController {
         return arr;
     });
     currentMd = computed(() => {
-        const deck = this.deck.value();
+        const cards = this.deck.value()?.cards;
         const shuffledIndexes = this.shuffledIndexes();
         const index = this.currentCard();
-        if (!deck || !shuffledIndexes || index >= shuffledIndexes.length) {
+        if (!cards || !shuffledIndexes || index >= shuffledIndexes.length) {
             return undefined;
         }
-        return deck[shuffledIndexes[this.currentCard()]];
+        return cards[shuffledIndexes[this.currentCard()]];
     });
 
     readonly finished = computed(
@@ -123,7 +127,7 @@ export class StudyController {
 
         const answer: StudyAnswer = {
             position: this.answers().length,
-            cardId: cardId(card),
+            cardId: card.id,
             cardFront: card.front,
             correct,
             durationMs: Date.now() - this.shownAt,

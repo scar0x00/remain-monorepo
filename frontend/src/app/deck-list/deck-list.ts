@@ -2,6 +2,14 @@ import { Component, inject } from "@angular/core";
 import { DeckSearchTerm } from "../deck-search-term";
 import { RouterLink } from "@angular/router";
 import { DatePipe, PercentPipe } from "@angular/common";
+import { DeckTool } from "../../types/Deck";
+
+const TOOL_LABELS: Record<DeckTool["kind"], string> = {
+  agent: "Generated",
+  mcp: "MCP",
+  manual: "Manual",
+  upload: "Uploaded",
+};
 
 @Component({
   selector: "app-deck-list",
@@ -13,6 +21,14 @@ export class DeckList {
 
   getDeckPath(deckName: string): string {
     return deckName.replace(/\.json$/i, "");
+  }
+
+  toolLabel(tool: DeckTool): string {
+    return TOOL_LABELS[tool.kind];
+  }
+
+  toolTitle(tool: DeckTool): string {
+    return tool.model ? `Generated with ${tool.model}` : TOOL_LABELS[tool.kind];
   }
 
   // Color hint for the recent score: green from 80%, amber from 50%, red below.
