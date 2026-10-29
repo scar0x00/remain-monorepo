@@ -103,7 +103,6 @@ Playwright browser tests (`app.e2e.test.ts`) that run against the live stack (`b
 ### Other
 - `dev-server` (repo root): bash script that starts the whole stack with `./dev-server {start|stop|restart|status|logs}`. Ports: main-backend 8787, agent 8788, frontend 4200. It passes one `--persist-to` dir to both workers.
 - `test-decks/`, `test-pdfs/`: sample inputs for manual testing.
-- `db/`: only `connect-psql-command.sh`.
 - `spec.md`, `TODO.md`: old notes, not kept up to date.
 - The app will be deployed on Cloudflare Workers using behind Cloudflare Access
 
