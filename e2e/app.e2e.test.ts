@@ -155,6 +155,7 @@ describe("study session", () => {
     }
 
     await doneMarker.waitFor();
-    await page.getByText(new RegExp(`^${right} right · ${wrong} wrong · \\d+s$`)).waitFor();
+    // The summary sits on its own line in the <p>, and regex text matching does not trim it.
+    await page.getByText(new RegExp(`^\\s*${right} right · ${wrong} wrong · \\d+s\\s*$`)).waitFor();
   }, STUDY_TIMEOUT);
 });
