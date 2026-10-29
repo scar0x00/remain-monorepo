@@ -10,7 +10,7 @@ import { RANGE_OPTIONS, RangeDays } from '../stats/stats.service';
         <button type="button"
           class="flex-1 sm:flex-none min-h-11 px-4 text-sm border border-app-border -ml-px first:ml-0 cursor-pointer"
           [class.rounded-l-full]="first" [class.rounded-r-full]="last"
-          [class]="days() === option ? 'bg-app-text text-app-bg border-app-text' : 'text-app-text-muted hover:bg-app-card'"
+          [class]="days() === option ? 'bg-action text-app-bg border-action font-semibold' : 'text-app-text-muted hover:bg-app-card'"
           [attr.aria-pressed]="days() === option"
           (click)="days.set(option)">
           {{ option }} days

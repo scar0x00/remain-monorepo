@@ -80,9 +80,9 @@ export class AccuracyChart {
           data: points.map((p) => p.value),
           symbol: 'circle',
           symbolSize: 6,
-          lineStyle: { color: c.text, width: 2.5 },
-          itemStyle: { color: c.text },
-          areaStyle: { color: withAlpha(c.text, 0.12) },
+          lineStyle: { color: c.accent, width: 2.5 },
+          itemStyle: { color: c.accent },
+          areaStyle: { color: withAlpha(c.accent, 0.12) },
         },
       ],
     };

@@ -1,39 +1,96 @@
 @import "tailwindcss";
 
+/*
+ * Design system
+ *
+ * Personality: a calm, friendly study companion. Warm colours, a neutral
+ * sans serif (Google Sans) and rounded but not bubbly corners.
+ *
+ * Limit the choices, so every decision is a pick from a short list:
+ *   Corners  - rounded-lg for controls (inputs, selects, chips),
+ *              rounded-xl for containers (cards, panels, menus),
+ *              rounded-full for buttons and pills. Nothing else.
+ *   Spacing  - Tailwind's 4px based scale; values used: 1 2 3 4 5 6 8 10 12 16.
+ *   Weights  - 400 for text, 600/700 for emphasis.
+ *   Shadows  - five elevations, shadow-e1 (resting cards) to shadow-e5 (modals),
+ *              plus shadow-raised for solid buttons and shadow-inset for inputs.
+ *   Type     - xs 12, sm 14, base 16, lg 18, xl 20, 2xl 24, 3xl 30, 5xl 48 (px).
+ *              Tight line height and letter spacing on large headings,
+ *              relaxed line height on small text and long reading text.
+ */
 
-/* 1. Default (DARK MODE) Variables */
+
+/* 1. Palette: every shade defined up front, in HSL.
+   Greys are warm (a little yellow-orange in them), with more saturation at
+   the light and dark ends so they don't wash out. Honey (the brand amber)
+   rotates its hue toward orange as it darkens, so the dark shades stay rich
+   instead of turning brown. Ember is the accent for warnings and highlights.
+   Success / danger use Tailwind's green and red scales. */
 :root {
-  /* Surfaces & Base UI */
-  --app-bg: #03071e;           /* Ink Black */
-  --app-card: #370617;         /* Night Bordeaux */
-  --app-card-hover: #6a040f;   /* Black Cherry */
-  --app-border: #6a040f;       /* Black Cherry */
-  --app-text: #ffba08;         /* Amber Flame */
-  --app-text-muted: #f48c06;   /* Dark Orange */
+  --sand-50: hsl(40 33% 97%);
+  --sand-100: hsl(36 27% 93%);
+  --sand-200: hsl(34 20% 86%);
+  --sand-300: hsl(32 15% 74%);
+  --sand-400: hsl(30 11% 60%);
+  --sand-500: hsl(28 9% 45%);
+  --sand-600: hsl(27 11% 35%);
+  --sand-700: hsl(26 14% 25%);
+  --sand-800: hsl(25 17% 16%);
+  --sand-900: hsl(24 21% 10%);
+  --sand-950: hsl(24 26% 6%);
 
-  /* Brand / Action Colors */
-  --primary: #d00000;          /* Brick Ember */
-  --primary-hover: #dc2f02;    /* Red Ochre */
-  --secondary: #e85d04;        /* Autumn Leaf */
-  --accent: #faa307;           /* Orange */
+  --honey-50: hsl(48 100% 96%);
+  --honey-100: hsl(46 96% 89%);
+  --honey-200: hsl(44 96% 78%);
+  --honey-300: hsl(42 96% 66%);
+  --honey-400: hsl(40 96% 56%);
+  --honey-500: hsl(36 94% 50%);
+  --honey-600: hsl(30 92% 44%);
+  --honey-700: hsl(25 88% 38%);
+  --honey-800: hsl(21 82% 31%);
+  --honey-900: hsl(18 78% 24%);
+
+  --ember-100: hsl(8 90% 94%);
+  --ember-300: hsl(6 85% 72%);
+  --ember-500: hsl(4 76% 52%);
+  --ember-700: hsl(2 74% 38%);
+  --ember-900: hsl(0 70% 24%);
 }
 
-/* 2. Light Mode Override */
+/* 2. Semantic tokens, dark by default */
+:root {
+  /* Surfaces & base UI */
+  --app-bg: var(--sand-950);
+  --app-card: var(--sand-900);
+  --app-card-hover: var(--sand-800);
+  --app-border: var(--sand-800);
+  /* Text: one colour per level of hierarchy */
+  --app-text: var(--sand-50);
+  --app-text-muted: var(--sand-300);
+  --app-text-subtle: var(--sand-400);
+  /* Solid primary buttons, with --app-bg as their text colour */
+  --app-action: var(--honey-400);
+  --app-action-hover: var(--honey-300);
+  --app-accent: var(--ember-500);
+  /* Shadows are tinted with the warm grey; dark surfaces need them stronger */
+  --shadow-hsl: 24 40% 2%;
+  --shadow-strength: 2.5;
+}
+
 @media (prefers-color-scheme: light) {
   :root {
-    /* Surfaces & Base UI */
-    --app-bg: #ffba08;         /* Amber Flame (Light background) */
-    --app-card: #faa307;       /* Orange (Light surface) */
-    --app-card-hover: #f48c06; /* Dark Orange */
-    --app-border: #e85d04;     /* Autumn Leaf */
-    --app-text: #03071e;       /* Ink Black (Dark text on light) */
-    --app-text-muted: #370617; /* Night Bordeaux */
-
-    /* Brand / Action Colors */
-    --primary: #9d0208;        /* Oxblood */
-    --primary-hover: #6a040f;  /* Black Cherry */
-    --secondary: #dc2f02;      /* Red Ochre */
-    --accent: #d00000;         /* Brick Ember */
+    --shadow-hsl: 24 30% 20%;
+    --shadow-strength: 1;
+    --app-bg: var(--sand-50);
+    --app-card: hsl(0 0% 100%);
+    --app-card-hover: var(--sand-100);
+    --app-border: var(--sand-200);
+    --app-text: var(--sand-900);
+    --app-text-muted: var(--sand-600);
+    --app-text-subtle: var(--sand-500);
+    --app-action: var(--honey-700);
+    --app-action-hover: var(--honey-800);
+    --app-accent: var(--ember-700);
   }
 }
 
@@ -45,15 +102,64 @@
   --color-app-border: var(--app-border);
   --color-app-text: var(--app-text);
   --color-app-text-muted: var(--app-text-muted);
+  --color-app-text-subtle: var(--app-text-subtle);
+  --color-action: var(--app-action);
+  --color-action-hover: var(--app-action-hover);
+  --color-accent: var(--app-accent);
 
-  --color-primary: var(--primary);
-  --color-primary-hover: var(--primary-hover);
-  --color-secondary: var(--secondary);
-  --color-accent: var(--accent);
+  --color-sand-50: var(--sand-50);
+  --color-sand-100: var(--sand-100);
+  --color-sand-200: var(--sand-200);
+  --color-sand-300: var(--sand-300);
+  --color-sand-400: var(--sand-400);
+  --color-sand-500: var(--sand-500);
+  --color-sand-600: var(--sand-600);
+  --color-sand-700: var(--sand-700);
+  --color-sand-800: var(--sand-800);
+  --color-sand-900: var(--sand-900);
+  --color-sand-950: var(--sand-950);
+  --color-honey-50: var(--honey-50);
+  --color-honey-100: var(--honey-100);
+  --color-honey-200: var(--honey-200);
+  --color-honey-300: var(--honey-300);
+  --color-honey-400: var(--honey-400);
+  --color-honey-500: var(--honey-500);
+  --color-honey-600: var(--honey-600);
+  --color-honey-700: var(--honey-700);
+  --color-honey-800: var(--honey-800);
+  --color-honey-900: var(--honey-900);
+
+  /* Elevation: each shadow has a soft, offset part (direct light) and a tight,
+     dark part (ambient occlusion) that fades as the element rises. */
+  --shadow-e1: 0 1px 3px hsl(var(--shadow-hsl) / calc(0.06 * var(--shadow-strength))),
+    0 1px 2px hsl(var(--shadow-hsl) / calc(0.08 * var(--shadow-strength)));
+  --shadow-e2: 0 4px 6px hsl(var(--shadow-hsl) / calc(0.06 * var(--shadow-strength))),
+    0 2px 4px hsl(var(--shadow-hsl) / calc(0.06 * var(--shadow-strength)));
+  --shadow-e3: 0 10px 20px hsl(var(--shadow-hsl) / calc(0.08 * var(--shadow-strength))),
+    0 3px 6px hsl(var(--shadow-hsl) / calc(0.05 * var(--shadow-strength)));
+  --shadow-e4: 0 15px 25px hsl(var(--shadow-hsl) / calc(0.1 * var(--shadow-strength))),
+    0 5px 10px hsl(var(--shadow-hsl) / calc(0.03 * var(--shadow-strength)));
+  --shadow-e5: 0 20px 40px hsl(var(--shadow-hsl) / calc(0.14 * var(--shadow-strength)));
 
   --font-sans: 'Google Sans', system-ui, -apple-system, sans-serif;
   --font-mono: 'Google Sans Code', monospace;
 }
+/* Light comes from above: a raised button shows a lighter top edge and casts
+   a small, sharp shadow below. Pressing it pushes it back into the page. */
+@utility shadow-raised {
+  box-shadow:
+    inset 0 1px 0 hsl(48 100% 96% / 0.35),
+    0 1px 2px hsl(var(--shadow-hsl) / calc(0.2 * var(--shadow-strength)));
+  &:active:not(:disabled) {
+    box-shadow: inset 0 1px 2px hsl(var(--shadow-hsl) / 0.25);
+  }
+}
+
+/* Inset wells (inputs): the lip above blocks light from the top edge. */
+@utility shadow-inset {
+  box-shadow: inset 0 2px 3px hsl(var(--shadow-hsl) / calc(0.07 * var(--shadow-strength)));
+}
+
 .thin-scrollbar {
   scrollbar-width: thin;
   scrollbar-color: var(--app-border) transparent;
@@ -95,8 +201,8 @@ input[type='checkbox']::after {
   transition: transform 120ms;
 }
 input[type='checkbox']:checked {
-  background: var(--app-text-muted);
-  border-color: var(--app-text-muted);
+  background: var(--app-action);
+  border-color: var(--app-action);
 }
 input[type='checkbox']:checked::after {
   transform: translateY(-1px) rotate(45deg) scale(1);
@@ -108,4 +214,49 @@ input[type='checkbox']:focus-visible {
 input[type='checkbox']:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+/* Markdown on flashcards: a readable measure and a small heading scale.
+   Card headings act like titles, so they stay close to the body size. */
+.card-prose {
+  display: block;
+  max-width: 65ch;
+  line-height: 1.65;
+}
+.card-prose :where(h1, h2, h3, h4) {
+  font-weight: 700;
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+  margin: 1.5em 0 0.5em;
+}
+.card-prose :where(h1) { font-size: 1.5rem; }
+.card-prose :where(h2) { font-size: 1.25rem; }
+.card-prose :where(h3, h4) { font-size: 1.125rem; }
+.card-prose > :first-child,
+.card-prose > :first-child :where(h1, h2, h3, h4) { margin-top: 0; }
+.card-prose :where(p, ul, ol, pre, table, blockquote) { margin: 0.75em 0; }
+.card-prose :where(ul) { list-style: disc; padding-left: 1.25em; }
+.card-prose :where(ol) { list-style: decimal; padding-left: 1.25em; }
+.card-prose :where(li + li) { margin-top: 0.25em; }
+.card-prose :where(strong) { font-weight: 700; }
+.card-prose :where(:not(pre) > code) {
+  font-size: 0.875em;
+  padding: 0.125em 0.375em;
+  border-radius: 0.375rem;
+  background: color-mix(in srgb, currentColor 10%, transparent);
+}
+.card-prose :where(th) { font-weight: 600; text-align: left; }
+
+/* Images come from whoever wrote the deck: keep them inside the card, and use
+   a faint inner outline (not a border) so a light image doesn't bleed into a
+   light card. */
+.card-prose :where(img) {
+  display: block;
+  max-width: 100%;
+  max-height: 24rem;
+  height: auto;
+  margin: 1em auto;
+  border-radius: 0.5rem;
+  outline: 1px solid color-mix(in srgb, var(--app-text) 12%, transparent);
+  outline-offset: -1px;
 }

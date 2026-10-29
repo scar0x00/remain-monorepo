@@ -1,9 +1,9 @@
 @if (front()) {
 <markdown
-    class="[&_.katex-display]:overflow-x-auto [&_.katex-display]:overflow-y-hidden [&_.katex-display]:pb-3 
+    class="card-prose [&_.katex-display]:overflow-x-auto [&_.katex-display]:overflow-y-hidden [&_.katex-display]:pb-3 
     [&_table]:block [&_table]:overflow-x-auto [&_table]:overflow-y-hidden [&_table]:w-full [&_table]:text-sm
     [&_th]:px-3 [&_td]:px-3 [&_th]:py-1 [&_td]:py-1
-    [&_code]:!text-xs [&_pre]:!text-xs"
+    [&_pre]:!text-sm"
     katex
     [data]="front()"
 >
@@ -13,10 +13,10 @@
 @if (!hideBack()) {
     <hr class="my-4 opacity-25">
     <markdown
-        class="[&_.katex-display]:overflow-x-auto [&_.katex-display]:overflow-y-hidden [&_.katex-display]:pb-3 
+        class="card-prose [&_.katex-display]:overflow-x-auto [&_.katex-display]:overflow-y-hidden [&_.katex-display]:pb-3 
         [&_table]:block [&_table]:overflow-x-auto [&_table]:overflow-y-hidden [&_table]:w-full [&_table]:text-sm
         [&_th]:px-3 [&_td]:px-3 [&_th]:py-1 [&_td]:py-1
-        [&_code]:!text-xs [&_pre]:!text-xs"
+        [&_pre]:!text-sm"
         katex
         [data]="back()"
     >
@@ -24,16 +24,18 @@
 }
 
 @if (!hideBack() && refLabels().length) {
-    <div class="mt-4 flex flex-col items-start gap-2 text-xs text-app-text-muted">
-        <button type="button" class="inline-flex items-center gap-1 rounded-full border border-app-border px-2.5 py-1 hover:bg-app-card-hover"
+    <div class="mt-6 flex flex-col items-start gap-3">
+        <button type="button"
+            class="-mx-2 inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-sm font-medium text-app-text-muted transition-colors hover:bg-app-card-hover hover:text-app-text focus-visible:outline-2 focus-visible:outline-action"
             [attr.aria-expanded]="showRefs()" aria-controls="card-refs" (click)="toggleRefs()">
-            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></svg>
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="size-4 text-app-text-subtle" aria-hidden="true"><path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></svg>
             {{ showRefs() ? 'Hide references' : 'References' }}
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="size-4 text-app-text-subtle transition-transform" [class.rotate-180]="showRefs()" aria-hidden="true"><path fill-rule="evenodd" d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06Z" clip-rule="evenodd"/></svg>
         </button>
         @if (showRefs()) {
-            <ul id="card-refs" class="flex flex-wrap gap-1.5" aria-label="References">
+            <ul id="card-refs" class="flex flex-wrap gap-2" aria-label="References">
                 @for (label of refLabels(); track $index) {
-                    <li class="rounded-full bg-app-card px-2 py-0.5 font-mono">{{ label }}</li>
+                    <li class="rounded-md bg-app-bg px-2.5 py-1 text-sm text-app-text-muted tabular-nums">{{ label }}</li>
                 }
             </ul>
         }

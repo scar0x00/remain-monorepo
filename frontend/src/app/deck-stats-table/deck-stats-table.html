@@ -1,5 +1,5 @@
 <div class="flex items-center justify-between gap-3 flex-wrap px-4 sm:px-5 pt-4 pb-2">
-    <h2 class="text-lg font-semibold text-app-text">Your decks</h2>
+    <h2 class="text-base font-semibold text-app-text">Your decks</h2>
     <label class="flex items-center gap-2 text-sm text-app-text-muted">
         Sort by
         <!-- Native arrow replaced by our own so it gets the same padding as the text. -->
@@ -21,11 +21,11 @@
     <div class="hidden md:block overflow-x-auto">
         <table class="w-full border-collapse text-sm">
             <thead>
-                <tr class="text-left text-xs text-app-text-muted">
+                <tr class="text-left text-xs uppercase tracking-wider text-app-text-subtle">
                     <th scope="col" class="font-semibold px-5 py-2">Deck</th>
                     <th scope="col" class="font-semibold px-3 py-2">Success ({{ days() }} days)</th>
                     <th scope="col" class="font-semibold px-3 py-2">Last 10 sessions</th>
-                    <th scope="col" class="font-semibold px-3 py-2">Mastered</th>
+                    <th scope="col" class="font-semibold px-3 py-2 text-right">Mastered</th>
                     <th scope="col" class="font-semibold px-3 py-2">Last studied</th>
                     <th scope="col" class="px-5 py-2"><span class="sr-only">Actions</span></th>
                 </tr>
@@ -51,15 +51,15 @@
                                     <span class="font-semibold tabular-nums" [class]="textClass(deck.level)">{{ deck.accuracyLabel }}</span>
                                 </div>
                             } @else {
-                                <span class="text-app-text-muted">Not studied</span>
+                                <span class="text-app-text-subtle">Not studied</span>
                             }
                         </td>
                         <td class="px-3 py-3"><app-sparkline [values]="deck.trend" /></td>
-                        <td class="px-3 py-3 tabular-nums whitespace-nowrap">{{ deck.mastered }}</td>
+                        <td class="px-3 py-3 text-right tabular-nums whitespace-nowrap">{{ deck.mastered }}</td>
                         <td class="px-3 py-3 text-app-text-muted whitespace-nowrap">{{ deck.last }}</td>
                         <td class="px-5 py-3 text-right">
                             @if (deck.exists && deck.study) {
-                                <a class="inline-flex items-center rounded-full bg-app-text-muted text-app-bg px-4 py-1.5 text-sm font-bold"
+                                <a class="inline-flex items-center rounded-full border border-app-border text-app-text hover:bg-app-card-hover px-4 py-1.5 text-sm font-semibold"
                                     [routerLink]="deck.study" [attr.aria-label]="'Study ' + deck.title">Study</a>
                             }
                         </td>
@@ -73,7 +73,7 @@
     <ul class="md:hidden flex flex-col gap-3 px-4 pb-4">
         @for (deck of rows(); track deck.deckName) {
             <li>
-                <a class="flex flex-col gap-2.5 rounded-xl border border-app-border p-4"
+                <a class="flex flex-col gap-2.5 rounded-lg bg-app-bg p-4"
                     [routerLink]="['/dashboard/decks', deck.deckName]">
                     <span class="flex justify-between gap-3">
                         <span class="font-semibold text-app-text truncate">{{ deck.title }}</span>

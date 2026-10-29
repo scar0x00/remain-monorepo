@@ -5,14 +5,14 @@ import { Component, input, output } from '@angular/core';
   selector: 'app-section-state',
   template: `
     @if (error()) {
-      <div class="flex flex-col items-start gap-2 rounded-2xl border border-app-border bg-app-card/40 p-4 sm:p-5" role="alert">
+      <div class="flex flex-col items-start gap-2 rounded-xl bg-app-card shadow-e1 p-4 sm:p-5" role="alert">
         <p class="font-semibold text-app-text">Could not load {{ what() }}</p>
         <p class="text-sm text-app-text-muted">The rest of the dashboard still works.</p>
-        <button type="button" class="min-h-11 rounded-full border-2 border-app-text px-4 font-bold text-app-text cursor-pointer"
+        <button type="button" class="min-h-11 rounded-full border-2 border-app-border px-4 font-bold hover:bg-app-card text-app-text cursor-pointer"
           (click)="retry.emit()">Try again</button>
       </div>
     } @else {
-      <div class="animate-pulse rounded-2xl bg-app-text/10" [style.height]="height()" aria-hidden="true"></div>
+      <div class="animate-pulse rounded-xl bg-app-text/10" [style.height]="height()" aria-hidden="true"></div>
     }
   `,
 })

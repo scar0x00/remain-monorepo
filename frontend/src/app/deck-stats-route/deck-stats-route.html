@@ -1,9 +1,9 @@
-<div class="mx-auto flex w-full max-w-5xl flex-col gap-6 text-app-text pb-12">
-    <a routerLink="/dashboard" class="self-start text-sm text-app-text-muted hover:underline">← Dashboard</a>
+<div class="mx-auto flex w-full max-w-5xl flex-col gap-8 text-app-text">
+    <a routerLink="/dashboard" class="self-start text-sm text-app-text-subtle hover:text-app-text">← Dashboard</a>
 
     <header class="flex flex-wrap items-end justify-between gap-4">
         <div class="flex min-w-0 flex-col gap-1">
-            <h1 class="text-2xl sm:text-3xl font-bold wrap-break-word">{{ title() }}</h1>
+            <h1 class="text-2xl font-bold leading-tight tracking-tight wrap-break-word">{{ title() }}</h1>
             @if (detail(); as d) {
                 <p class="text-app-text-muted">
                     @if (d.cardCount != null) { {{ d.cardCount }} cards · }
@@ -15,14 +15,14 @@
         <div class="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:items-center">
             <app-range-selector [(days)]="stats.days" />
             @if (study() && detail()?.exists) {
-                <a class="inline-flex min-h-11 items-center justify-center rounded-full bg-app-text-muted px-5 font-bold text-app-bg"
+                <a class="inline-flex min-h-11 items-center justify-center rounded-full bg-action px-5 font-bold text-app-bg shadow-raised hover:bg-action-hover"
                     [routerLink]="study()">Study this deck</a>
             }
         </div>
     </header>
 
     @if (notFound()) {
-        <p class="rounded-2xl border border-app-border p-6 text-app-text-muted">
+        <p class="rounded-xl bg-app-card shadow-e1 p-6 text-app-text-muted">
             No deck or study history called “{{ title() }}”. <a routerLink="/dashboard" class="underline text-app-text">Back to the dashboard</a>
         </p>
     } @else if (detail(); as d) {
@@ -32,8 +32,8 @@
             }
         </section>
 
-        <section class="flex flex-col gap-3 rounded-2xl border border-app-border bg-app-card/40 p-4 sm:p-5">
-            <h2 class="text-lg font-semibold">Success per session</h2>
+        <section class="flex flex-col gap-3 rounded-xl bg-app-card shadow-e1 p-4 sm:p-5">
+            <h2 class="text-base font-semibold">Success per session</h2>
             @if (d.recentSessions.length > 1) {
                 <app-accuracy-chart [sessions]="d.recentSessions" />
             } @else {
@@ -42,23 +42,23 @@
         </section>
 
         <section class="flex flex-wrap gap-4">
-            <div class="flex flex-[1_1_22rem] flex-col gap-3">
+            <div class="flex min-w-0 flex-[1_1_22rem] flex-col gap-3">
                 <app-hardest-cards [cards]="d.hardestCards" [showDeck]="false" title="Hardest cards in this deck" />
                 @if (study() && d.exists && d.hardestCards.length > 1) {
-                    <a class="self-start text-sm underline" [routerLink]="study()" [queryParams]="{ cardIds: practiceIds() }">
+                    <a class="self-start text-sm font-semibold text-app-text-muted hover:text-app-text hover:underline" [routerLink]="study()" [queryParams]="{ cardIds: practiceIds() }">
                         Practice all {{ d.hardestCards.length }} hardest cards
                     </a>
                 }
             </div>
-            <div class="flex min-w-0 flex-[1_1_22rem] flex-col gap-2 rounded-2xl border border-app-border bg-app-card/40 p-4 sm:p-5">
-                <h2 class="text-lg font-semibold">Recent sessions</h2>
+            <div class="flex min-w-0 flex-[1_1_22rem] flex-col gap-2 rounded-xl bg-app-card shadow-e1 p-4 sm:p-5">
+                <h2 class="text-base font-semibold">Recent sessions</h2>
                 @if (sessionRows().length) {
                     <ul class="flex flex-col">
                         @for (s of sessionRows(); track s.id) {
                             <li class="flex items-center justify-between gap-3 border-t border-app-border py-2.5 first:border-t-0 text-sm">
                                 <span class="min-w-0">
                                     <span class="block">{{ s.when }}</span>
-                                    <span class="block text-xs text-app-text-muted">{{ s.detail }}@if (s.status) { · {{ s.status }} }</span>
+                                    <span class="block text-xs text-app-text-subtle">{{ s.detail }}@if (s.status) { · {{ s.status }} }</span>
                                 </span>
                                 <span class="font-semibold tabular-nums">{{ s.accuracy }}</span>
                             </li>

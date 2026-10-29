@@ -1,4 +1,4 @@
-<section class="text-app-text flex flex-col items-center gap-8 text-center">
+<section class="text-app-text flex flex-col items-center gap-8 text-center overflow-x-clip">
   <div class="stage" aria-hidden="true">
     <span class="spark spark-1"></span>
     <span class="spark spark-2"></span>
@@ -23,19 +23,19 @@
   </div>
 
   <div class="flex flex-col items-center gap-3 max-w-md">
-    <h1 class="text-4xl font-bold">Remain</h1>
-    <p class="text-app-text-muted text-lg">
-      Flip, recall and remember. Study a deck, or let AI build one from your notes.
+    <h1 class="text-5xl font-bold leading-none tracking-tight">Remain</h1>
+    <p class="text-app-text-muted text-lg leading-relaxed">
+      <span class="font-semibold text-app-text">Flip, recall and remember.</span> Study a deck, or let AI build one from your notes.
     </p>
   </div>
 
   <div class="flex flex-col sm:flex-row gap-4 w-full max-w-md">
     <a routerLink="/deck-browse"
-      class="cta flex-1 bg-app-text text-app-bg border-app-text">
+      class="cta flex-1 bg-action text-app-bg border-action hover:bg-action-hover hover:border-action-hover">
       Study
     </a>
     <a routerLink="/flashcard-chat"
-      class="cta flex-1 text-app-text border-app-text hover:bg-app-card">
+      class="cta flex-1 text-app-text border-app-border hover:bg-app-card">
       Create a deck
     </a>
   </div>
