@@ -34,6 +34,74 @@ describe("PUT /deck/:key", () => {
     expect(await res.text()).toBe("Put alpha.apkg successfully!");
     expect(DECKS.objects.get("alpha.apkg")?.bytes.byteLength).toBe(10);
     expect(decks.get("alpha.apkg")?.size).toBe(10);
+    expect(decks.get("alpha.apkg")?.cardCount).toBeNull();
+  });
+
+  it("records the card count of a .json or .yaml deck", async () => {
+    await request("/deck/cards.json", {
+      method: "PUT",
+      body: JSON.stringify([{ front: "Q1", back: "A1" }, { front: "Q2", back: "A2" }]),
+    });
+    await request("/deck/cards.yaml", { method: "PUT", body: "- front: Q\n  back: A\n" });
+
+    expect(decks.get("cards.json")?.cardCount).toBe(2);
+    expect(decks.get("cards.yaml")?.cardCount).toBe(1);
+  });
+
+  it("stores a legacy deck as v2, stamped as an upload, with deterministic card ids", async () => {
+    const body = JSON.stringify([{ front: "Q1", back: "A1" }]);
+    const res = await request("/deck/legacy.json", { method: "PUT", body });
+
+    expect(res.status).toBe(200);
+    const deck = JSON.parse(await (await request("/deck/legacy.json")).text());
+    expect(deck).toEqual({
+      version: 2,
+      meta: { tool: { kind: "upload", generatedAt: expect.any(String) }, author: null },
+      cards: [{ id: expect.stringMatching(/^[0-9a-f]{8}$/), front: "Q1", back: "A1" }],
+    });
+
+    await request("/deck/legacy-again.json", { method: "PUT", body });
+    const again = JSON.parse(await (await request("/deck/legacy-again.json")).text());
+    expect(again.cards[0].id).toBe(deck.cards[0].id);
+    expect(decks.get("legacy.json")?.size).toBe(DECKS.objects.get("legacy.json")!.bytes.byteLength);
+  });
+
+  it("keeps the tool, author, ids and refs of an uploaded v2 deck", async () => {
+    const deck = {
+      version: 2,
+      meta: {
+        title: "Signals",
+        author: { id: "u1", name: "Ada" },
+        tool: { kind: "agent", model: "m", generatedAt: "2026-01-01T00:00:00.000Z" },
+      },
+      cards: [{ id: "c_1", front: "Q", back: "A", meta: { refs: [{ kind: "page", label: "1" }] } }],
+    };
+    await request("/deck/signals.json", { method: "PUT", body: JSON.stringify(deck) });
+
+    expect(JSON.parse(await (await request("/deck/signals.json")).text())).toEqual(deck);
+    expect(decks.get("signals.json")).toMatchObject({ title: "Signals", cardCount: 1, meta: deck.meta });
+  });
+
+  it("stores a YAML upload as YAML", async () => {
+    await request("/deck/cards.yaml", { method: "PUT", body: "- front: Q\n  back: A\n" });
+
+    const text = await (await request("/deck/cards.yaml")).text();
+    expect(text).toStartWith("version: 2\n");
+    expect(DECKS.objects.get("cards.yaml")?.contentType).toBe("application/yaml");
+  });
+
+  it.each([
+    ["not JSON", "cards.json", "{nope", "Not valid JSON"],
+    ["not YAML", "cards.yaml", "a: [", "Not valid YAML"],
+    ["a card without a back", "cards.json", JSON.stringify([{ front: "Q" }]), "0.back"],
+    ["an unknown reference kind", "cards.json", JSON.stringify({ version: 2, meta: {}, cards: [{ front: "Q", back: "A", meta: { refs: [{ kind: "chapter", label: "1" }] } }] }), "cards.0.meta.refs.0.kind"],
+  ])("rejects %s with 400 and a readable error, and stores nothing", async (_label, key, body, message) => {
+    const res = await request(`/deck/${key}`, { method: "PUT", body });
+
+    expect(res.status).toBe(400);
+    expect(await res.text()).toContain(message);
+    expect(DECKS.objects.has(key)).toBe(false);
+    expect(decks.has(key)).toBe(false);
   });
 
   it("rejects an empty body with 400 and stores nothing", async () => {
@@ -140,6 +208,40 @@ describe("GET /decks", () => {
     expect(body[1]).toMatchObject({ deckName: "b.apkg", size: 5 });
     expect(typeof body[0].etag).toBe("string");
     expect(body[0].uploaded).toBeDefined();
+    expect(body[0]).not.toHaveProperty("title");
+    expect(body[0]).not.toHaveProperty("cardCount");
+  });
+
+  it("returns the title, card count, author and tool of a deck", async () => {
+    await request("/deck/signals.json", {
+      method: "PUT",
+      body: JSON.stringify({
+        version: 2,
+        meta: { title: "Signals", author: { id: "u1", name: "Ada" }, tool: { kind: "agent", model: "m" } },
+        cards: [{ front: "Q", back: "A" }, { front: "Q2", back: "A2" }],
+      }),
+    });
+
+    const [deck] = (await (await request("/decks")).json()) as Array<Record<string, unknown>>;
+    expect(deck).toMatchObject({
+      deckName: "signals.json",
+      title: "Signals",
+      cardCount: 2,
+      author: { id: "u1", name: "Ada" },
+      tool: { kind: "agent", model: "m" },
+    });
+  });
+
+  it("matches the search term against the title too", async () => {
+    await request("/deck/sig.json", {
+      method: "PUT",
+      body: JSON.stringify({ version: 2, meta: { title: "Linear modulation" }, cards: [] }),
+    });
+
+    const names = ((await (await request("/decks?searchTerm=linear")).json()) as Array<{ deckName: string }>).map(
+      (d) => d.deckName,
+    );
+    expect(names).toEqual(["sig.json"]);
   });
 
   it("filters by searchTerm as a case-insensitive prefix", async () => {
@@ -231,6 +333,19 @@ describe("POST /flashcards/:deckName", () => {
     expect(decks.get("my-deck.json")?.etag).toBe(
       DECKS.objects.get("my-deck.json")?.httpEtag,
     );
+    expect(decks.get("my-deck.json")?.cardCount).toBe(1);
+  });
+
+  it("records the title and metadata of the generated deck file", async () => {
+    const meta = { title: "Biology", author: null, tool: { kind: "agent", model: "m", generatedAt: "2026-10-24T00:00:00.000Z" } };
+    env.FLASHCARD_AGENT = agentStub(async () => {
+      await DECKS.put("bio.json", JSON.stringify({ version: 2, meta, cards: [{ id: "c_1", front: "Q", back: "A" }] }));
+      return Response.json({ key: "bio.json", format: "json", cardCount: 1 }, { status: 201 });
+    });
+
+    await request("/flashcards/bio", form({ deckName: "bio", text: "hi" }));
+
+    expect(decks.get("bio.json")).toMatchObject({ title: "Biology", cardCount: 1, meta });
   });
 
   it("encodes the deck name when building the agent path", async () => {
@@ -264,7 +379,8 @@ describe("POST /flashcards/:deckName", () => {
   });
 
   it("passes refine through to the agent and updates the existing Postgres row", async () => {
-    await request("/deck/my-deck.json", { method: "PUT", body: "old" });
+    await request("/deck/my-deck.json", { method: "PUT", body: JSON.stringify([{ front: "Q?", back: "A" }]) });
+    const oldSize = decks.get("my-deck.json")!.size;
     const refinedFlags: string[] = [];
     env.FLASHCARD_AGENT = agentStub(async (req) => {
       const fields = await req.clone().formData();
@@ -294,7 +410,7 @@ describe("POST /flashcards/:deckName", () => {
     expect(decks.get("my-deck.json")?.size).toBe(
       DECKS.objects.get("my-deck.json")?.bytes.byteLength,
     );
-    expect(decks.get("my-deck.json")?.size).not.toBe(3);
+    expect(decks.get("my-deck.json")?.size).not.toBe(oldSize);
   });
 
   it("returns 500 when the agent reports a key that is not in R2", async () => {

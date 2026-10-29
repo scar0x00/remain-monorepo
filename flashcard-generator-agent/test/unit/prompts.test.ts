@@ -6,9 +6,19 @@ import {
   SYSTEM_PROMPT,
 } from "../../src/prompts";
 
-const currentDeck = [
-  { front: "What is a closure?", back: "A function with captured scope." },
-];
+const currentDeck = {
+  version: 2 as const,
+  meta: { title: "JS" },
+  cards: [
+    {
+      id: "c_1",
+      front: "What is a closure?",
+      back: "A function with captured scope.",
+      meta: { refs: [{ kind: "page" as const, label: "4" }], tags: ["fn"] },
+    },
+    { id: "c_2", front: "What is hoisting?", back: "Moving declarations up." },
+  ],
+};
 
 describe("formatSources", () => {
   test("wraps each source in a named tag and separates them with blank lines", () => {
@@ -58,9 +68,25 @@ describe("buildRefinePrompt", () => {
     expect(prompt).toContain("Revise the existing flashcard deck below.");
     expect(prompt).toContain("Requested change: Make the answers shorter");
     expect(prompt).toContain(
-      `<current_deck>\n${JSON.stringify(currentDeck, null, 2)}\n</current_deck>`,
+      `<current_deck>\n${JSON.stringify(
+        [
+          { index: 0, front: "What is a closure?", back: "A function with captured scope.", refs: [{ kind: "page", label: "4" }] },
+          { index: 1, front: "What is hoisting?", back: "Moving declarations up." },
+        ],
+        null,
+        2,
+      )}\n</current_deck>`,
     );
     expect(prompt).not.toContain("<source");
+  });
+
+  test("shows cards by position and never shows ids", () => {
+    const prompt = buildRefinePrompt({ currentDeck, instructions: "x" });
+
+    expect(prompt).not.toContain("c_1");
+    expect(prompt).not.toContain('"id"');
+    expect(prompt).toContain('Address each existing card by its "index"');
+    expect(prompt).toContain("return only the changes, not the whole deck");
   });
 
   test("includes additional source material when provided", () => {
@@ -88,6 +114,11 @@ describe("buildRefinePrompt", () => {
 });
 
 describe("SYSTEM_PROMPT", () => {
+  test("moves page and equation numbers into refs instead of the card text", () => {
+    expect(SYSTEM_PROMPT).toContain("Never put equation numbers or page numbers on a card");
+    expect(SYSTEM_PROMPT).toContain(`report it in the card's "refs"`);
+  });
+
   test("tells the model to use only the source material", () => {
     expect(SYSTEM_PROMPT).toContain(
       "Only use information present in the source material",

@@ -30,7 +30,9 @@ type Card = { front: string; back: string };
 async function fetchDeck(): Promise<Card[]> {
   const res = await fetch(`${API}/deck/${encodeURIComponent(DECK_KEY)}`);
   expect(res.status).toBe(200);
-  return (await res.json()) as Card[];
+  // v2 decks are { version, meta, cards }; legacy decks are a bare array.
+  const body = (await res.json()) as Card[] | { cards: Card[] };
+  return Array.isArray(body) ? body : body.cards;
 }
 
 // Polls until the callback returns a truthy value, so DOM-driven checks don't race rendering.
@@ -153,7 +155,6 @@ describe("study session", () => {
     }
 
     await doneMarker.waitFor();
-    await page.getByText(`Right: ${right}`, { exact: true }).waitFor();
-    await page.getByText(`Wrong: ${wrong}`, { exact: true }).waitFor();
+    await page.getByText(new RegExp(`^${right} right · ${wrong} wrong · \\d+s$`)).waitFor();
   }, STUDY_TIMEOUT);
 });

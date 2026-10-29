@@ -1,18 +1,46 @@
-<div class="text-app-text">
+<div class="mx-auto w-full max-w-2xl pb-28 text-app-text">
+    @if (this.sessions.saveFailed() && !this.finished()) {
+        <p class="text-sm text-app-text-muted text-center mb-2">Results not saved, you can keep studying.</p>
+    }
     @defer (on immediate) {
-        @if (this.currentCard() === this.shuffledIndexes()?.length) {
-            <div class="flex justify-start flex-col items-center gap-8">
-                <p class="text-3xl">You're done!</p>
-                <ul>
-                    <li>Right: {{ this.rightCounter() }}</li>
-                    <li>Wrong: {{ this.wrongCounter() }}</li>
-                </ul>
-                <a class="text-lg inline-flex items-center gap-2" routerLink="/deck-browse">
+        @if (this.finished()) {
+            <div class="flex justify-start flex-col items-center gap-10 pt-6">
+                <div class="flex flex-col items-center gap-1 text-center">
+                    <p class="text-xs font-semibold uppercase tracking-widest text-app-text-muted">You're done!</p>
+                    <p class="text-5xl font-bold leading-none tracking-tight tabular-nums">{{ this.accuracy() | percent: '1.0-0' }}</p>
+                    <p class="text-app-text-muted">
+                        {{ this.rightCounter() }} right · {{ this.wrongCounter() }} wrong · {{ this.elapsedMs() / 1000 | number: '1.0-0' }}s
+                    </p>
+                    @if (this.previousRun(); as previous) {
+                        @if (previous.accuracy !== null) {
+                            <p class="text-sm text-app-text-subtle">{{ previous.accuracy | percent: '1.0-0' }} last time</p>
+                        }
+                    }
+                </div>
+                @if (this.missed().length) {
+                    <div class="flex w-full flex-col items-center gap-4">
+                        <h2 class="font-semibold">Missed cards</h2>
+                        <ul class="flex w-full max-w-md flex-col gap-2 text-left leading-relaxed">
+                            @for (answer of this.missed(); track answer.position) {
+                                <li class="flex items-start gap-3 rounded-lg bg-app-card px-4 py-3 shadow-e1">
+                                    <span class="mt-1 grid size-5 shrink-0 place-items-center rounded-full bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-300"><svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></span>
+                                    <markdown class="min-w-0" katex [data]="answer.cardFront"></markdown>
+                                </li>
+                            }
+                        </ul>
+                        <a class="font-bold bg-action hover:bg-action-hover text-app-bg px-6 py-3 rounded-full shadow-raised"
+                            [routerLink]="[]" [queryParams]="{ cardIds: this.missedIds() }">Study missed cards</a>
+                    </div>
+                }
+                @if (this.sessions.saveFailed()) {
+                    <p class="text-sm text-app-text-subtle">Results could not be saved.</p>
+                }
+                <a class="inline-flex items-center gap-2 text-app-text-muted hover:text-app-text" routerLink="/deck-browse">
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-move-left-icon lucide-move-left"><path d="M6 8L2 12L6 16"/><path d="M2 12H22"/></svg> Back to decks
                 </a>
             </div>
         } @else {
-            <app-flashcard class="text-md" [front]="currentMd()?.front" [back]="currentMd()?.back" [hideBack]="hideBack()" />
+            <app-flashcard class="block min-h-[calc(100dvh-17rem)] rounded-xl bg-app-card p-6 shadow-e3 sm:min-h-[calc(100dvh-18rem)] sm:p-10 text-base sm:text-lg" [front]="currentMd()?.front" [back]="currentMd()?.back" [refs]="currentMd()?.meta?.refs" [hideBack]="hideBack()" />
         }
     } @placeholder {
         <div class="grid place-items-center">
@@ -31,18 +59,21 @@
             </svg>
         </div>
     } @error {
-        <p>Error loading your deck!</p>
+        <p>We couldn't load this deck. Try again in a moment.</p>
     }
 </div>
-<div class="text-app-bg text-lg fixed w-full flex justify-center left-0 bottom-12 gap-12 items-center bg-transparent">
-    @if (!hideBack() && this.currentCard() !== this.shuffledIndexes()?.length) {
-        <button class="font-bold bg-app-text-muted px-6 py-2 rounded-2xl" (click)="rightAnswer()">Right</button>
-        <button class="font-bold bg-app-text-muted px-6 py-2 rounded-2xl" (click)="wrongAnswer()">Wrong</button>
+<div class="text-app-bg text-lg fixed inset-x-0 bottom-8 mx-auto flex w-full max-w-md items-center justify-center gap-4 px-4 bg-transparent">
+    @if (!hideBack() && !this.finished()) {
+        <button class="flex-1 inline-flex items-center justify-center gap-2 font-bold bg-green-700 text-white hover:bg-green-800 dark:bg-green-500 dark:text-green-950 dark:hover:bg-green-400 px-6 py-3 rounded-full shadow-raised active:translate-y-px" (click)="rightAnswer()">
+            <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+            Right
+        </button>
+        <button class="flex-1 inline-flex items-center justify-center gap-2 font-bold bg-red-700 text-white hover:bg-red-800 dark:bg-red-500 dark:text-red-950 dark:hover:bg-red-400 px-6 py-3 rounded-full shadow-raised active:translate-y-px" (click)="wrongAnswer()">
+            <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+            Wrong
+        </button>
     }
-    @if (hideBack() && this.currentCard() !== this.shuffledIndexes()?.length) {
-        <button class="font-bold bg-app-text-muted px-6 py-2 rounded-2xl" (click)="flipCard()">Show back</button>
+    @if (hideBack() && !this.finished()) {
+        <button class="flex-1 font-bold bg-action hover:bg-action-hover px-6 py-3 rounded-full shadow-raised active:translate-y-px" (click)="flipCard()">Show back</button>
     }
 </div>
-<p class="text-white">
-
-</p>

@@ -1,0 +1,5 @@
+[
+  { "front": "What is a closure?", "back": "A function that captures its lexical scope." },
+  { "front": "¿Qué es $e^{i\\pi}$?", "back": "$-1$" },
+  { "front": "What is a closure?", "back": "A function that captures its lexical scope." }
+]

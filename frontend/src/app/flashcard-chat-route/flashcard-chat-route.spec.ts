@@ -241,6 +241,6 @@ describe('FlashcardChatRoute', () => {
   });
 
   it('renders the empty state when there are no messages', () => {
-    expect(fixture.nativeElement.textContent).toContain('Nothing here yet');
+    expect(fixture.nativeElement.textContent).toContain('Turn your notes into a deck');
   });
 });

@@ -1,0 +1,89 @@
+<div class="mx-auto flex w-full max-w-6xl flex-col gap-8 text-app-text">
+    <header class="flex flex-wrap items-end justify-between gap-4">
+        <div class="flex flex-col gap-1">
+            <h1 class="text-2xl font-bold leading-tight tracking-tight">Dashboard</h1>
+            <p class="text-app-text-muted">How your studying is going.</p>
+        </div>
+        @if (!isEmpty()) {
+            <app-range-selector class="w-full sm:w-auto" [(days)]="stats.days" />
+        }
+    </header>
+
+    @if (isEmpty()) {
+        <section class="flex flex-col items-center gap-4 rounded-xl border border-app-border px-6 py-20 text-center">
+            <span class="grid size-14 place-items-center rounded-full bg-honey-100 text-honey-800 dark:bg-honey-400/15 dark:text-honey-300">
+                <svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v16a2 2 0 0 0 2 2h16"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></svg>
+            </span>
+            <h2 class="text-xl font-semibold">Your stats show up here</h2>
+            <p class="max-w-sm text-app-text-muted">
+                Study a deck once and you will see your success rate, streak and the cards you keep missing.
+            </p>
+            <div class="flex w-full max-w-sm flex-col gap-3 sm:flex-row">
+                <a routerLink="/deck-browse" class="flex-1 rounded-full border-2 border-action bg-action px-5 py-2.5 font-bold text-app-bg shadow-raised hover:bg-action-hover">Study a deck</a>
+                <a routerLink="/flashcard-chat" class="flex-1 rounded-full border-2 border-app-border px-5 py-2.5 font-bold hover:bg-app-card">Create a deck</a>
+            </div>
+        </section>
+    } @else {
+        <section aria-label="Summary" class="grid grid-cols-2 gap-3 md:grid-cols-6 lg:grid-cols-5">
+            @if (stats.overview.hasValue()) {
+                @for (tile of tiles(); track tile.label) {
+                    <app-stat-tile [class]="tile.span" [label]="tile.label" [value]="tile.value" [detail]="tile.detail" />
+                }
+            } @else {
+                <app-section-state class="col-span-full" height="6rem" what="your summary"
+                    [error]="!!stats.overview.error()" (retry)="stats.overview.reload()" />
+            }
+        </section>
+
+        <section class="flex flex-wrap gap-4">
+            <div class="flex min-w-0 flex-[999_1_32rem] flex-col gap-3 rounded-xl bg-app-card shadow-e1 p-4 sm:p-5">
+                <div class="flex flex-wrap items-baseline justify-between gap-2">
+                    <h2 class="text-base font-semibold">Activity</h2>
+                    <p class="text-sm text-app-text-subtle">Last 12 weeks · {{ activityTotal().toLocaleString() }} cards</p>
+                </div>
+                @if (stats.activity.hasValue()) {
+                    <app-activity-heatmap [days]="stats.activity.value()" [span]="activityDays" />
+                } @else {
+                    <app-section-state height="9rem" what="your activity"
+                        [error]="!!stats.activity.error()" (retry)="stats.activity.reload()" />
+                }
+            </div>
+            <div class="flex min-w-0 flex-[1_1_16rem] flex-col gap-3 rounded-xl bg-app-card shadow-e1 p-4 sm:p-5">
+                <div class="flex items-baseline justify-between gap-2">
+                    <h2 class="text-base font-semibold">By weekday</h2>
+                    <p class="text-sm text-app-text-subtle">cards, {{ stats.days() }} days</p>
+                </div>
+                @if (stats.overview.hasValue()) {
+                    <app-weekday-chart [counts]="stats.overview.value().weekdays" />
+                } @else {
+                    <app-section-state height="10rem" what="weekdays"
+                        [error]="!!stats.overview.error()" (retry)="stats.overview.reload()" />
+                }
+            </div>
+        </section>
+
+        @if (stats.decks.hasValue()) {
+            <section class="overflow-hidden rounded-xl bg-app-card shadow-e1">
+                <app-deck-stats-table [decks]="stats.decks.value()" [days]="stats.days()" />
+            </section>
+        } @else {
+            <app-section-state height="18rem" what="your decks"
+                [error]="!!stats.decks.error()" (retry)="stats.decks.reload()" />
+        }
+
+        <section class="flex flex-wrap gap-4">
+            @if (stats.decks.hasValue()) {
+                <app-needs-review class="flex-[1_1_22rem]" [decks]="stats.decks.value()" />
+            } @else {
+                <app-section-state class="flex-[1_1_22rem]" height="12rem" what="decks to review"
+                    [error]="!!stats.decks.error()" (retry)="stats.decks.reload()" />
+            }
+            @if (stats.hardestCards.hasValue()) {
+                <app-hardest-cards class="flex-[1_1_22rem]" [cards]="stats.hardestCards.value()" />
+            } @else {
+                <app-section-state class="flex-[1_1_22rem]" height="12rem" what="your hardest cards"
+                    [error]="!!stats.hardestCards.error()" (retry)="stats.hardestCards.reload()" />
+            }
+        </section>
+    }
+</div>

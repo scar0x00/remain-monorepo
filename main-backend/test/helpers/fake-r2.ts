@@ -20,6 +20,9 @@ export function createFakeR2() {
     get body() {
       return new Response(stored.bytes).body;
     },
+    async text() {
+      return new TextDecoder().decode(stored.bytes);
+    },
   });
 
   return {

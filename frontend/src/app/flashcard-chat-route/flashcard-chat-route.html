@@ -1,7 +1,7 @@
-<section class="mx-auto flex h-[calc(100dvh-7rem)] w-full max-w-3xl flex-col gap-4 text-app-text">
-  <header class="flex shrink-0 flex-col items-center gap-2 text-center">
-    <h1 class="text-xl font-bold sm:text-2xl">Generate flashcards</h1>
-    <p class="text-sm text-app-text-muted">
+<section class="mx-auto flex h-[calc(100dvh-10rem)] w-full max-w-3xl flex-col gap-6 text-app-text">
+  <header class="flex shrink-0 flex-col items-start gap-2">
+    <h1 class="text-2xl font-bold leading-tight tracking-tight">Generate flashcards</h1>
+    <p class="max-w-prose text-sm leading-relaxed text-app-text-muted">
       Attach PDFs, images, text, Markdown or LaTeX files, or paste some text, then generate a deck.
       Then ask for changes to refine it.
     </p>
@@ -10,7 +10,7 @@
         type="button"
         (click)="startNewDeck()"
         [disabled]="pending()"
-        class="min-h-11 rounded-lg border border-app-border px-4 text-sm text-app-text hover:cursor-pointer hover:bg-app-card-hover disabled:cursor-not-allowed disabled:opacity-50"
+        class="min-h-11 rounded-full border border-app-border px-4 text-sm text-app-text hover:cursor-pointer hover:bg-app-card-hover disabled:cursor-not-allowed disabled:opacity-50"
       >
         New deck (currently {{ deck }})
       </button>
@@ -24,9 +24,17 @@
     class="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto pr-1"
   >
     @if (messages().length === 0) {
-      <p class="my-auto text-center text-sm text-app-text-muted">
-        Nothing here yet. Start by attaching a file below.
-      </p>
+      <div class="my-auto flex flex-col items-center gap-4 py-6 text-center">
+        <span class="grid size-14 place-items-center rounded-full bg-honey-100 text-honey-800 dark:bg-honey-400/15 dark:text-honey-300">
+          <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/></svg>
+        </span>
+        <p class="text-lg font-semibold">Turn your notes into a deck</p>
+        <ol class="flex flex-col gap-2 text-left text-sm text-app-text-muted">
+          <li class="flex items-center gap-3"><span class="grid size-6 shrink-0 place-items-center rounded-full bg-app-card text-xs font-bold text-app-text shadow-e1">1</span>Attach a file or paste some text below</li>
+          <li class="flex items-center gap-3"><span class="grid size-6 shrink-0 place-items-center rounded-full bg-app-card text-xs font-bold text-app-text shadow-e1">2</span>Name your deck and press Generate</li>
+          <li class="flex items-center gap-3"><span class="grid size-6 shrink-0 place-items-center rounded-full bg-app-card text-xs font-bold text-app-text shadow-e1">3</span>Ask for changes until it's just right</li>
+        </ol>
+      </div>
     }
     @for (message of messages(); track message.id) {
       <app-chat-bubble [message]="message" />

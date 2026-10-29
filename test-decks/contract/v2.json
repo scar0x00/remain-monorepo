@@ -1,0 +1,26 @@
+{
+  "version": 2,
+  "meta": {
+    "title": "Linear modulation",
+    "description": "AM and DSB-SC basics.",
+    "language": "en",
+    "author": null,
+    "tool": { "kind": "agent", "model": "anthropic/claude-haiku-5.5", "generatedAt": "2026-10-18T09:30:00.000Z" },
+    "sources": [{ "name": "ch3.pdf" }],
+    "tags": ["signals"]
+  },
+  "cards": [
+    {
+      "id": "c_8f3k2a9d01bc",
+      "front": "What is the modulation index of AM?",
+      "back": "$\\mu = A_m / A_c$",
+      "meta": {
+        "refs": [
+          { "kind": "page", "label": "112", "source": "ch3.pdf" },
+          { "kind": "equation", "label": "3.14" }
+        ]
+      }
+    },
+    { "id": "c_0000000000aa", "front": "What does DSB-SC suppress?", "back": "The carrier." }
+  ]
+}
