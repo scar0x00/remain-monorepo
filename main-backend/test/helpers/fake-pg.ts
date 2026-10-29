@@ -3,6 +3,8 @@ type DeckRecord = {
   size: number;
   etag: string;
   cardCount: number | null;
+  title: string | null;
+  meta: Record<string, unknown> | null;
   createdAt: Date;
 };
 
@@ -63,13 +65,17 @@ export class FakeClient {
     const normalized = sql.replace(/\s+/g, " ").trim();
 
     if (normalized.startsWith("INSERT INTO public.decks")) {
-      const [name, , size, etag, cardCount] = params as [string, string, number, string, number | null];
+      const [name, , size, etag, cardCount, title, meta] = params as [
+        string, string, number, string, number | null, string | null, string | null,
+      ];
       const existing = decks.get(name);
       decks.set(name, {
         name,
         size: Number(size),
         etag,
         cardCount: cardCount ?? null,
+        title: title ?? null,
+        meta: meta ? JSON.parse(meta) : null,
         createdAt: existing?.createdAt ?? new Date(),
       });
       return { rows: [] };
@@ -79,13 +85,16 @@ export class FakeClient {
       const pattern = String(params[0] ?? "%");
       const prefix = pattern.endsWith("%") ? pattern.slice(0, -1) : pattern;
       const rows = [...decks.values()]
-        .filter((d) => d.name.toLowerCase().startsWith(prefix.toLowerCase()))
+        .filter((d) => [d.name, d.title ?? ""].some((s) => s.toLowerCase().startsWith(prefix.toLowerCase())))
         .sort((a, b) => a.name.localeCompare(b.name))
         .map((d) => ({
           name: d.name,
           size: String(d.size),
           createdAt: d.createdAt,
           etag: d.etag,
+          card_count: d.cardCount,
+          title: d.title,
+          meta: d.meta,
         }));
       return { rows };
     }

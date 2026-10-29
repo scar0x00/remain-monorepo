@@ -1,10 +1,11 @@
 import { describe, expect, test } from "bun:test";
-import { DeckOutputSchema } from "../../src/schema";
+import { DeckOutputSchema, legacyCardId, newCardId, RefineOutputSchema } from "../../src/schema";
 
 describe("DeckOutputSchema", () => {
-  test("accepts a deck of cards with front and back", () => {
+  test("accepts a deck of cards with front and back, with or without refs", () => {
     const result = DeckOutputSchema.safeParse({
-      cards: [{ front: "Q?", back: "A" }],
+      title: "T",
+      cards: [{ front: "Q?", back: "A" }, { front: "Q2", back: "A2", refs: [{ kind: "equation", label: "3.14" }] }],
     });
     expect(result.success).toBe(true);
   });
@@ -17,5 +18,54 @@ describe("DeckOutputSchema", () => {
   test("rejects a missing cards array and a card without a back", () => {
     expect(DeckOutputSchema.safeParse({}).success).toBe(false);
     expect(DeckOutputSchema.safeParse({ cards: [{ front: "Q?" }] }).success).toBe(false);
+  });
+
+  test("has no field for ids, author, tool or timestamps", () => {
+    const parsed = DeckOutputSchema.parse({
+      cards: [{ id: "x", front: "Q?", back: "A" }],
+      author: { id: "u", name: "U" },
+      tool: { kind: "agent" },
+      generatedAt: "2026-01-01",
+    });
+    expect(parsed).toEqual({ cards: [{ front: "Q?", back: "A" }] });
+  });
+});
+
+describe("RefineOutputSchema", () => {
+  test("accepts changes addressed by position", () => {
+    const parsed = RefineOutputSchema.parse({
+      edits: [{ index: 0, back: "A", refs: [] }],
+      remove: [2],
+      add: [{ front: "Q", back: "A" }],
+    });
+    expect(parsed.edits[0]!.index).toBe(0);
+  });
+
+  test("has no field for ids", () => {
+    const parsed = RefineOutputSchema.parse({
+      edits: [{ index: 0, id: "c_1", back: "A" }],
+      remove: [],
+      add: [{ id: "c_2", front: "Q", back: "A" }],
+    });
+    expect(parsed).toEqual({ edits: [{ index: 0, back: "A" }], remove: [], add: [{ front: "Q", back: "A" }] });
+  });
+
+  test("rejects negative or fractional positions and empty text", () => {
+    expect(RefineOutputSchema.safeParse({ edits: [{ index: -1 }], remove: [], add: [] }).success).toBe(false);
+    expect(RefineOutputSchema.safeParse({ edits: [], remove: [1.5], add: [] }).success).toBe(false);
+    expect(RefineOutputSchema.safeParse({ edits: [{ index: 0, front: "" }], remove: [], add: [] }).success).toBe(false);
+  });
+});
+
+describe("card ids", () => {
+  test("legacyCardId is a stable 8 character hash of front and back", () => {
+    expect(legacyCardId({ front: "Q", back: "A" })).toMatch(/^[0-9a-f]{8}$/);
+    expect(legacyCardId({ front: "Q", back: "A" })).toBe(legacyCardId({ front: "Q", back: "A" }));
+    expect(legacyCardId({ front: "Q", back: "B" })).not.toBe(legacyCardId({ front: "Q", back: "A" }));
+  });
+
+  test("newCardId is random and prefixed", () => {
+    expect(newCardId()).toMatch(/^c_[0-9a-f]{12}$/);
+    expect(newCardId()).not.toBe(newCardId());
   });
 });

@@ -182,26 +182,33 @@ describe("isPlainText", () => {
 });
 
 describe("serializeDeck", () => {
-  const cards = [
-    {
-      front: "What is a closure?",
-      back: "A function that captures its lexical scope.",
-    },
-    {
-      front: "Use `list.append()` for?",
-      back: "Adding an item to the end of a list.",
-    },
-  ];
+  const deck = {
+    version: 2 as const,
+    meta: { title: "JS" },
+    cards: [
+      {
+        id: "c_1",
+        front: "What is a closure?",
+        back: "A function that captures its lexical scope.",
+      },
+      {
+        id: "c_2",
+        front: "Use `list.append()` for?",
+        back: "Adding an item to the end of a list.",
+        meta: { refs: [{ kind: "page" as const, label: "3" }] },
+      },
+    ],
+  };
 
   test("serializes JSON with a trailing newline that round-trips", () => {
-    const body = serializeDeck(cards, "json");
+    const body = serializeDeck(deck, "json");
 
     expect(body.endsWith("\n")).toBe(true);
-    expect(JSON.parse(body)).toEqual(cards);
+    expect(JSON.parse(body)).toEqual(deck);
   });
 
   test("serializes YAML that round-trips", () => {
-    expect(parseYaml(serializeDeck(cards, "yaml"))).toEqual(cards);
+    expect(parseYaml(serializeDeck(deck, "yaml"))).toEqual(deck);
   });
 });
 
@@ -237,23 +244,28 @@ describe("parseRequest refine flag", () => {
 });
 
 describe("parseDeck", () => {
-  const cards = [{ front: "Q?", back: "A" }];
+  const deck = { version: 2 as const, meta: {}, cards: [{ id: "c_1", front: "Q?", back: "A" }] };
 
-  test("reads a JSON deck", () => {
-    expect(parseDeck(serializeDeck(cards, "json"), "json")).toEqual(cards);
+  test("reads a JSON and a YAML deck", () => {
+    expect(parseDeck(serializeDeck(deck, "json"), "json")).toEqual(deck);
+    expect(parseDeck(serializeDeck(deck, "yaml"), "yaml")).toEqual(deck);
   });
 
-  test("reads a YAML deck", () => {
-    expect(parseDeck(serializeDeck(cards, "yaml"), "yaml")).toEqual(cards);
+  test("upgrades a legacy array and gives its cards deterministic ids", () => {
+    const legacy = JSON.stringify([{ front: "Q?", back: "A" }]);
+    const parsed = parseDeck(legacy, "json");
+
+    expect(parsed).toEqual({ version: 2, meta: {}, cards: [{ id: expect.any(String), front: "Q?", back: "A" }] });
+    expect(parseDeck(legacy, "json")!.cards[0]!.id).toBe(parsed!.cards[0]!.id);
   });
 
   test("returns null for text that is not valid in the given format", () => {
     expect(parseDeck("not json", "json")).toBeNull();
-    expect(parseDeck(serializeDeck(cards, "yaml"), "json")).toBeNull();
+    expect(parseDeck(serializeDeck(deck, "yaml"), "json")).toBeNull();
   });
 
   test("returns null when the content does not match the deck schema", () => {
-    expect(parseDeck(JSON.stringify({ cards }), "json")).toBeNull();
+    expect(parseDeck(JSON.stringify({ cards: deck.cards }), "json")).toBeNull();
     expect(parseDeck(JSON.stringify([{ front: "Q?" }]), "json")).toBeNull();
   });
 });
