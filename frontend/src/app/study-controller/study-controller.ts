@@ -10,10 +10,12 @@ import { Deck } from "../../types/Deck";
 import { StudyAnswer, StudySession } from "../../types/StudySession";
 import { StudySessionService } from "../study-session/study-session.service";
 import { normalizeDeck } from "../deck-format/deck-format";
+import { CardQuickEdit } from "../card-quick-edit/card-quick-edit";
+import { Card } from "../../types/Card";
 
 @Component({
     selector: "app-study-controller",
-    imports: [Flashcard, RouterLink, MarkdownComponent, PercentPipe, DecimalPipe],
+    imports: [Flashcard, RouterLink, MarkdownComponent, PercentPipe, DecimalPipe, CardQuickEdit],
     templateUrl: "./study-controller.html",
     providers: [StudySessionService],
     host: { "(window:pagehide)": "sessions.flushOnPageHide()" },
@@ -66,8 +68,21 @@ export class StudyController {
 
         return arr;
     });
+    // Cards saved from the quick edit, by id. Applied on top of the loaded deck instead of replacing
+    // it, so the run (its order and answers) carries on with the fixed text.
+    private readonly editedCards = signal<Record<string, Card>>({});
+    private readonly savedEtag = signal<string | null | undefined>(undefined);
+    readonly deckKey = computed(() => `${this.deckId()}.json`);
+    readonly currentDeck = computed(() => {
+        const deck = this.deck.value();
+        const edited = this.editedCards();
+        return deck && { ...deck, cards: deck.cards.map((card) => edited[card.id] ?? card) };
+    });
+    readonly deckEtag = computed(() => this.savedEtag() ?? this.deck.headers()?.get("etag") ?? null);
+    readonly editing = signal(false);
+
     currentMd = computed(() => {
-        const cards = this.deck.value()?.cards;
+        const cards = this.currentDeck()?.cards;
         const shuffledIndexes = this.shuffledIndexes();
         const index = this.currentCard();
         if (!cards || !shuffledIndexes || index >= shuffledIndexes.length) {
@@ -101,7 +116,9 @@ export class StudyController {
                 this.previousRun.set(null);
                 this.startedAt = this.shownAt = Date.now();
                 const etag = this.deck.headers()?.get("etag") ?? null;
-                this.sessions.start(`${this.deckId()}.json`, etag, order.length);
+                this.editedCards.set({});
+                this.savedEtag.set(undefined);
+                this.sessions.start(this.deckKey(), etag, order.length);
             });
         });
 
@@ -148,5 +165,10 @@ export class StudyController {
 
     flipCard() {
         this.hideBack.set(false);
+    }
+
+    cardSaved({ deck, etag }: { deck: Deck; etag: string | null }) {
+        this.editedCards.set(Object.fromEntries(deck.cards.map((card) => [card.id, card])));
+        this.savedEtag.set(etag);
     }
 }

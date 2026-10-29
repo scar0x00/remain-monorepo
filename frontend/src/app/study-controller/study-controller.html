@@ -40,7 +40,19 @@
                 </a>
             </div>
         } @else {
-            <app-flashcard class="block min-h-[calc(100dvh-17rem)] rounded-xl bg-app-card p-6 shadow-e3 sm:min-h-[calc(100dvh-18rem)] sm:p-10 text-base sm:text-lg" [front]="currentMd()?.front" [back]="currentMd()?.back" [refs]="currentMd()?.meta?.refs" [hideBack]="hideBack()" />
+            <div class="relative">
+                <app-flashcard class="block min-h-[calc(100dvh-17rem)] rounded-xl bg-app-card p-6 pr-14 shadow-e3 sm:min-h-[calc(100dvh-18rem)] sm:p-10 sm:pr-16 text-base sm:text-lg" [front]="currentMd()?.front" [back]="currentMd()?.back" [refs]="currentMd()?.meta?.refs" [hideBack]="hideBack()" />
+                @if (currentMd()) {
+                    <button type="button" aria-label="Edit card" title="Edit card" (click)="editing.set(true)"
+                        class="absolute right-3 top-3 grid size-9 place-items-center rounded-full text-app-text-subtle hover:bg-app-card-hover hover:text-app-text sm:right-4 sm:top-4">
+                        <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.17 6.81a1 1 0 0 0-3.99-3.99L3.84 16.17a2 2 0 0 0-.5.83l-1.32 4.35a.5.5 0 0 0 .62.62l4.35-1.32a2 2 0 0 0 .83-.5z"/><path d="m15 5 4 4"/></svg>
+                    </button>
+                }
+            </div>
+            @if (editing() && currentMd() && currentDeck()) {
+                <app-card-quick-edit [deckKey]="deckKey()" [deck]="currentDeck()!" [etag]="deckEtag()" [cardId]="currentMd()!.id"
+                    (saved)="cardSaved($event)" (closed)="editing.set(false)" />
+            }
         }
     } @placeholder {
         <div class="grid place-items-center">

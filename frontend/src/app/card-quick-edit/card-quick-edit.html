@@ -1,0 +1,52 @@
+<!-- A bottom sheet on a phone, centred on larger screens -->
+<dialog #dialog aria-labelledby="quick-edit-title" (close)="closed.emit()"
+    class="m-0 mt-auto w-full max-w-none overflow-hidden rounded-t-xl bg-app-card p-0 text-app-text shadow-e5 backdrop:bg-sand-950/60 backdrop:backdrop-blur-sm sm:m-auto sm:max-w-3xl sm:rounded-xl">
+    @if (card(); as current) {
+        <div class="flex max-h-[92dvh] flex-col">
+            <div class="mx-auto mt-2 h-1 w-10 shrink-0 rounded-full bg-app-border sm:hidden" aria-hidden="true"></div>
+            <header class="flex items-center gap-3 px-5 pb-3 pt-4 sm:px-6 sm:pt-5">
+                <div class="flex-1">
+                    <h2 id="quick-edit-title" class="text-lg font-semibold">Edit card</h2>
+                    <p class="text-sm text-app-text-muted">Saved to the deck. Your run continues.</p>
+                </div>
+                <button type="button" aria-label="Close" (click)="close()" class="grid size-9 place-items-center rounded-full text-app-text-subtle hover:bg-app-card-hover hover:text-app-text">
+                    <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                </button>
+            </header>
+
+            <div class="grid flex-1 grid-cols-[minmax(0,1fr)] gap-5 overflow-y-auto px-5 pb-5 sm:grid-cols-2 sm:px-6">
+                <app-card-editor [card]="current" [compact]="true" [errors]="editor.errors().get(current.id) ?? {}" (changed)="update($event)" />
+                <div class="flex flex-col gap-2 max-sm:hidden">
+                    <span class="text-sm font-semibold text-app-text-muted">Preview</span>
+                    <app-flashcard class="block rounded-xl bg-app-bg p-5 text-sm shadow-inset"
+                        [front]="current.front" [back]="current.back" [hideBack]="false" />
+                </div>
+            </div>
+
+            @if (editor.status() === 'conflict') {
+                <div role="alert" class="mx-5 mb-4 flex flex-col gap-3 rounded-lg bg-honey-100 px-4 py-3 text-sm text-honey-900 dark:bg-honey-400/15 dark:text-honey-200 sm:mx-6">
+                    <p>This deck changed somewhere else since you started studying. Save your edit over it, or discard your edit.</p>
+                    <div class="flex gap-3">
+                        <button type="button" class="font-bold underline-offset-2 hover:underline" (click)="overwrite()">Overwrite with mine</button>
+                        <button type="button" class="font-bold underline-offset-2 hover:underline" (click)="close()">Discard my edit</button>
+                    </div>
+                </div>
+            } @else if (editor.status() === 'save-failed') {
+                <p role="alert" class="mx-5 mb-4 text-sm text-red-700 dark:text-red-300 sm:mx-6">Couldn't save. Try again.</p>
+            }
+
+            <footer class="flex flex-col-reverse gap-3 border-t border-app-border px-5 py-4 sm:flex-row sm:items-center sm:px-6">
+                <a class="inline-flex items-center justify-center gap-1.5 text-sm font-semibold text-app-text-muted hover:text-app-text sm:mr-auto"
+                    [routerLink]="['/deck-edit', deckName()]" [queryParams]="{ card: current.id }" title="Ends this study run">
+                    Open in full editor
+                    <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>
+                </a>
+                <button type="button" class="rounded-full border-2 border-app-border px-5 py-2 font-bold hover:bg-app-card-hover max-sm:hidden" (click)="close()">Cancel</button>
+                <button type="button" class="rounded-full bg-action px-5 py-2.5 font-bold text-app-bg shadow-raised hover:bg-action-hover disabled:bg-app-card-hover disabled:text-app-text-subtle disabled:shadow-none"
+                    [disabled]="editor.status() === 'saving' || editor.errors().has(current.id)" (click)="save()">
+                    {{ editor.status() === 'saving' ? 'Saving…' : 'Save card' }}
+                </button>
+            </footer>
+        </div>
+    }
+</dialog>

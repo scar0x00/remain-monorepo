@@ -99,6 +99,41 @@ describe('StudyController', () => {
     expect(component.currentMd()).toEqual(DECK.cards[1]);
   });
 
+  it('keeps the run going after a quick edit, with the fixed text', async () => {
+    await setup();
+    const order = component.shuffledIndexes();
+    component.flipCard();
+    component.rightAnswer();
+    await fixture.whenStable();
+    http.expectOne('/api/v1/study-sessions/s1/answers').flush(null);
+    const current = component.currentMd()!;
+
+    const deck = component.currentDeck()!;
+    component.cardSaved({
+      deck: { ...deck, cards: deck.cards.map((c) => (c.id === current.id ? { ...c, back: 'fixed' } : c)) },
+      etag: '"e2"',
+    });
+    await fixture.whenStable();
+
+    expect(component.shuffledIndexes()).toBe(order);
+    expect(component['answers']()).toHaveLength(1);
+    expect(component.currentMd()).toEqual({ ...current, back: 'fixed' });
+    expect(component.deckEtag()).toBe('"e2"');
+  });
+
+  it('opens the quick edit for the current card', async () => {
+    await setup();
+    // The test DOM has no modal dialogs.
+    HTMLDialogElement.prototype.showModal ??= function (this: HTMLDialogElement) { this.open = true; };
+
+    fixture.nativeElement.querySelector('button[aria-label="Edit card"]').click();
+    await fixture.whenStable();
+
+    const dialog = fixture.nativeElement.querySelector('app-card-quick-edit dialog') as HTMLDialogElement;
+    expect(dialog).not.toBeNull();
+    expect(dialog.querySelector<HTMLTextAreaElement>(`#front-${component.currentMd()!.id}`)!.value).toBe(component.currentMd()!.front);
+  });
+
   it('studies a legacy deck, using the ids answers had before decks stored them', async () => {
     const legacy = [{ front: 'one', back: '1' }];
     await setup(legacyCardId(legacy[0]), 201, legacy);
