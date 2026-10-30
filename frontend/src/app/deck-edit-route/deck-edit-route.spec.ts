@@ -152,13 +152,15 @@ describe('DeckEditRoute', () => {
   it('asks before leaving with unsaved changes', async () => {
     await open();
     route.updateSelected({ back: 'changed' });
-    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false);
+    // Stubbed rather than spied on: happy-dom, unlike jsdom, has no window.confirm.
+    const confirm = vi.fn(() => false);
+    vi.stubGlobal('confirm', confirm);
 
     await harness.navigateByUrl('/deck-browse');
 
     expect(confirm).toHaveBeenCalled();
     expect(TestBed.inject(Router).url).toBe('/deck-edit/signals');
-    confirm.mockRestore();
+    vi.unstubAllGlobals();
   });
 
   it('opens a YAML deck with ?format=yaml', async () => {
