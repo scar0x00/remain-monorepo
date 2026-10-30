@@ -40,15 +40,7 @@
                 </a>
             </div>
         } @else {
-            <div class="relative">
-                <app-flashcard class="block min-h-[calc(100dvh-17rem)] rounded-xl bg-app-card p-6 pr-14 shadow-e3 sm:min-h-[calc(100dvh-18rem)] sm:p-10 sm:pr-16 text-base sm:text-lg" [front]="currentMd()?.front" [back]="currentMd()?.back" [refs]="currentMd()?.meta?.refs" [hideBack]="hideBack()" />
-                @if (currentMd()) {
-                    <button type="button" aria-label="Edit card" title="Edit card" (click)="editing.set(true)"
-                        class="absolute right-3 top-3 grid size-9 place-items-center rounded-full text-app-text-subtle hover:bg-app-card-hover hover:text-app-text sm:right-4 sm:top-4">
-                        <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.17 6.81a1 1 0 0 0-3.99-3.99L3.84 16.17a2 2 0 0 0-.5.83l-1.32 4.35a.5.5 0 0 0 .62.62l4.35-1.32a2 2 0 0 0 .83-.5z"/><path d="m15 5 4 4"/></svg>
-                    </button>
-                }
-            </div>
+            <app-flashcard class="block min-h-[calc(100dvh-17rem)] rounded-xl bg-app-card p-6 shadow-e3 sm:min-h-[calc(100dvh-18rem)] sm:p-10 text-base sm:text-lg" [front]="currentMd()?.front" [back]="currentMd()?.back" [refs]="currentMd()?.meta?.refs" [hideBack]="hideBack()" />
             @if (editing() && currentMd() && currentDeck()) {
                 <app-card-quick-edit [deckKey]="deckKey()" [deck]="currentDeck()!" [etag]="deckEtag()" [cardId]="currentMd()!.id"
                     (saved)="cardSaved($event)" (closed)="editing.set(false)" />
@@ -75,6 +67,13 @@
     }
 </div>
 <div class="text-app-bg text-lg fixed inset-x-0 bottom-8 mx-auto flex w-full max-w-md items-center justify-center gap-4 px-4 bg-transparent">
+    <!-- Secondary to the answer buttons, so it sits beside them instead of on the card -->
+    @if (currentMd() && !this.finished()) {
+        <button type="button" aria-label="Edit card" title="Edit card" (click)="editing.set(true)"
+            class="grid size-12 shrink-0 place-items-center rounded-full border-2 border-app-border bg-app-bg text-app-text-muted hover:bg-app-card-hover hover:text-app-text active:translate-y-px">
+            <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.17 6.81a1 1 0 0 0-3.99-3.99L3.84 16.17a2 2 0 0 0-.5.83l-1.32 4.35a.5.5 0 0 0 .62.62l4.35-1.32a2 2 0 0 0 .83-.5z"/><path d="m15 5 4 4"/></svg>
+        </button>
+    }
     @if (!hideBack() && !this.finished()) {
         <button class="flex-1 inline-flex items-center justify-center gap-2 font-bold bg-green-700 text-white hover:bg-green-800 dark:bg-green-500 dark:text-green-950 dark:hover:bg-green-400 px-6 py-3 rounded-full shadow-raised active:translate-y-px" (click)="rightAnswer()">
             <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
