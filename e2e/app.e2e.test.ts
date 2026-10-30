@@ -3,7 +3,7 @@ import { chromium, type Browser, type Page } from "playwright-core";
 
 // Browser-driven checks against the running stack: frontend (4200) -> main-backend (8787)
 // -> flashcard-generator-agent (8788). Start the stack first with `./dev-server start`.
-// Uses the system Chrome; set E2E_BASE_URL to point at a different frontend.
+// Uses the system Chrome; set E2E_BROWSER_PATH to use another Chromium, E2E_BASE_URL for another frontend.
 // main-backend reads back the decks flashcard-generator-agent writes, so both workers must share
 // local R2 state (wrangler dev --persist-to <same dir>). Without that, generation returns 500.
 const BASE = process.env.E2E_BASE_URL ?? "http://localhost:4200";
@@ -47,7 +47,7 @@ async function waitFor<T>(read: () => Promise<T>, ok: (value: T) => boolean, tim
 }
 
 beforeAll(async () => {
-  browser = await chromium.launch({ channel: "chrome", headless: true });
+  browser = await chromium.launch(process.env.E2E_BROWSER_PATH ? { executablePath: process.env.E2E_BROWSER_PATH } : { channel: "chrome", headless: true });
   page = await browser.newPage();
 });
 
@@ -155,6 +155,7 @@ describe("study session", () => {
     }
 
     await doneMarker.waitFor();
-    await page.getByText(new RegExp(`^${right} right · ${wrong} wrong · \\d+s$`)).waitFor();
+    // The summary sits on its own line in the <p>, and regex text matching does not trim it.
+    await page.getByText(new RegExp(`^\\s*${right} right · ${wrong} wrong · \\d+s\\s*$`)).waitFor();
   }, STUDY_TIMEOUT);
 });

@@ -1,0 +1,38 @@
+<div class="flex flex-col gap-5">
+    <div class="flex flex-col gap-2">
+        <label for="deck-title" class="text-sm font-semibold text-app-text-muted">Title</label>
+        <input id="deck-title" class="rounded-lg border-2 border-app-border bg-app-bg px-3 py-2 text-app-text shadow-inset placeholder:text-app-text-subtle focus:border-action focus:outline-none"
+            placeholder="Linear modulation" [value]="meta().title ?? ''" (input)="setText('title', $any($event.target).value)" />
+    </div>
+    <div class="flex flex-col gap-2">
+        <label for="deck-description" class="text-sm font-semibold text-app-text-muted">Description</label>
+        <textarea id="deck-description" rows="3" class="resize-y rounded-lg border-2 border-app-border bg-app-bg px-3 py-2 leading-relaxed text-app-text shadow-inset placeholder:text-app-text-subtle focus:border-action focus:outline-none"
+            placeholder="What the deck covers" [value]="meta().description ?? ''" (input)="setText('description', $any($event.target).value)"></textarea>
+    </div>
+    <div class="grid grid-cols-[minmax(0,1fr)] gap-5 sm:grid-cols-[8rem_minmax(0,1fr)]">
+        <div class="flex flex-col gap-2">
+            <label for="deck-language" class="text-sm font-semibold text-app-text-muted">Language</label>
+            <input id="deck-language" class="rounded-lg border-2 border-app-border bg-app-bg px-3 py-2 text-app-text shadow-inset placeholder:text-app-text-subtle focus:border-action focus:outline-none"
+                placeholder="en" [value]="meta().language ?? ''" (input)="setText('language', $any($event.target).value)" />
+        </div>
+        <div class="flex flex-col gap-2">
+            <label for="deck-tags" class="text-sm font-semibold text-app-text-muted">Tags <span class="font-normal text-app-text-subtle">· comma separated</span></label>
+            <input id="deck-tags" class="rounded-lg border-2 border-app-border bg-app-bg px-3 py-2 text-app-text shadow-inset placeholder:text-app-text-subtle focus:border-action focus:outline-none"
+                placeholder="signals, AM" [value]="(meta().tags ?? []).join(', ')" (change)="setTags($any($event.target).value)" />
+        </div>
+    </div>
+
+    @if (toolLabel() || meta().author || meta().sources?.length) {
+        <dl class="flex flex-col gap-2 rounded-lg bg-app-bg px-4 py-3 text-sm">
+            @if (toolLabel(); as label) {
+                <div class="flex gap-3"><dt class="w-20 shrink-0 text-app-text-subtle">Made</dt><dd class="text-app-text-muted">{{ label }}@if (meta().tool?.generatedAt) {, {{ meta().tool?.generatedAt | date: 'd MMM y' }}}</dd></div>
+            }
+            @if (meta().author; as author) {
+                <div class="flex gap-3"><dt class="w-20 shrink-0 text-app-text-subtle">Author</dt><dd class="text-app-text-muted">{{ author.name }}</dd></div>
+            }
+            @if (meta().sources?.length) {
+                <div class="flex gap-3"><dt class="w-20 shrink-0 text-app-text-subtle">Sources</dt><dd class="min-w-0 break-words text-app-text-muted">@for (source of meta().sources; track $index) {<span>{{ source.name }}@if (!$last) {, }</span>}</dd></div>
+            }
+        </dl>
+    }
+</div>

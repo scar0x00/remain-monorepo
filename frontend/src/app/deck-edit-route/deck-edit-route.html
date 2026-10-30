@@ -1,0 +1,202 @@
+@switch (editor.status()) {
+    @case ("loading") {
+        <div class="grid place-items-center pt-10 text-app-text">
+            <svg aria-label="Loading" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="animate-spin"><path d="M21 12a9 9 0 1 1-6.219-8.56" /></svg>
+        </div>
+    }
+    @case ("load-failed") {
+        <div class="mx-auto flex max-w-md flex-col items-center gap-4 pt-10 text-center text-app-text">
+            <h1 class="text-lg font-semibold">We couldn't open this deck</h1>
+            <p class="text-app-text-muted">It may have been deleted, or it isn't a deck we can edit.</p>
+            <a routerLink="/deck-browse" class="rounded-full border-2 border-app-border px-5 py-2 font-bold hover:bg-app-card-hover">Back to decks</a>
+        </div>
+    }
+    @default {
+        <div class="mx-auto w-full max-w-7xl text-app-text">
+            <!-- Header: deck, save state and actions. Sticky so Save is always reachable. -->
+            <header class="sticky top-0 z-10 -mx-4 mb-6 flex items-center gap-3 bg-app-bg/95 px-4 py-3 backdrop-blur sm:-mx-6 sm:px-6"
+                [class.max-md:hidden]="card()">
+                <a routerLink="/deck-browse" aria-label="Back to decks" class="grid size-9 shrink-0 place-items-center rounded-full text-app-text-subtle hover:bg-app-card-hover hover:text-app-text">
+                    <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+                </a>
+                <div class="min-w-0 flex-1">
+                    <p class="text-xs font-semibold uppercase tracking-widest text-app-text-subtle">Editing</p>
+                    <h1 class="truncate text-xl font-bold leading-tight tracking-tight">{{ name() }}</h1>
+                </div>
+                @if (saveState()) {
+                    <span class="hidden items-center gap-2 text-sm text-app-text-muted sm:inline-flex" role="status">
+                        @if (editor.status() === 'invalid' || editor.status() === 'save-failed') {
+                            <span class="size-2 rounded-full bg-red-600 dark:bg-red-400"></span>
+                        } @else if (editor.dirty()) {
+                            <span class="size-2 rounded-full bg-action"></span>
+                        }
+                        {{ saveState() }}
+                    </span>
+                }
+                <button type="button" class="hidden rounded-full border-2 border-app-border px-4 py-2 text-sm font-bold text-app-text hover:bg-app-card-hover sm:inline-flex" (click)="openDetails()">Deck details</button>
+                <button type="button" class="inline-flex items-center gap-2 rounded-full bg-action px-5 py-2 text-sm font-bold text-app-bg shadow-raised hover:bg-action-hover disabled:bg-app-card-hover disabled:text-app-text-subtle disabled:shadow-none"
+                    [disabled]="!editor.dirty() || editor.status() === 'saving'" (click)="save()">
+                    {{ editor.status() === 'saving' ? 'Saving…' : 'Save' }} <kbd class="hidden rounded bg-app-bg/15 px-1.5 font-sans text-xs lg:inline">⌘S</kbd>
+                </button>
+            </header>
+
+            <div class="grid grid-cols-[minmax(0,1fr)] gap-6 md:grid-cols-[18rem_minmax(0,1fr)] xl:grid-cols-[18rem_minmax(0,1fr)_minmax(0,1fr)]">
+                <!-- Card list -->
+                <aside class="flex flex-col gap-3" [class.max-md:hidden]="card()">
+                    <div class="relative">
+                        <label for="card-search" class="sr-only">Search cards</label>
+                        <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" class="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-app-text-subtle" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21 21-4.34-4.34"/><circle cx="11" cy="11" r="8"/></svg>
+                        <input id="card-search" type="search" [placeholder]="'Search ' + cards().length + ' cards'" [value]="search()" (input)="search.set($any($event.target).value)"
+                            class="w-full rounded-lg border-2 border-app-border bg-app-card py-2 pl-10 pr-3 text-app-text shadow-inset placeholder:text-app-text-subtle focus:border-action focus:outline-none" />
+                    </div>
+                    <p class="flex items-center justify-between px-1 text-xs text-app-text-subtle">
+                        <span>{{ cards().length }} {{ cards().length === 1 ? 'card' : 'cards' }}</span>
+                        @if (errorSummary()) {
+                            <span class="inline-flex items-center gap-1.5 text-red-700 dark:text-red-300"><span class="size-1.5 rounded-full bg-current"></span>{{ errorSummary() }}</span>
+                        }
+                    </p>
+                    <ol class="flex flex-col gap-1 md:max-h-[calc(100dvh-16rem)] md:overflow-y-auto">
+                        @for (item of listed(); track item.card.id) {
+                            <li>
+                                <button type="button" (click)="select(item.card.id)" [attr.aria-current]="item.card.id === selectedId() ? 'true' : null"
+                                    class="flex w-full items-start gap-3 rounded-lg px-3 py-2.5 text-left text-sm transition-colors hover:bg-app-card-hover"
+                                    [class]="item.card.id === selectedId() ? 'bg-app-card shadow-e1 text-app-text' : 'text-app-text-muted'">
+                                    <span class="mt-px w-5 shrink-0 text-right text-xs tabular-nums text-app-text-subtle">{{ item.index + 1 }}</span>
+                                    <span class="min-w-0 flex-1 truncate" [class.font-semibold]="item.card.id === selectedId()">{{ summary(item.card.front) || 'Empty card' }}</span>
+                                    @if (editor.errors().has(item.card.id)) {
+                                        <span class="mt-1.5 size-2 shrink-0 rounded-full bg-red-600 dark:bg-red-400" title="Needs fixing"></span>
+                                    } @else if (editor.changedIds().has(item.card.id)) {
+                                        <span class="mt-1.5 size-2 shrink-0 rounded-full bg-action" title="Edited, not saved yet"></span>
+                                    }
+                                </button>
+                            </li>
+                        } @empty {
+                            <li class="px-3 py-6 text-center text-sm text-app-text-subtle">
+                                {{ search() ? 'No cards match “' + search() + '”' : 'This deck has no cards yet' }}
+                            </li>
+                        }
+                    </ol>
+                    <button type="button" (click)="addCard()" class="flex items-center justify-center gap-2 rounded-lg border-2 border-dashed border-app-border py-2.5 text-sm font-semibold text-app-text-muted hover:border-action hover:text-app-text">
+                        <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+                        Add card
+                    </button>
+                    <button type="button" class="rounded-full border-2 border-app-border px-4 py-2 text-sm font-bold text-app-text hover:bg-app-card-hover sm:hidden" (click)="openDetails()">Deck details</button>
+                </aside>
+
+                @if (selected(); as current) {
+                    <!-- Phone card header: back to the list, position, save -->
+                    @if (card()) {
+                        <div class="-mt-2 flex items-center gap-2 md:hidden">
+                            <button type="button" (click)="backToList()" class="inline-flex items-center gap-1 rounded-full py-1.5 pr-3 text-sm font-semibold text-app-text-muted">
+                                <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg> All cards
+                            </button>
+                            <span class="flex-1 text-center text-sm tabular-nums text-app-text-subtle">{{ selectedIndex() + 1 }} of {{ cards().length }}</span>
+                            <button type="button" class="rounded-full bg-action px-4 py-1.5 text-sm font-bold text-app-bg shadow-raised disabled:bg-app-card-hover disabled:text-app-text-subtle disabled:shadow-none"
+                                [disabled]="!editor.dirty() || editor.status() === 'saving'" (click)="save()">{{ editor.status() === 'saving' ? 'Saving…' : 'Save' }}</button>
+                        </div>
+                        <div class="flex rounded-full bg-app-card p-1 text-sm font-semibold shadow-e1 md:hidden" role="tablist">
+                            <button type="button" role="tab" [attr.aria-selected]="phoneTab() === 'edit'" (click)="phoneTab.set('edit')"
+                                class="flex-1 rounded-full py-1.5" [class]="phoneTab() === 'edit' ? 'bg-app-card-hover text-app-text' : 'text-app-text-muted'">Edit</button>
+                            <button type="button" role="tab" [attr.aria-selected]="phoneTab() === 'preview'" (click)="phoneTab.set('preview')"
+                                class="flex-1 rounded-full py-1.5" [class]="phoneTab() === 'preview' ? 'bg-app-card-hover text-app-text' : 'text-app-text-muted'">Preview</button>
+                        </div>
+                    }
+
+                    <!-- Editor -->
+                    <section class="flex flex-col gap-5 rounded-xl bg-app-card p-5 shadow-e1 sm:p-6" aria-label="Card editor"
+                        [class.max-md:hidden]="!card() || phoneTab() !== 'edit'">
+                        <div class="flex items-center gap-1">
+                            <h2 class="flex-1 font-semibold">Card {{ selectedIndex() + 1 }}</h2>
+                            <button type="button" aria-label="Move up" title="Move up" [disabled]="selectedIndex() === 0" (click)="move(-1)"
+                                class="grid size-9 place-items-center rounded-full text-app-text-subtle hover:bg-app-card-hover hover:text-app-text disabled:opacity-40 disabled:hover:bg-transparent">
+                                <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m18 15-6-6-6 6"/></svg>
+                            </button>
+                            <button type="button" aria-label="Move down" title="Move down" [disabled]="selectedIndex() === cards().length - 1" (click)="move(1)"
+                                class="grid size-9 place-items-center rounded-full text-app-text-subtle hover:bg-app-card-hover hover:text-app-text disabled:opacity-40 disabled:hover:bg-transparent">
+                                <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+                            </button>
+                            <button type="button" aria-label="Duplicate" title="Duplicate" (click)="duplicate()"
+                                class="grid size-9 place-items-center rounded-full text-app-text-subtle hover:bg-app-card-hover hover:text-app-text">
+                                <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+                            </button>
+                            <button type="button" aria-label="Delete" title="Delete" (click)="remove()"
+                                class="grid size-9 place-items-center rounded-full text-app-text-subtle hover:bg-app-card-hover hover:text-red-600 dark:hover:text-red-400">
+                                <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+                            </button>
+                        </div>
+                        <app-card-editor [card]="current" [errors]="editor.errors().get(current.id) ?? {}" (changed)="updateSelected($event)" />
+                    </section>
+
+                    <!-- Preview: the same component study mode uses -->
+                    <section class="flex flex-col gap-3 md:col-start-2 xl:col-start-3" aria-label="Preview"
+                        [class.max-md:hidden]="!card() || phoneTab() !== 'preview'">
+                        <div class="flex items-center justify-between">
+                            <h2 class="text-sm font-semibold text-app-text-muted">Preview</h2>
+                            <div class="flex rounded-full bg-app-card p-1 text-xs font-semibold shadow-e1">
+                                <button type="button" class="rounded-full px-3 py-1" [attr.aria-pressed]="!showBack()" (click)="showBack.set(false)"
+                                    [class]="showBack() ? 'text-app-text-muted' : 'bg-app-card-hover text-app-text'">Front</button>
+                                <button type="button" class="rounded-full px-3 py-1" [attr.aria-pressed]="showBack()" (click)="showBack.set(true)"
+                                    [class]="showBack() ? 'bg-app-card-hover text-app-text' : 'text-app-text-muted'">Front + back</button>
+                            </div>
+                        </div>
+                        @if (current.front.trim() || current.back.trim()) {
+                            <app-flashcard class="block rounded-xl bg-app-card p-6 text-base shadow-e3 sm:p-8"
+                                [front]="current.front" [back]="current.back" [refs]="current.meta?.refs" [hideBack]="!showBack()" />
+                        } @else {
+                            <p class="rounded-xl border-2 border-dashed border-app-border px-6 py-10 text-center text-sm text-app-text-subtle">Write the front and back to see the card as it shows in study mode.</p>
+                        }
+                    </section>
+                } @else {
+                    <section class="grid place-items-center rounded-xl bg-app-card p-10 text-center shadow-e1 max-md:hidden">
+                        <p class="text-app-text-muted">Add a card to start.</p>
+                    </section>
+                }
+            </div>
+        </div>
+
+        @if (deleted(); as removed) {
+            <div role="status" class="fixed inset-x-0 bottom-6 z-30 mx-auto flex w-fit max-w-[calc(100%-2rem)] items-center gap-4 rounded-full bg-sand-800 py-2 pl-5 pr-2 text-sm text-sand-50 shadow-e4">
+                <span class="truncate">Card {{ removed.index + 1 }} deleted</span>
+                <button type="button" class="rounded-full px-3 py-1.5 font-bold text-honey-300 hover:bg-sand-700" (click)="undoRemove()">Undo</button>
+            </div>
+        }
+    }
+}
+
+<!-- Deck details: a side sheet on larger screens, full width on a phone -->
+<dialog #details aria-labelledby="details-title"
+    class="m-0 ml-auto h-dvh max-h-none w-full max-w-md bg-app-card p-0 text-app-text shadow-e5 backdrop:bg-sand-950/60 backdrop:backdrop-blur-sm">
+    @if (editor.draft(); as deck) {
+        <div class="flex h-full flex-col">
+            <header class="flex items-center gap-3 px-6 pb-4 pt-6">
+                <h2 id="details-title" class="flex-1 text-lg font-semibold">Deck details</h2>
+                <button type="button" aria-label="Close" (click)="closeDetails()" class="grid size-9 place-items-center rounded-full text-app-text-subtle hover:bg-app-card-hover hover:text-app-text">
+                    <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                </button>
+            </header>
+            <div class="flex-1 overflow-y-auto px-6 pb-6">
+                <app-deck-meta-editor [meta]="deck.meta" (changed)="editor.updateMeta($event)" />
+            </div>
+            <footer class="border-t border-app-border px-6 py-4">
+                <button type="button" (click)="closeDetails()" class="w-full rounded-full bg-action px-5 py-2.5 font-bold text-app-bg shadow-raised hover:bg-action-hover">Done</button>
+            </footer>
+        </div>
+    }
+</dialog>
+
+<dialog #conflict role="alertdialog" aria-labelledby="conflict-title" aria-describedby="conflict-text" (cancel)="$event.preventDefault()"
+    class="m-auto w-[calc(100%-2rem)] max-w-md rounded-xl bg-app-card p-6 text-app-text shadow-e5 backdrop:bg-sand-950/60 backdrop:backdrop-blur-sm">
+    <div class="flex flex-col gap-4">
+        <span class="grid size-11 place-items-center rounded-full bg-honey-100 text-honey-800 dark:bg-honey-400/15 dark:text-honey-300">
+            <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 16h5v5"/></svg>
+        </span>
+        <div class="flex flex-col gap-1">
+            <h2 id="conflict-title" class="text-lg font-semibold">This deck changed while you were editing</h2>
+            <p id="conflict-text" class="leading-relaxed text-app-text-muted">It was updated somewhere else, for example by a chat refine. Reload to see that version, or overwrite it with yours.</p>
+        </div>
+        <div class="mt-2 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+            <button type="button" class="rounded-full border-2 border-app-border px-5 py-2 font-bold hover:bg-app-card-hover" (click)="editor.overwrite()">Overwrite with mine</button>
+            <button type="button" class="rounded-full bg-action px-5 py-2 font-bold text-app-bg shadow-raised hover:bg-action-hover" (click)="editor.reload()">Reload deck</button>
+        </div>
+    </div>
+</dialog>

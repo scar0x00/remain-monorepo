@@ -1,0 +1,17 @@
+<div class="flex flex-col gap-2">
+    <div class="flex items-center justify-between gap-2">
+        <label [for]="fieldId()" class="text-sm font-semibold text-app-text-muted">{{ label() }}</label>
+        <div class="flex gap-1 font-mono text-xs">
+            <button type="button" class="rounded-md px-2 py-1 text-app-text-subtle hover:bg-app-card-hover hover:text-app-text" title="Inline math" (click)="inlineMath()">$x$</button>
+            <button type="button" class="rounded-md px-2 py-1 text-app-text-subtle hover:bg-app-card-hover hover:text-app-text" title="Block math" (click)="blockMath()">$$x$$</button>
+        </div>
+    </div>
+    <textarea #textarea [id]="fieldId()" rows="3" spellcheck="false"
+        [attr.aria-invalid]="error() ? true : null" [attr.aria-describedby]="error() ? fieldId() + '-error' : null"
+        class="min-h-20 w-full min-w-0 resize-none overflow-hidden rounded-lg border-2 bg-app-bg px-3 py-2.5 font-mono text-sm leading-relaxed text-app-text shadow-inset focus:border-action focus:outline-none focus:ring-4 focus:ring-action/20"
+        [class]="error() ? 'border-red-600 dark:border-red-400' : 'border-app-border'"
+        [value]="value()" (input)="onInput($event)" (keydown)="onKeydown($event)" (blur)="onBlur()"></textarea>
+    @if (error()) {
+        <p [id]="fieldId() + '-error'" class="text-sm text-red-700 dark:text-red-300">{{ error() }}</p>
+    }
+</div>
