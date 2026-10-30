@@ -6,6 +6,7 @@ import { RouterTestingHarness } from '@angular/router/testing';
 import { provideMarkdown } from 'ngx-markdown';
 
 import { DeckEditRoute, cardSummary } from './deck-edit-route';
+import { polyfillDialog } from '../../testing/dialog';
 
 const DECK = {
   version: 2,
@@ -22,6 +23,7 @@ describe('DeckEditRoute', () => {
   let route: DeckEditRoute;
 
   async function open(url = '/deck-edit/signals', file = 'signals.json') {
+    polyfillDialog();
     TestBed.configureTestingModule({
       providers: [
         provideRouter(
@@ -89,6 +91,49 @@ describe('DeckEditRoute', () => {
     req.flush('ok', { headers: { etag: '"e2"' } });
     await settle();
 
+    expect(el().textContent).toContain('All changes saved');
+  });
+
+  async function saveIntoConflict() {
+    route.updateSelected({ back: 'Mine' });
+    await harness.fixture.whenStable();
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 's', ctrlKey: true }));
+    http.expectOne((r) => r.method === 'PUT').flush('changed', { status: 412, statusText: 'Precondition Failed' });
+    await settle();
+  }
+
+  const conflictDialog = () => el().querySelector<HTMLDialogElement>('dialog[role="alertdialog"]')!;
+  const button = (text: string) => [...el().querySelectorAll('button')].find((b) => b.textContent!.trim() === text)!;
+
+  it('opens the conflict dialog on a 412 and reloads the stored deck', async () => {
+    await open();
+    await saveIntoConflict();
+    expect(conflictDialog().open).toBe(true);
+
+    button('Reload deck').click();
+    const theirs = { ...DECK, cards: [{ id: 'c_1', front: 'Theirs', back: '2W' }] };
+    http.expectOne({ method: 'GET', url: '/api/v1/deck/signals.json' }).flush(JSON.stringify(theirs), { headers: { etag: '"theirs"' } });
+    await settle();
+
+    expect(conflictDialog().open).toBe(false);
+    expect(listItems()).toEqual(['1 Theirs']);
+    expect(el().textContent).not.toContain('unsaved');
+  });
+
+  it('overwrites from the conflict dialog with the current etag', async () => {
+    await open();
+    await saveIntoConflict();
+
+    button('Overwrite with mine').click();
+    http.expectOne({ method: 'GET', url: '/api/v1/deck/signals.json' }).flush(JSON.stringify(DECK), { headers: { etag: '"theirs"' } });
+    await settle();
+    const req = http.expectOne((r) => r.method === 'PUT');
+    expect(req.request.headers.get('if-match')).toBe('"theirs"');
+    expect(JSON.parse(req.request.body).cards[0].back).toBe('Mine');
+    req.flush('ok', { headers: { etag: '"e3"' } });
+    await settle();
+
+    expect(conflictDialog().open).toBe(false);
     expect(el().textContent).toContain('All changes saved');
   });
 

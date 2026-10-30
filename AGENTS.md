@@ -101,7 +101,7 @@ main-backend serves a stateless MCP endpoint at `https://remain.scar0x00.click/m
 - Tests: `test/unit/` (`bun run test`) and `test/smoke/` (`bun run test:smoke`, which calls the real model).
 
 ### `e2e/`
-Playwright browser tests (`app.e2e.test.ts`) that run against the live stack (`bun run test`).
+Playwright browser tests that run against the live stack (`bun run test`): `app.e2e.test.ts` (generation, refine, study; needs the agent and a model) and `deck-editor.e2e.test.ts` (editor saves, conflicts, study quick edit; needs only main-backend and the frontend). Both use the system Chrome; set `E2E_BROWSER_PATH` to another Chromium binary.
 
 ### Other
 - `dev-server` (repo root): bash script that starts the whole stack with `./dev-server {start|stop|restart|status|logs}`. Ports: main-backend 8787, agent 8788, frontend 4200. It passes one `--persist-to` dir to both workers.

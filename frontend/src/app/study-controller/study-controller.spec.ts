@@ -7,6 +7,7 @@ import { provideMarkdown } from 'ngx-markdown';
 
 import { StudyController } from './study-controller';
 import { legacyCardId } from '../deck-format/deck-format';
+import { polyfillDialog } from '../../testing/dialog';
 
 const DECK = {
   version: 2,
@@ -123,8 +124,7 @@ describe('StudyController', () => {
 
   it('opens the quick edit for the current card', async () => {
     await setup();
-    // The test DOM has no modal dialogs.
-    HTMLDialogElement.prototype.showModal ??= function (this: HTMLDialogElement) { this.open = true; };
+    polyfillDialog();
 
     fixture.nativeElement.querySelector('button[aria-label="Edit card"]').click();
     await fixture.whenStable();
