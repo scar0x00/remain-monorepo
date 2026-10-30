@@ -13,6 +13,7 @@ import {
   parseDeck,
   RefSchema,
 } from "./lib/deck-format";
+import { track } from "./lib/analytics";
 import { deleteDeck, listDecks, saveDeck, type DeckStore } from "./lib/decks";
 import { type Bindings } from "./types";
 
@@ -96,8 +97,33 @@ const CardEdit = z
     message: "provide front, back, refs or a combination",
   });
 
-export function createServer(env: Bindings) {
+// The deck event each writing tool records in analytics when it succeeds.
+const TOOL_EVENTS: Record<string, string> = {
+  create_deck: "deck_created",
+  update_deck: "deck_edited",
+  add_cards: "deck_edited",
+  edit_cards: "deck_edited",
+  update_deck_meta: "deck_edited",
+  delete_deck: "deck_deleted",
+};
+
+export function createServer(env: Bindings, ctx?: Pick<ExecutionContext, "waitUntil">) {
   const server = new McpServer({ name: "remain", version: "1.0.0" });
+
+  // Every tool call is recorded as `mcp_tool_called`, plus its deck event when it changed a deck.
+  const registerTool = server.registerTool.bind(server) as (...args: unknown[]) => unknown;
+  server.registerTool = ((name: string, config: unknown, handler: (args: any, extra: unknown) => Promise<{ isError?: boolean }>) =>
+    registerTool(name, config, async (args: any, extra: unknown) => {
+      const result = await handler(args, extra);
+      const ok = !result.isError;
+      track(env, ctx, "mcp_tool_called", { tool: name, ok });
+      const event = TOOL_EVENTS[name];
+      if (ok && event) {
+        const deck = args.key ?? `${args.name}.${args.format}`;
+        track(env, ctx, event, name === "create_deck" ? { deck, source: "mcp", format: args.format, card_count: args.cards.length } : { deck, via: "mcp", tool: name });
+      }
+      return result;
+    })) as unknown as typeof server.registerTool;
 
   server.registerTool(
     "list_decks",

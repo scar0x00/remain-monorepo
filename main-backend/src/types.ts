@@ -10,6 +10,9 @@ export type Bindings = {
   ACCESS_AUD: string;
   // Local dev only (.dev.vars): skip Access JWT verification because there is no Access in front.
   DEV_SKIP_ACCESS_AUTH?: string;
+  // PostHog project token. A Worker secret in production only, so analytics are off everywhere else.
+  POSTHOG_KEY?: string;
+  POSTHOG_HOST: string;
 };
 
 export type Env = {
