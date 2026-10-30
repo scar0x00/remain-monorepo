@@ -2,6 +2,7 @@ import { type Context, Hono, MiddlewareHandler } from "hono";
 import { Client } from "pg";
 import { createMcpHandler } from "agents/mcp/server";
 import { accessAuth } from "./lib/access-auth";
+import { type AnalyticsProperties, track } from "./lib/analytics";
 import { formatOfKey, parseDeck, readDeck } from "./lib/deck-format";
 import {
   SYSTEM_USER_ID,
@@ -40,6 +41,18 @@ import { type Env } from "./types";
 const app = new Hono<Env>();
 
 const FLASHCARD_AGENT_ORIGIN = "http://flashcard-agent";
+
+// Hono throws when a request has no execution context, which is the case in unit tests.
+const executionCtx = (c: Context<Env>) => {
+  try {
+    return c.executionCtx;
+  } catch {
+    return undefined;
+  }
+};
+
+const trackRequest = (c: Context<Env>, event: string, properties?: AnalyticsProperties) =>
+  track(c.env, executionCtx(c), event, properties);
 
 const pgDbMiddleware: MiddlewareHandler = async (c, next) => {
   const client = new Client({
@@ -101,6 +114,7 @@ app.put("/api/v1/deck/:key", pgDbMiddleware, async (c) => {
   if (ifMatch) {
     stored = await c.env.DECKS.get(key);
     if (!stored || !etagsMatch(ifMatch, stored.etag)) {
+      trackRequest(c, "deck_edit_conflict", { deck: key, via: "app" });
       return deckChanged(c);
     }
   }
@@ -109,6 +123,7 @@ app.put("/api/v1/deck/:key", pgDbMiddleware, async (c) => {
 
   const store = { bucket: c.env.DECKS, pg: c.get("pg") };
   const format = formatOfKey(key);
+  let cardCount: number | null = null;
   let object;
   if (format) {
     // .json/.yaml files must be decks, stored as v2 in the key's format. The editor sends JSON for
@@ -119,6 +134,7 @@ app.put("/api/v1/deck/:key", pgDbMiddleware, async (c) => {
       return c.text(result.error, 400);
     }
     const { deck } = result;
+    cardCount = deck.cards.length;
     if (stored) {
       // An edit: how the deck was produced, by whom and from what never changes (#13).
       const { tool, author, sources } = parseDeck(await stored.text(), format)?.meta ?? {};
@@ -143,9 +159,17 @@ app.put("/api/v1/deck/:key", pgDbMiddleware, async (c) => {
 
   if (!object) {
     // R2 also returns null when the `onlyIf` condition fails.
+    if (stored) trackRequest(c, "deck_edit_conflict", { deck: key, via: "app" });
     return stored ? deckChanged(c) : c.text("Upload failed", 500);
   }
 
+  trackRequest(
+    c,
+    stored ? "deck_edited" : "deck_created",
+    stored
+      ? { deck: key, via: "app", card_count: cardCount }
+      : { deck: key, source: "upload", format: format ?? key.split(".").pop() ?? null, card_count: cardCount },
+  );
   c.header("etag", object.httpEtag);
   return c.text(`Put ${key} successfully!`);
 });
@@ -171,10 +195,17 @@ app.post("/api/v1/flashcards/:deckName", pgDbMiddleware, async (c) => {
     FLASHCARD_AGENT_ORIGIN,
   );
 
+  // Read on a copy: the original body is forwarded to the agent as it is.
+  const form = await c.req.raw.clone().formData().catch(() => null);
+  const refine = form?.get("refine") === "true";
+  const sourceFiles = form ? [...form.values()].filter((value) => typeof value !== "string").length : 0;
+  const startedAt = Date.now();
+
   const upstream = await c.env.FLASHCARD_AGENT.fetch(
     new Request(agentUrl, c.req.raw),
   );
   if (!upstream.ok) {
+    trackRequest(c, "deck_generation_failed", { deck: deckName, refine, status: upstream.status });
     return upstream;
   }
 
@@ -186,7 +217,16 @@ app.post("/api/v1/flashcards/:deckName", pgDbMiddleware, async (c) => {
     return c.text(`Generated deck ${key} could not be found`, 500);
   }
 
-  await upsertDeckRow(c.get("pg"), key, object, summarizeDeckFile(key, await object.text()));
+  const summary = summarizeDeckFile(key, await object.text());
+  await upsertDeckRow(c.get("pg"), key, object, summary);
+  trackRequest(c, refine ? "deck_refined" : "deck_created", {
+    deck: key,
+    ...(refine ? {} : { source: "agent", format: formatOfKey(key) }),
+    card_count: summary?.cardCount ?? null,
+    language: summary?.meta.language ?? null,
+    source_files: sourceFiles,
+    duration_ms: Date.now() - startedAt,
+  });
 
   return new Response(text, {
     status: upstream.status,
@@ -202,6 +242,7 @@ app.delete("/api/v1/deck/:key", pgDbMiddleware, async (c) => {
     return c.text("Object Not Found", 404);
   }
 
+  trackRequest(c, "deck_deleted", { deck: key, via: "app" });
   return c.text(`Deleted ${key} successfully!`);
 });
 
@@ -226,6 +267,7 @@ app.post("/api/v1/study-sessions", async (c) => {
   }
 
   const id = await createSession(c.get("pg"), SYSTEM_USER_ID, parsed.data);
+  trackRequest(c, "study_session_started", { deck: parsed.data.deckName, card_total: parsed.data.cardTotal });
   return c.json({ id }, 201);
 });
 
@@ -269,9 +311,26 @@ app.post("/api/v1/study-sessions/:id/answers", async (c) => {
 });
 
 app.post("/api/v1/study-sessions/:id/finish", async (c) => {
-  const session = await finishSession(c.get("pg"), SYSTEM_USER_ID, c.req.param("id"));
+  const pg = c.get("pg");
+  const before = await getSession(pg, SYSTEM_USER_ID, c.req.param("id"));
+  const session = await finishSession(pg, SYSTEM_USER_ID, c.req.param("id"));
   if (!session) {
     return c.text("Session Not Found", 404);
+  }
+
+  // Only the first finish counts; finishing again is a no-op.
+  if (before?.status !== "completed" && session.status === "completed") {
+    trackRequest(c, "study_session_finished", {
+      deck: session.deckName,
+      card_total: session.cardTotal,
+      answered: session.right + session.wrong,
+      right: session.right,
+      wrong: session.wrong,
+      accuracy: session.accuracy,
+      duration_s: session.finishedAt
+        ? Math.round((new Date(session.finishedAt).getTime() - new Date(session.startedAt).getTime()) / 1000)
+        : null,
+    });
   }
 
   return c.json(session);
@@ -324,7 +383,7 @@ app.get("/api/v1/stats/hardest-cards", async (c) => {
 });
 
 app.all("/mcp", accessAuth, (c) =>
-  createMcpHandler(() => createServer(c.env))(c.req.raw, c.env, c.executionCtx as unknown as ExecutionContext),
+  createMcpHandler(() => createServer(c.env, executionCtx(c)))(c.req.raw, c.env, c.executionCtx as unknown as ExecutionContext),
 );
 
 export default app;
