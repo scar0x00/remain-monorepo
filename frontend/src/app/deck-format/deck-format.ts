@@ -5,7 +5,7 @@ import { Deck, DeckToolKind } from '../../types/Deck';
 // main-backend/src/lib/deck-format.ts. Keep them in sync: the contract tests in each package read the
 // fixtures in test-decks/contract/.
 
-const REF_KINDS: readonly CardRefKind[] = ['page', 'equation', 'theorem', 'definition', 'figure', 'section', 'other'];
+export const REF_KINDS: readonly CardRefKind[] = ['page', 'equation', 'theorem', 'definition', 'figure', 'section', 'other'];
 const TOOL_KINDS: readonly DeckToolKind[] = ['agent', 'mcp', 'manual', 'upload'];
 
 /**
@@ -19,6 +19,19 @@ export function legacyCardId(card: { front: string; back: string }): string {
     hash = Math.imul(hash, 0x01000193) >>> 0;
   }
   return hash.toString(16).padStart(8, '0');
+}
+
+/** A fresh id for a card created in the editor, like the backend's. Never derived from the card text. */
+export function newCardId(): string {
+  return `c_${crypto.randomUUID().replace(/-/g, '').slice(0, 12)}`;
+}
+
+export type DeckFormat = 'json' | 'yaml';
+
+export function formatOfKey(key: string): DeckFormat | null {
+  if (/\.json$/i.test(key)) return 'json';
+  if (/\.ya?ml$/i.test(key)) return 'yaml';
+  return null;
 }
 
 const isObject = (value: unknown): value is Record<string, unknown> =>

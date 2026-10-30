@@ -96,15 +96,23 @@ export async function upsertDeckRow(
   );
 }
 
-/** Writes a file to R2 as is and records it in Postgres. Returns null when R2 rejects the write. */
+/** Only write when the stored object still matches, e.g. the request's `If-Match` header. */
+export type WriteCondition = { onlyIf?: R2Conditional | Headers };
+
+/**
+ * Writes a file to R2 as is and records it in Postgres. Returns null when R2 rejects the write,
+ * which includes a failed `onlyIf` condition.
+ */
 export async function putDeck(
   { bucket, pg }: DeckStore,
   key: string,
   body: ArrayBuffer | string,
   contentType?: string,
+  { onlyIf }: WriteCondition = {},
 ) {
   const object = await bucket.put(key, body, {
     httpMetadata: { contentType },
+    onlyIf,
   });
 
   if (!object) return null;
@@ -113,10 +121,20 @@ export async function putDeck(
   return object;
 }
 
-/** Writes a deck in the v2 format of its key's extension. Returns null when R2 rejects the write. */
-export async function saveDeck({ bucket, pg }: DeckStore, key: string, format: DeckFormat, deck: Deck) {
+/**
+ * Writes a deck in the v2 format of its key's extension. Returns null when R2 rejects the write,
+ * which includes a failed `onlyIf` condition.
+ */
+export async function saveDeck(
+  { bucket, pg }: DeckStore,
+  key: string,
+  format: DeckFormat,
+  deck: Deck,
+  { onlyIf }: WriteCondition = {},
+) {
   const object = await bucket.put(key, serializeDeck(deck, format), {
     httpMetadata: { contentType: CONTENT_TYPES[format] },
+    onlyIf,
   });
 
   if (!object) return null;

@@ -6,12 +6,21 @@ type StoredObject = {
   uploaded: Date;
 };
 
+type Conditional = { etagMatches?: string } | Headers;
+
+// The etags an `onlyIf` requires, unquoted, or undefined when it requires none.
+function requiredEtags(onlyIf?: Conditional) {
+  const raw = onlyIf instanceof Headers ? onlyIf.get("if-match") : onlyIf?.etagMatches;
+  return raw?.split(",").map((etag) => etag.trim().replace(/^"|"$/g, ""));
+}
+
 export function createFakeR2() {
   const objects = new Map<string, StoredObject>();
 
   const toObject = (stored: StoredObject) => ({
     key: stored.key,
     size: stored.bytes.byteLength,
+    etag: stored.httpEtag.replace(/^"|"$/g, ""),
     httpEtag: stored.httpEtag,
     uploaded: stored.uploaded,
     writeHttpMetadata(headers: Headers) {
@@ -30,8 +39,14 @@ export function createFakeR2() {
     async put(
       key: string,
       value: ArrayBuffer | string,
-      options?: { httpMetadata?: { contentType?: string } },
+      options?: { httpMetadata?: { contentType?: string }; onlyIf?: Conditional },
     ) {
+      // Like R2, a failed condition writes nothing and returns null.
+      const required = requiredEtags(options?.onlyIf);
+      if (required && !required.includes("*")) {
+        const current = objects.get(key)?.httpEtag.replace(/^"|"$/g, "");
+        if (!current || !required.includes(current)) return null;
+      }
       const bytes =
         typeof value === "string"
           ? new TextEncoder().encode(value)

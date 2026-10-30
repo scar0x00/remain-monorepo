@@ -19,6 +19,17 @@ const TOOL_LABELS: Record<DeckTool["kind"], string> = {
 export class DeckList {
   searchTerm = inject(DeckSearchTerm);
 
+  // Only .json and .yaml files are decks the editor can open.
+  isEditable(deckName: string): boolean {
+    return /\.(json|ya?ml)$/i.test(deckName);
+  }
+
+  // Route params for the editor: the name without extension, and the format when it isn't JSON.
+  editLink(deckName: string) {
+    const [, name, ext] = deckName.match(/^(.*)\.(json|ya?ml)$/i)!;
+    return { name, queryParams: ext.toLowerCase() === "json" ? {} : { format: ext.toLowerCase() } };
+  }
+
   getDeckPath(deckName: string): string {
     return deckName.replace(/\.json$/i, "");
   }

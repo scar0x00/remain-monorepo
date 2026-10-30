@@ -36,6 +36,7 @@ Deck files are `<deckName>.json` or `<deckName>.yaml` objects in R2. Postgres on
 
 - **Generate or refine a deck**: the chat route (`FlashcardGenerator` in `frontend/src/app/flashcard-chat-route/flashcard-generator.ts`) sends multipart form data to `POST /api/v1/flashcards/:deckName`. main-backend forwards the request through `FLASHCARD_AGENT` to `/agents/flashcard-agent/:deckName`, and the `FlashcardAgent` writes the deck to R2 and returns `{ key, format, cardCount }`. main-backend then reads the object and upserts the `decks` row with its card count, title and `meta`. The `refine` form field edits an existing deck instead of creating one.
 - **Upload a deck**: the upload route does `PUT /api/v1/deck/:key` with the raw file. A `.json`/`.yaml` key must be a valid deck (legacy or v2), otherwise the route returns 400 with the reason. It is stored as v2, with `tool.kind = "upload"` unless the file already has a `tool`. Other files (e.g. `.apkg`) are stored as they are. main-backend upserts the row either way.
+- **Save an edited deck** (deck editor, #14): the same `PUT /api/v1/deck/:key` with `If-Match: <etag>` and the whole v2 deck as JSON (`Content-Type: application/json` works for `.yaml` keys too; the file keeps its key's format). The write uses R2 `onlyIf`, so it answers **412** when the deck changed since it was loaded (or no longer exists), for example after an agent refine or an MCP edit. `tool`, `author` and `sources` are copied from the stored deck, whatever the body says, and an edit never stamps `tool.kind = "upload"`. Every successful `PUT` returns the new etag in the `ETag` header.
 - **Browse decks**: `GET /api/v1/decks?searchTerm=` does a prefix `ILIKE` on `decks.name` and or `decks.title` and returns `DeckEntry[]` (`deckName`, `size`, `uploaded`, `etag`, and when known `title`, `cardCount`, `author`, `tool`).
 - **Study a deck**: `GET /api/v1/deck/:key` streams the object from R2 with etag and range support.
 - **Delete**: `DELETE /api/v1/deck/:key` removes the R2 object and the row.
@@ -66,13 +67,15 @@ main-backend serves a stateless MCP endpoint at `https://remain.scar0x00.click/m
   | `flashcard-chat` | `flashcard-chat-route/` | Chat UI. Uses `chat-composer/`, `chat-bubble/`; request building in `flashcard-chat.utils.ts` |
   | `deck-upload` | `deck-upload-route/` | Uses `file-input/` |
   | `deck-browse` | `browse-decks-route/` | Uses `deck-list/`, `search-deck-field/`; search state in `deck-search-term.ts` |
-  | `deck-study/:id` | `deck-study-route/` | Uses `flashcard/`, `study-controller/` |
+  | `deck-study/:id` | `deck-study-route/` | Uses `flashcard/`, `study-controller/`. The card's pencil opens `card-quick-edit/` |
+  | `deck-edit/:name` | `deck-edit-route/` | Lazy. Deck editor (#14): `name` without `.json`, `?format=yaml` for YAML decks, `?card=<id>` selects a card. Uses `card-editor/`, `markdown-editor/`, `deck-meta-editor/` |
   | `dashboard` | `dashboard-route/` | Lazy. Study stats: `stat-tile/`, `activity-heatmap/`, `weekday-chart/`, `deck-stats-table/`, `needs-review/`, `hardest-cards/` |
   | `dashboard/decks/:name` | `deck-stats-route/` | Lazy. One deck's stats; `accuracy-chart/` |
 
 - Dashboard data comes from `stats/stats.service.ts` (one `httpResource` per `/api/v1/stats/*` endpoint), provided on the `dashboard` route together with ECharts. Charts use ngx-echarts with the tree-shaken build in `stats/echarts.ts` (SVG renderer, lazy-loaded); `stats/chart-theme.ts` turns the `--app-*` tokens into colours and follows the colour scheme.
 - The nav bar's hamburger opens a native `popover` menu (`nav-bar/`), which is where Dashboard lives.
 
+- Editing: `deck-editor/deck-editor.ts` (`DeckEditor`, provided per editor, never in root) holds `original`, `draft` and the loaded etag, and saves the whole deck with `If-Match`; a 412 sets `status` to `conflict` and the UI offers Reload or Overwrite. New cards get `newCardId()` from `deck-format.ts`. The study quick edit saves through the same service and patches the run's cards by id (`StudyController.cardSaved`) without restarting the run. `markdown-editor/` is the only place that knows the field is a `textarea`, so CodeMirror can replace it later. YAML decks are parsed with `yaml`, imported on demand.
 - Shared types are in `src/types/` (`Card`, `Deck` (v2), `DeckEntry`, `ChatMessage`, `FlashcardAgent` for the generate request/result).
 - `deck-format/deck-format.ts` has `normalizeDeck`, which the study controller passes as the `httpResource` `parse` to read legacy and v2 files. Study answers use `card.id`.
 - All HTTP goes to `/api/v1/*`. `proxy.conf.json` forwards `/api/**` to `localhost:8787`.
@@ -98,7 +101,7 @@ main-backend serves a stateless MCP endpoint at `https://remain.scar0x00.click/m
 - Tests: `test/unit/` (`bun run test`) and `test/smoke/` (`bun run test:smoke`, which calls the real model).
 
 ### `e2e/`
-Playwright browser tests (`app.e2e.test.ts`) that run against the live stack (`bun run test`).
+Playwright browser tests that run against the live stack (`bun run test`): `app.e2e.test.ts` (generation, refine, study; needs the agent and a model) and `deck-editor.e2e.test.ts` (editor saves, conflicts, study quick edit; needs only main-backend and the frontend). Both use the system Chrome; set `E2E_BROWSER_PATH` to another Chromium binary.
 
 ### Other
 - CI: `.github/workflows/tests.yml` runs every suite on pull requests and pushes to `dev`/`main`: unit tests of each package, main-backend e2e (Postgres service container, migrations applied by `scripts/ci-migrate.sh`), the agent smoke test with `SMOKE_LIVE=1`, and the browser e2e against `./dev-server start`. The last two need the `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` repo secrets because the AI binding is remote. `.github/workflows/deploy.yml` deploys on push to `main`.

@@ -64,6 +64,14 @@
                             title="Download deck">
                             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V3"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/></svg>
                         </a>
+                        @if (isEditable(deck.deckName)) {
+                            <a class="p-1.5 rounded-full text-app-text-subtle hover:text-app-text hover:bg-app-card-hover"
+                                [routerLink]="['/deck-edit', editLink(deck.deckName).name]" [queryParams]="editLink(deck.deckName).queryParams"
+                                [attr.aria-label]="'Edit ' + getDeckPath(deck.deckName)"
+                                title="Edit deck">
+                                <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.17 6.81a1 1 0 0 0-3.99-3.99L3.84 16.17a2 2 0 0 0-.5.83l-1.32 4.35a.5.5 0 0 0 .62.62l4.35-1.32a2 2 0 0 0 .83-.5z"/><path d="m15 5 4 4"/></svg>
+                            </a>
+                        }
                         <a class="inline-flex items-center gap-1.5 rounded-full bg-action text-app-bg px-4 py-1.5 text-sm font-bold shadow-raised hover:bg-action-hover"
                             [routerLink]="['/deck-study/', getDeckPath(deck.deckName)]"
                             [attr.aria-label]="'Study ' + getDeckPath(deck.deckName)">
