@@ -104,9 +104,9 @@ main-backend serves a stateless MCP endpoint at `https://remain.scar0x00.click/m
 Playwright browser tests that run against the live stack (`bun run test`): `app.e2e.test.ts` (generation, refine, study; needs the agent and a model) and `deck-editor.e2e.test.ts` (editor saves, conflicts, study quick edit; needs only main-backend and the frontend). Both use the system Chrome; set `E2E_BROWSER_PATH` to another Chromium binary.
 
 ### Other
+- CI: `.github/workflows/tests.yml` runs every suite on pull requests and pushes to `dev`/`main`: unit tests of each package, main-backend e2e (Postgres service container, migrations applied by `scripts/ci-migrate.sh`), the agent smoke test with `SMOKE_LIVE=1`, and the browser e2e against `./dev-server start`. The last two need the `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` repo secrets because the AI binding is remote. `.github/workflows/deploy.yml` deploys on push to `main`.
 - `dev-server` (repo root): bash script that starts the whole stack with `./dev-server {start|stop|restart|status|logs}`. Ports: main-backend 8787, agent 8788, frontend 4200. It passes one `--persist-to` dir to both workers.
 - `test-decks/`, `test-pdfs/`: sample inputs for manual testing.
-- `db/`: only `connect-psql-command.sh`.
 - `spec.md`, `TODO.md`: old notes, not kept up to date.
 - The app will be deployed on Cloudflare Workers using behind Cloudflare Access
 
