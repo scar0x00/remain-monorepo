@@ -114,6 +114,12 @@ Playwright browser tests that run against the live stack (`bun run test`): `app.
 - `scripts/`: `ci-migrate.sh` and `ci-require-cloudflare.sh` for CI, and `generate-deck.ts`, which generates a deck locally with the `claude` CLI, reusing the agent's prompts and schemas.
 - The app will be deployed on Cloudflare Workers using behind Cloudflare Access
 
+## Git workflow
+- `dev` and `main` are protected: changes need a pull request and all six Tests jobs to pass.
+- Work on a feature branch and open a PR into `dev`. Merge it with a **squash commit**, then delete the feature branch once it is merged.
+- Release by opening a PR from `dev` into `main` and merging it with a **regular merge commit** (never squash), so the two branches don't diverge. Do not delete `dev` or `main`.
+- Merge only when the user asks you to.
+
 ## Commands
 - Frontend: `bun run start`, `bun run build`, `bun run test` (Vitest via `ng test`).
 - main-backend: `bun run dev`, `bun run test` (unit), `bun run test:e2e`, `bun run cf-typegen`.

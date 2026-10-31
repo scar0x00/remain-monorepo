@@ -112,7 +112,7 @@ Authentication uses Cloudflare Access Managed OAuth. See [`AGENTS.md`](AGENTS.md
 - **Tests** (`.github/workflows/tests.yml`) run every suite above on pull requests and pushes to `dev` and `main`. The agent smoke test and the browser e2e need the `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` repository secrets.
 - **Deploy** (`.github/workflows/deploy.yml`) deploys the Workers whose package changed on every push to `main`. It can also be run by hand to deploy all three.
 
-Changes go through a pull request into `dev`, and `dev` is merged into `main` to release. Both branches are protected and require the Tests jobs to pass.
+Changes go through a pull request from a feature branch into `dev`, which is squash-merged, and the feature branch is deleted afterwards. `dev` is merged into `main` with a regular merge commit to release. Both branches are protected and require the Tests jobs to pass.
 
 ## More documentation
 
