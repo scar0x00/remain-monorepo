@@ -22,7 +22,7 @@ flashcard-generator-agent (Agents SDK Worker, :8788) ── R2 `remain-decks` (D
    └─ Claude Haiku via OpenRouter + Cloudflare AI gateway
 ```
 
-Deck files are `<deckName>.json` or `<deckName>.yaml` objects in R2. Postgres only stores listing metadata.
+Deck files are `<deckName>.json` or `<deckName>.yaml` objects in R2. Postgres stores listing metadata (`decks`) and study history (`study_sessions`, `study_answers`).
 
 ### Deck format (v2)
 
@@ -40,6 +40,7 @@ Deck files are `<deckName>.json` or `<deckName>.yaml` objects in R2. Postgres on
 - **Browse decks**: `GET /api/v1/decks?searchTerm=` does a prefix `ILIKE` on `decks.name` and or `decks.title` and returns `DeckEntry[]` (`deckName`, `size`, `uploaded`, `etag`, and when known `title`, `cardCount`, `author`, `tool`).
 - **Study a deck**: `GET /api/v1/deck/:key` streams the object from R2 with etag and range support.
 - **Delete**: `DELETE /api/v1/deck/:key` removes the R2 object and the row.
+- **Study sessions**: `POST /api/v1/study-sessions` (`deckName`, `cardTotal`; returns the new id with 201), `GET /api/v1/study-sessions` (`deckName?`, `limit?`, `cursor?`), `GET /api/v1/study-sessions/:id` (the session and its answers), `POST /api/v1/study-sessions/:id/answers` (409 once the session is finished) and `POST /api/v1/study-sessions/:id/finish` (finishing twice is a no-op).
 - **Study stats**: `GET /api/v1/stats/{overview,activity,decks,decks/:name,hardest-cards}` aggregate `study_sessions`/`study_answers` (`src/lib/stats.ts`). Every answered card counts, whatever the session status; `days` is the window and `tz` the IANA zone days are bucketed in. `decks.card_count`, `title` and `meta` are written on every deck write and backfilled from R2 by `/stats/decks`.
 - **MCP client (claude.ai, Claude Code, ...)**: the client calls `POST /mcp` on main-backend, which runs a tool against the same deck store as the REST routes. See "MCP server".
 
@@ -64,6 +65,7 @@ main-backend serves a stateless MCP endpoint at `https://remain.scar0x00.click/m
 
   | Path | Route component | Notes |
   |---|---|---|
+  | (empty) | `landing-route/` | Landing page |
   | `flashcard-chat` | `flashcard-chat-route/` | Chat UI. Uses `chat-composer/`, `chat-bubble/`; request building in `flashcard-chat.utils.ts` |
   | `deck-upload` | `deck-upload-route/` | Uses `file-input/` |
   | `deck-browse` | `browse-decks-route/` | Uses `deck-list/`, `search-deck-field/`; search state in `deck-search-term.ts` |
@@ -108,8 +110,8 @@ Playwright browser tests that run against the live stack (`bun run test`): `app.
 ### Other
 - CI: `.github/workflows/tests.yml` runs every suite on pull requests and pushes to `dev`/`main`: unit tests of each package, main-backend e2e (Postgres service container, migrations applied by `scripts/ci-migrate.sh`), the agent smoke test with `SMOKE_LIVE=1`, and the browser e2e against `./dev-server start`. The last two need the `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` repo secrets because the AI binding is remote. `.github/workflows/deploy.yml` deploys on push to `main`.
 - `dev-server` (repo root): bash script that starts the whole stack with `./dev-server {start|stop|restart|status|logs}`. Ports: main-backend 8787, agent 8788, frontend 4200. It passes one `--persist-to` dir to both workers.
-- `test-decks/`, `test-pdfs/`: sample inputs for manual testing.
-- `spec.md`, `TODO.md`: old notes, not kept up to date.
+- `test-decks/`: sample decks for manual testing, plus the contract fixtures in `test-decks/contract/`. `test-pdfs/` is gitignored: put your own PDFs there for manual testing.
+- `scripts/`: `ci-migrate.sh` and `ci-require-cloudflare.sh` for CI, and `generate-deck.ts`, which generates a deck locally with the `claude` CLI, reusing the agent's prompts and schemas.
 - The app will be deployed on Cloudflare Workers using behind Cloudflare Access
 
 ## Commands
@@ -119,7 +121,7 @@ Playwright browser tests that run against the live stack (`bun run test`): `app.
 
 ## Gotchas
 - main-backend and the agent must share local R2 state. Run both with `wrangler dev --persist-to <same dir>` (`./dev-server start` does this), or generation returns 500.
-- `frontend/` has both `package-lock.json` and `pnpm-lock.yaml`. Use `bun` for installs anyway.
+- `frontend/` has `bun.lock`, `package-lock.json` and `pnpm-lock.yaml` (and `packageManager` says pnpm). Use `bun` for installs anyway.
 - `main-backend/src/lib/auth.ts` creates its DB client differently on Cloudflare and locally; locally it reads `CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_PG`.
 
 ## Browser automation

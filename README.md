@@ -14,7 +14,7 @@ Remain is a web app for studying and memorizing flashcards. You can write decks 
 
 ## Architecture
 
-Remain is a Bun + Cloudflare Workers monorepo. Each top-level directory is its own package with its own `package.json`; there is no root workspace, so run commands from inside the package.
+Remain is a Bun + Cloudflare Workers monorepo. Each top-level directory is its own package with its own `package.json` and README; there is no root workspace, so run commands from inside the package.
 
 ```
 Browser (Angular SPA, :4200)
@@ -46,10 +46,10 @@ The app is deployed on Cloudflare Workers behind Cloudflare Access. User account
 ### Prerequisites
 
 - [Bun](https://bun.com). Use `bun` and `bunx` in this repo, not `npm`.
-- A Node.js runtime for the Angular CLI.
+- Node.js for the Angular CLI (CI uses 24).
 - A local Postgres, for main-backend. Point `CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_PG` at it (the connection string needs a password) and apply the SQL files in `main-backend/better-auth_migrations/` and then `main-backend/migrations/`. `scripts/ci-migrate.sh` does this.
 - A Cloudflare account, authenticated with `wrangler`. The agent's Workers AI binding is remote even in local development.
-- In `main-backend/.env`, set `DEV_SKIP_ACCESS_AUTH=true` so `/mcp` works without Cloudflare Access. Never set it in production.
+- In `main-backend/.dev.vars` (or `.env`), set `DEV_SKIP_ACCESS_AUTH=true` so `/mcp` works without Cloudflare Access. Never set it in production.
 
 ### Install
 
@@ -80,7 +80,7 @@ To run a single package instead, use the scripts below from inside its directory
 | Where | Command | What it runs |
 |---|---|---|
 | `frontend` | `bun run test` | Vitest, through `ng test` |
-| `main-backend` | `bun run test` | Unit tests against fake Postgres and R2 |
+| `main-backend` | `bun run test` | Unit tests against in-memory fakes of Postgres and R2 |
 | `main-backend` | `bun run test:e2e` | API e2e against a `wrangler dev` it starts itself |
 | `flashcard-generator-agent` | `bun run typecheck` and `bun run test` | Type check and unit tests |
 | `flashcard-generator-agent` | `bun run test:smoke` | Smoke test that calls the real model |
