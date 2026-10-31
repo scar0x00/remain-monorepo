@@ -107,3 +107,7 @@ Changes go through a pull request into `dev`, and `dev` is merged into `main` to
 ## More documentation
 
 [`AGENTS.md`](AGENTS.md) is the detailed technical reference: deck format, request flows, the MCP server, analytics, per-package layout and gotchas. It is written for coding agents but is the best place for contributors to start.
+
+## License
+
+Remain is source-available under the [PolyForm Noncommercial License 1.0.0](LICENSE). You can read, run, modify and share the code for any noncommercial purpose, such as personal use, study, research and hobby projects. Commercial use is not permitted. This is not an OSI-approved open source license.
