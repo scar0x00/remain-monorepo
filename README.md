@@ -1,6 +1,6 @@
 # Remain
 
-Remain is a web app for studying and memorizing flashcards. You can write decks by hand, upload them, or have an LLM generate them from your own notes, PDFs and other files, then study them in the browser and track your progress on a dashboard. Decks are also exposed over [MCP](https://modelcontextprotocol.io), so assistants such as claude.ai and Claude Code can read and edit them.
+Remain is a web app for studying and memorizing flashcards. You can upload decks, or have an LLM generate them from your own notes, PDFs and other files, then study them in the browser and track your progress on a dashboard. Decks are also exposed over [MCP](https://modelcontextprotocol.io), so assistants such as claude.ai and Claude Code can read and edit them.
 
 ## Features
 
@@ -16,30 +16,40 @@ Remain is a web app for studying and memorizing flashcards. You can write decks 
 
 Remain is a Bun + Cloudflare Workers monorepo. Each top-level directory is its own package with its own `package.json` and README; there is no root workspace, so run commands from inside the package.
 
+In production everything runs on Cloudflare, on one domain, behind Cloudflare Access (an owner-only policy):
+
 ```
-Browser (Angular SPA, :4200)
-   │  /api/**  (proxy.conf.json -> :8787)
-   ▼
-main-backend (Hono Worker, :8787)  ── R2 bucket `remain-decks` (DECKS) ── deck files
-   │            └─ Postgres via Hyperdrive (PG) ── `public.decks` metadata
-   │  service binding FLASHCARD_AGENT
-   ▼
-flashcard-generator-agent (Agents SDK Worker, :8788) ── R2 `remain-decks` (DECKS)
-   └─ Claude Haiku via OpenRouter + Cloudflare AI gateway
+Browser ── remain.scar0x00.click ── Cloudflare Access
+              │
+              ├─ /*          frontend (Worker serving the Angular SPA's static files)
+              │
+              ├─ /api/v1/*   main-backend (Hono Worker)
+              │              ├─ R2 bucket `remain-decks`: the deck files
+              │              ├─ Postgres via Hyperdrive: deck metadata, study sessions and answers
+              │              ├─ PostHog: usage analytics (no deck contents)
+              │              └─ service binding ─▶ flashcard-generator-agent
+              │                                    ├─ R2 bucket `remain-decks`: writes the decks it generates
+              │                                    ├─ Workers AI: converts uploaded documents to text
+              │                                    └─ Cloudflare AI gateway ─▶ OpenRouter ─▶ Claude Haiku
+              │
+              └─ /mcp        main-backend again, for MCP clients such as claude.ai and Claude Code.
+                             A second Access application handles OAuth for it
 ```
+
+- **frontend:** the Angular app is built to static files and served by its own Worker, which falls back to `index.html` for client-side routes. It only ever calls `/api/v1/*` on its own origin.
+- **main-backend:** the only public API. It reads and writes deck files in R2 and keeps what the app needs to list, search and chart decks in Postgres. To generate or refine a deck it forwards the request to the agent over a service binding, then reads the stored deck back and records it in Postgres. The MCP tools use the same deck operations as the REST routes.
+- **flashcard-generator-agent:** has no public route. It is reachable only through the service binding from main-backend. It prompts the model, validates the output, assigns card ids and writes the deck to R2.
+- **Storage:** deck files are `<deckName>.json` or `<deckName>.yaml` in R2, in the v2 deck format described in [`AGENTS.md`](AGENTS.md#deck-format-v2). Postgres is not the source of truth for cards.
+- **Accounts:** they are not wired up yet, so every deck belongs to a placeholder `system` user.
 
 | Directory | What it is |
 |---|---|
 | [`frontend/`](frontend) | Angular single-page app: chat, upload, browse, study, deck editor and dashboard |
-| [`main-backend/`](main-backend) | Hono Worker with the REST API (`/api/v1/*`) and the MCP endpoint (`/mcp`). Stores deck files in R2 and listing metadata and study stats in Postgres |
+| [`main-backend/`](main-backend) | Hono Worker with the REST API (`/api/v1/*`) and the MCP endpoint (`/mcp`) |
 | [`flashcard-generator-agent/`](flashcard-generator-agent) | Cloudflare Agents SDK Worker that turns prompts and files into decks with an LLM |
 | [`e2e/`](e2e) | Playwright browser tests that run against the whole local stack |
 | [`scripts/`](scripts) | CI helpers and a deck generation script |
 | [`test-decks/`](test-decks) | Sample decks and the contract fixtures shared by the three packages |
-
-Decks are `<deckName>.json` or `<deckName>.yaml` files in R2. Postgres only stores what is needed for listing, searching and statistics. The deck format (v2) is described in [`AGENTS.md`](AGENTS.md#deck-format-v2).
-
-The app is deployed on Cloudflare Workers behind Cloudflare Access. User accounts are not wired up yet, so every deck belongs to a placeholder `system` user.
 
 ## Getting started
 
@@ -65,7 +75,7 @@ for dir in frontend main-backend flashcard-generator-agent e2e; do (cd "$dir" &&
 ./dev-server start     # also: stop | restart | status | logs
 ```
 
-This starts the frontend on <http://localhost:4200>, main-backend on port 8787 and the agent on port 8788. Both workers share one local R2 state directory, which generation needs to work.
+This starts the frontend on <http://localhost:4200>, main-backend on port 8787 and the agent on port 8788. The Angular dev server proxies `/api/**` to main-backend (see `frontend/proxy.conf.json`), and main-backend reaches the agent through its service binding. Both workers share one local R2 state directory, which generation needs to work.
 
 To run a single package instead, use the scripts below from inside its directory. If you run the two workers by hand, give them the same `--persist-to` directory.
 
