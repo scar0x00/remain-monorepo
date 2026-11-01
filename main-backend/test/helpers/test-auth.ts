@@ -68,7 +68,7 @@ export const AUTH_ENV = {
  * `createAuth` has the same shape as the real one, to be set as the app's `createAuth` variable.
  */
 export function createTestAuth() {
-  const db: Record<string, unknown[]> = { user: [], session: [], account: [], verification: [] };
+  const db: Record<string, unknown[]> = { user: [], session: [], account: [], verification: [], twoFactor: [], passkey: [] };
   const redis = createFakeRedis();
   const storage = redisSecondaryStorage(redis.redis);
   const factory: typeof createAuth = (env: AuthEnv, overrides: AuthOverrides = {}) => ({

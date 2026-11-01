@@ -1,6 +1,8 @@
+import { passkey } from "@better-auth/passkey";
 import { type BetterAuthOptions, type SecondaryStorage, betterAuth } from "better-auth";
+import { twoFactor } from "better-auth/plugins";
 import { Pool } from "pg";
-import { resetPasswordEmail, sendMail, verificationEmail } from "./email";
+import { TWO_FACTOR_CODE_MINUTES, resetPasswordEmail, sendMail, twoFactorCodeEmail, verificationEmail } from "./email";
 import { createSecondaryStorage } from "./session-storage";
 import { type Bindings } from "../types";
 
@@ -46,12 +48,14 @@ export function authOptions(env: AuthEnv, overrides: AuthOverrides = {}) {
       ? { github: { clientId: env.GITHUB_CLIENT_ID, clientSecret: env.GITHUB_CLIENT_SECRET } }
       : undefined;
 
+  const site = new URL(env.BETTER_AUTH_URL);
+
   return {
     appName: "Remain",
     baseURL: env.BETTER_AUTH_URL,
     basePath: AUTH_BASE_PATH,
     secret: env.BETTER_AUTH_SECRET,
-    trustedOrigins: [new URL(env.BETTER_AUTH_URL).origin],
+    trustedOrigins: [site.origin],
     database: overrides.database,
     secondaryStorage,
     emailAndPassword: {
@@ -99,12 +103,42 @@ export function authOptions(env: AuthEnv, overrides: AuthOverrides = {}) {
         "/send-verification-email": { window: 60 * 60, max: 5 },
         "/request-password-reset": { window: 60 * 60, max: 5 },
         "/sign-in/email": { window: 60, max: 10 },
+        // Sends an email. The plugin's own limit (3 per 10 s for every /two-factor/* path) still
+        // applies to the verify endpoints.
+        "/two-factor/send-otp": { window: 10 * 60, max: 5 },
       },
     },
     advanced: {
       ipAddress: { ipAddressHeaders: ["cf-connecting-ip"] },
       ...(overrides.waitUntil && { backgroundTasks: { handler: overrides.waitUntil } }),
     },
+    plugins: [
+      // Gates email + password sign-in only. GitHub (GitHub's own 2FA) and passkeys (already a
+      // second factor) are not asked for a code.
+      twoFactor({
+        issuer: "Remain",
+        // Without a password (GitHub- or passkey-only accounts) 2FA can still be managed. Accounts
+        // with a password must give it.
+        allowPasswordless: true,
+        // Any user with 2FA on can ask for a code by email, alongside their authenticator app.
+        otpOptions: {
+          sendOTP: async ({ user, otp }) => sendMail(env, twoFactorCodeEmail(user, otp)),
+          period: TWO_FACTOR_CODE_MINUTES,
+          storeOTP: "hashed",
+        },
+        backupCodeOptions: { storeBackupCodes: "encrypted" },
+        // On by default; stated so it isn't lost: 10 failed codes of any kind lock 2FA sign-in for
+        // 15 minutes.
+        accountLockout: { enabled: true },
+      }),
+      passkey({
+        // The exact host, not the parent zone, so the passkeys are only valid on this site. Changing
+        // the hostname later invalidates every passkey. `localhost` in dev.
+        rpID: site.hostname,
+        rpName: "Remain",
+        origin: site.origin,
+      }),
+    ],
   } satisfies BetterAuthOptions;
 }
 
