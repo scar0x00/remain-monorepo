@@ -226,3 +226,13 @@ export class FakeClient {
     throw new Error(`FakeClient: unsupported query: ${normalized}`);
   }
 }
+
+/** better-auth's pool in src/lib/auth.ts. Tests give better-auth an in-memory adapter instead. */
+export class FakePool {
+  constructor(_config?: unknown) {
+    throw new Error("better-auth's pg Pool is not available in unit tests. Use createTestAuth().");
+  }
+}
+
+/** What `mock.module("pg", ...)` installs: every export of "pg" the worker imports. */
+export const fakePg = () => ({ Client: FakeClient, Pool: FakePool });

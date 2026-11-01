@@ -1,12 +1,12 @@
 import { beforeEach, describe, expect, it, mock } from "bun:test";
-import { FakeClient, resetDecks, users } from "../helpers/fake-pg";
+import { fakePg, resetDecks, users } from "../helpers/fake-pg";
 import { createFakeR2 } from "../helpers/fake-r2";
 import { signedInAs } from "../helpers/test-auth";
 
 type Captured = { distinctId: string; event: string; properties: Record<string, unknown> };
 const captured: Captured[] = [];
 
-mock.module("pg", () => ({ Client: FakeClient }));
+mock.module("pg", fakePg);
 mock.module("posthog-node", () => ({
   PostHog: class {
     async captureImmediate(message: Captured) {

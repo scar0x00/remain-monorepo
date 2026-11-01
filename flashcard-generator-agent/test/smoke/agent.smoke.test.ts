@@ -8,6 +8,11 @@ import { join } from "node:path";
 const PORT = Number(process.env.SMOKE_PORT ?? 8788);
 const BASE_URL = `http://localhost:${PORT}`;
 const AGENT_URL = `${BASE_URL}/agents/flashcard-agent`;
+// main-backend names each instance `<userId>:<deckName>` and says who the user is in headers.
+const USER_ID = "smoke-user";
+const USER_HEADERS = { "x-remain-user-id": USER_ID, "x-remain-user-name": encodeURIComponent("Smoke Test") };
+const agentUrl = (deckName: string, userId = USER_ID) =>
+  `${AGENT_URL}/${encodeURIComponent(userId)}:${encodeURIComponent(deckName)}`;
 const LIVE = process.env.SMOKE_LIVE === "1";
 const READY_TIMEOUT_MS = 120_000;
 const PROJECT_DIR = new URL("../../", import.meta.url).pathname;
@@ -35,9 +40,9 @@ async function waitForServer(): Promise<void> {
 }
 
 async function postJson(deckName: string, body: Record<string, unknown> = {}) {
-  return fetch(`${AGENT_URL}/${encodeURIComponent(deckName)}`, {
+  return fetch(agentUrl(deckName), {
     method: "POST",
-    headers: { "content-type": "application/json" },
+    headers: { "content-type": "application/json", ...USER_HEADERS },
     body: JSON.stringify({ deckName, ...body }),
   });
 }
@@ -74,7 +79,7 @@ type StoredDeck = {
 
 async function readStored(key: string): Promise<StoredDeck> {
   const get = Bun.spawn(
-    ["bunx", "wrangler", "r2", "object", "get", `remain-decks/${key}`, "--local", "--persist-to", PERSIST_DIR, "--pipe"],
+    ["bunx", "wrangler", "r2", "object", "get", `remain-decks/${USER_ID}/${key}`, "--local", "--persist-to", PERSIST_DIR, "--pipe"],
     { cwd: PROJECT_DIR, stdout: "pipe", stderr: "pipe" },
   );
   const text = await new Response(get.stdout).text();
@@ -84,7 +89,7 @@ async function readStored(key: string): Promise<StoredDeck> {
 
 describe("routing", () => {
   test("GET on the agent route returns 405", async () => {
-    const response = await fetch(`${AGENT_URL}/smoke`);
+    const response = await fetch(agentUrl("smoke"));
     expect(response.status).toBe(405);
     expect(await response.json()).toEqual({ error: "Use POST to generate a deck" });
   });
@@ -93,6 +98,27 @@ describe("routing", () => {
     const response = await fetch(`${BASE_URL}/`);
     expect(response.status).toBe(404);
     await response.body?.cancel();
+  });
+});
+
+describe("users (no model call)", () => {
+  const post = (url: string, headers: Record<string, string> = {}) =>
+    fetch(url, {
+      method: "POST",
+      headers: { "content-type": "application/json", ...headers },
+      body: JSON.stringify({ deckName: "mine", text: "some text" }),
+    });
+
+  test("rejects a request with no user with 401", async () => {
+    const response = await post(agentUrl("mine"));
+    expect(response.status).toBe(401);
+    expect(await response.json()).toEqual({ error: "Unknown user" });
+  });
+
+  test("rejects another user's instance with 401", async () => {
+    const response = await post(agentUrl("mine", "someone-else"), USER_HEADERS);
+    expect(response.status).toBe(401);
+    expect(await response.json()).toEqual({ error: "Unknown user" });
   });
 });
 
@@ -111,9 +137,9 @@ describe("validation (no model call)", () => {
   });
 
   test("rejects a non-JSON body with 400", async () => {
-    const response = await fetch(`${AGENT_URL}/not-json`, {
+    const response = await fetch(agentUrl("not-json"), {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      headers: { "content-type": "application/json", ...USER_HEADERS },
       body: "this is not json",
     });
     expect(response.status).toBe(400);

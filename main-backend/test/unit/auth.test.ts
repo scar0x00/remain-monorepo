@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, mock, setSystemTime, afterEach } from "bun:test";
-import { FakeClient, resetDecks } from "../helpers/fake-pg";
+import { fakePg, resetDecks } from "../helpers/fake-pg";
 import { createFakeR2 } from "../helpers/fake-r2";
 import {
   AUTH_ENV,
@@ -12,7 +12,7 @@ import {
 } from "../helpers/test-auth";
 import { SESSION_COOKIE_CACHE_SECONDS } from "../../src/lib/auth";
 
-mock.module("pg", () => ({ Client: FakeClient }));
+mock.module("pg", fakePg);
 
 const { default: realApp } = await import("../../src/index");
 

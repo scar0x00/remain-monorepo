@@ -1,10 +1,10 @@
 import { beforeEach, describe, expect, it, mock } from "bun:test";
-import { FakeClient, decksOf, resetDecks, sessions } from "../helpers/fake-pg";
+import { fakePg, decksOf, resetDecks, sessions } from "../helpers/fake-pg";
 import { createFakeR2, type FakeR2 } from "../helpers/fake-r2";
 import { AUTH_ENV, createFakeEmail, createTestAuth, signUpAndVerify, withTestAuth } from "../helpers/test-auth";
 import { legacyCardId } from "../../src/lib/deck-format";
 
-mock.module("pg", () => ({ Client: FakeClient }));
+mock.module("pg", fakePg);
 
 const { default: realApp } = await import("../../src/index");
 

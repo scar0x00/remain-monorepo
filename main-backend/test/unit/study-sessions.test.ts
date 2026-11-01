@@ -1,9 +1,9 @@
 import { beforeEach, describe, expect, it, mock } from "bun:test";
-import { FakeClient, answers, resetDecks, sessions } from "../helpers/fake-pg";
+import { fakePg, answers, resetDecks, sessions } from "../helpers/fake-pg";
 import { createFakeR2 } from "../helpers/fake-r2";
 import { signedInAs } from "../helpers/test-auth";
 
-mock.module("pg", () => ({ Client: FakeClient }));
+mock.module("pg", fakePg);
 
 const { default: realApp } = await import("../../src/index");
 
