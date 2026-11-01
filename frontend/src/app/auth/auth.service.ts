@@ -73,8 +73,12 @@ export class AuthService {
     return error ? toAuthError(error) : null;
   }
 
+  /**
+   * Signs in without a `callbackURL`: with one, better-auth's client answers success by setting
+   * `window.location` to it, which would race the caller's own navigation to `returnTo`.
+   */
   async signIn(input: { email: string; password: string; rememberMe?: boolean }): Promise<AuthError | null> {
-    const { data, error } = await this.client.signIn.email({ ...input, callbackURL: '/verify-email' });
+    const { data, error } = await this.client.signIn.email(input);
     if (error) return toAuthError(error);
     this.current.set((data?.user as AuthUser | undefined) ?? null);
     return null;

@@ -36,7 +36,7 @@ describe('LoginRoute', () => {
     type('#login-password', 'secret password');
     await submit();
 
-    expect(calls).toContainEqual(['signIn.email', { email: 'ada@example.com', password: 'secret password', callbackURL: '/verify-email' }]);
+    expect(calls).toContainEqual(['signIn.email', { email: 'ada@example.com', password: 'secret password' }]);
     expect(navigate).toHaveBeenCalledWith('/dashboard');
   });
 

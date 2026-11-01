@@ -37,11 +37,12 @@ describe('AuthService', () => {
     expect(auth.isAuthenticated()).toBe(false);
   });
 
-  it('sets the user on sign-in', async () => {
-    const { auth, results } = setup();
+  it('sets the user on sign-in, without a callback that would redirect the page', async () => {
+    const { auth, calls, results } = setup();
     results['signIn.email'] = { data: { user: ADA } };
     expect(await auth.signIn({ email: 'ada@example.com', password: 'pw' })).toBeNull();
     expect(auth.user()).toEqual(ADA);
+    expect(calls).toContainEqual(['signIn.email', { email: 'ada@example.com', password: 'pw' }]);
   });
 
   it('turns better-auth errors into messages', async () => {
