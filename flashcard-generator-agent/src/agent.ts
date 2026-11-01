@@ -4,6 +4,7 @@ import { createAI } from "agents/models/ai-sdk";
 import { generateText, Output } from "ai";
 import type { z } from "zod";
 import { batchPdfs } from "./pdf";
+import { type DeckBucket, type RequestUser, requestUser } from "./user";
 import { buildDeck, mergeRefinedDeck, RefineError } from "./deck";
 import { DeckOutputSchema, RefineOutputSchema, type Deck, type ModelCard } from "./schema";
 import {
@@ -32,6 +33,7 @@ const MAX_JOBS = 8;
 
 const FORMATS: DeckFormat[] = ["json", "yaml"];
 
+
 export class FlashcardAgent extends Agent<Env> {
   async onRequest(request: Request): Promise<Response> {
     if (request.method !== "POST") {
@@ -41,19 +43,25 @@ export class FlashcardAgent extends Agent<Env> {
       );
     }
 
+    // The instance is named `<userId>:<deckName>` (URI-encoded parts), so a user only reaches their own.
+    const user = requestUser(request, this.env.DECKS);
+    if (!user || !this.name.startsWith(`${encodeURIComponent(user.author.id)}:`)) {
+      return Response.json({ error: "Unknown user" }, { status: 401 });
+    }
+
     const parsed = await parseRequest(request);
     if (!parsed.success) {
       return Response.json({ error: parsed.error }, { status: 400 });
     }
 
     return parsed.data.refine
-      ? this.refineDeck(parsed.data, parsed.files)
-      : this.createDeck(parsed.data, parsed.files);
+      ? this.refineDeck(user, parsed.data, parsed.files)
+      : this.createDeck(user, parsed.data, parsed.files);
   }
 
-  private async createDeck(input: DeckInput, files: File[]): Promise<Response> {
+  private async createDeck(user: RequestUser, input: DeckInput, files: File[]): Promise<Response> {
     const key = `${input.deckName}.${input.format}`;
-    if (!input.overwrite && (await this.env.DECKS.head(key))) {
+    if (!input.overwrite && (await user.bucket.head(key))) {
       return Response.json(
         { error: `Deck ${key} already exists. Set overwrite to replace it` },
         { status: 409 },
@@ -112,13 +120,14 @@ export class FlashcardAgent extends Agent<Env> {
       ...first,
       cards,
       model: MODEL,
+      author: user.author,
       sources: [...sources.map((source) => source.name), ...pdfs.map((file) => file.name)],
     });
-    return this.saveDeck(key, input.format, deck, 201);
+    return this.saveDeck(user.bucket, key, input.format, deck, 201);
   }
 
-  private async refineDeck(input: DeckInput, files: File[]): Promise<Response> {
-    const stored = await this.loadDeck(input.deckName);
+  private async refineDeck(user: RequestUser, input: DeckInput, files: File[]): Promise<Response> {
+    const stored = await this.loadDeck(user.bucket, input.deckName);
     if (!stored) {
       return Response.json(
         { error: `Deck ${input.deckName} does not exist` },
@@ -164,7 +173,7 @@ export class FlashcardAgent extends Agent<Env> {
     );
     try {
       const deck = mergeRefinedDeck(currentDeck, changes, files.map((file) => file.name));
-      return this.saveDeck(stored.key, stored.format, deck, 200);
+      return this.saveDeck(user.bucket, stored.key, stored.format, deck, 200);
     } catch (error) {
       if (!(error instanceof RefineError)) throw error;
       return Response.json({ error: `The model returned changes that do not fit the deck: ${error.message}` }, { status: 502 });
@@ -172,11 +181,12 @@ export class FlashcardAgent extends Agent<Env> {
   }
 
   private async loadDeck(
+    bucket: DeckBucket,
     deckName: string,
   ): Promise<{ key: string; format: DeckFormat; text: string } | null> {
     for (const format of FORMATS) {
       const key = `${deckName}.${format}`;
-      const object = await this.env.DECKS.get(key);
+      const object = await bucket.get(key);
       if (object) {
         return { key, format, text: await object.text() };
       }
@@ -185,12 +195,13 @@ export class FlashcardAgent extends Agent<Env> {
   }
 
   private async saveDeck(
+    bucket: DeckBucket,
     key: string,
     format: DeckFormat,
     deck: Deck,
     status: 200 | 201,
   ): Promise<Response> {
-    await this.env.DECKS.put(key, serializeDeck(deck, format), {
+    await bucket.put(key, serializeDeck(deck, format), {
       httpMetadata: {
         contentType:
           format === "json" ? "application/json" : "application/yaml",

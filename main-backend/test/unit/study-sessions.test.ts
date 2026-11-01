@@ -1,15 +1,16 @@
 import { beforeEach, describe, expect, it, mock } from "bun:test";
 import { FakeClient, answers, resetDecks, sessions } from "../helpers/fake-pg";
 import { createFakeR2 } from "../helpers/fake-r2";
+import { signedInAs } from "../helpers/test-auth";
 
 mock.module("pg", () => ({ Client: FakeClient }));
 
-const { default: app } = await import("../../src/index");
+const { default: realApp } = await import("../../src/index");
 
 let env: Record<string, unknown>;
+let app: Awaited<ReturnType<typeof signedInAs>>;
 
-const request = (path: string, init?: RequestInit) =>
-  app.request(`http://localhost/api/v1/study-sessions${path}`, init, env as any);
+const request = (path: string, init?: RequestInit) => app.request(`http://localhost/api/v1/study-sessions${path}`, init);
 
 const post = (path: string, body: unknown) =>
   request(path, {
@@ -23,9 +24,10 @@ const start = async (deckName = "alpha.json") => {
   return ((await res.json()) as { id: string }).id;
 };
 
-beforeEach(() => {
+beforeEach(async () => {
   resetDecks();
   env = { PG: { connectionString: "postgres://fake" }, DECKS: createFakeR2() };
+  app = await signedInAs(realApp, env);
 });
 
 describe("POST /study-sessions", () => {
@@ -140,9 +142,8 @@ describe("GET /decks study stats", () => {
     await app.request(
       "http://localhost/api/v1/deck/alpha.json",
       { method: "PUT", body: "[]" },
-      env as any,
     );
-    await app.request("http://localhost/api/v1/deck/beta.json", { method: "PUT", body: "[]" }, env as any);
+    await app.request("http://localhost/api/v1/deck/beta.json", { method: "PUT", body: "[]" });
 
     // accuracies, oldest to newest: 0, 1, 0.5, 0.5 -> last three average 2/3
     for (const [i, right] of [0, 2, 1, 1].entries()) {
@@ -158,7 +159,7 @@ describe("GET /decks study stats", () => {
     }
     await start("alpha.json"); // in progress, not counted
 
-    const res = await app.request("http://localhost/api/v1/decks", {}, env as any);
+    const res = await app.request("http://localhost/api/v1/decks");
     const [alpha, beta] = (await res.json()) as any[];
 
     expect(alpha.studyCount).toBe(4);

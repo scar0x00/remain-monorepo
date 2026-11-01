@@ -1,5 +1,6 @@
 type DeckRecord = {
   name: string;
+  userId: string;
   size: number;
   etag: string;
   cardCount: number | null;
@@ -8,7 +9,23 @@ type DeckRecord = {
   createdAt: Date;
 };
 
+/** Every user's deck rows, keyed by `<userId>/<name>`. Use `decksOf` to look at one user's. */
 export const decks = new Map<string, DeckRecord>();
+
+/** One user's deck rows by name, like the R2 keys under their prefix. */
+export function decksOf(userId: string) {
+  const mine = () => [...decks.values()].filter((d) => d.userId === userId);
+  return {
+    get: (name: string) => decks.get(`${userId}/${name}`),
+    has: (name: string) => decks.has(`${userId}/${name}`),
+    get size() {
+      return mine().length;
+    },
+  };
+}
+
+/** Rows of the better-auth "user" table that the MCP auth looks up by email. */
+export const users = new Map<string, { id: string; name: string; email: string; emailVerified: boolean }>();
 
 export type SessionRecord = {
   id: string;
@@ -37,6 +54,7 @@ let sessionSeq = 0;
 
 export function resetDecks() {
   decks.clear();
+  users.clear();
   sessions.clear();
   answers.length = 0;
   sessionSeq = 0;
@@ -65,12 +83,13 @@ export class FakeClient {
     const normalized = sql.replace(/\s+/g, " ").trim();
 
     if (normalized.startsWith("INSERT INTO public.decks")) {
-      const [name, , size, etag, cardCount, title, meta] = params as [
+      const [name, userId, size, etag, cardCount, title, meta] = params as [
         string, string, number, string, number | null, string | null, string | null,
       ];
-      const existing = decks.get(name);
-      decks.set(name, {
+      const existing = decks.get(`${userId}/${name}`);
+      decks.set(`${userId}/${name}`, {
         name,
+        userId,
         size: Number(size),
         etag,
         cardCount: cardCount ?? null,
@@ -85,6 +104,7 @@ export class FakeClient {
       const pattern = String(params[0] ?? "%");
       const prefix = pattern.endsWith("%") ? pattern.slice(0, -1) : pattern;
       const rows = [...decks.values()]
+        .filter((d) => d.userId === params[1])
         .filter((d) => [d.name, d.title ?? ""].some((s) => s.toLowerCase().startsWith(prefix.toLowerCase())))
         .sort((a, b) => a.name.localeCompare(b.name))
         .map((d) => ({
@@ -100,7 +120,7 @@ export class FakeClient {
     }
 
     if (normalized.startsWith("DELETE FROM public.decks")) {
-      decks.delete(String(params[0]));
+      decks.delete(`${params[1]}/${params[0]}`);
       return { rows: [] };
     }
 
@@ -195,6 +215,12 @@ export class FakeClient {
         .filter((a) => a.session_id === params[0])
         .sort((a, b) => a.position - b.position);
       return { rows };
+    }
+
+    if (normalized.startsWith('SELECT id, name, email FROM "user"')) {
+      const email = String(params[0]).toLowerCase();
+      const user = [...users.values()].find((u) => u.email.toLowerCase() === email && u.emailVerified);
+      return { rows: user ? [{ id: user.id, name: user.name, email: user.email }] : [] };
     }
 
     throw new Error(`FakeClient: unsupported query: ${normalized}`);

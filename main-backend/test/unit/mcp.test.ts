@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, mock } from "bun:test";
-import { FakeClient, decks, resetDecks } from "../helpers/fake-pg";
+import { FakeClient, decksOf, resetDecks, users } from "../helpers/fake-pg";
 import { createFakeR2, type FakeR2 } from "../helpers/fake-r2";
 
 mock.module("pg", () => ({ Client: FakeClient }));
@@ -33,13 +33,18 @@ const callTool = async (name: string, args: unknown) => {
   return body.result;
 };
 
+const USER = "u_ada";
+const decks = { get: (name: string) => decksOf(USER).get(name), has: (name: string) => decksOf(USER).has(name) };
+
 beforeEach(() => {
   resetDecks();
+  users.set(USER, { id: USER, name: "Ada", email: "ada@example.com", emailVerified: true });
   DECKS = createFakeR2();
   env = {
     PG: { connectionString: "postgres://fake" },
     DECKS,
     DEV_SKIP_ACCESS_AUTH: "true",
+    DEV_ACCESS_EMAIL: "Ada@Example.com",
   };
 });
 
@@ -58,6 +63,26 @@ describe("/mcp auth", () => {
       env as any,
     );
     expect(res.status).toBe(401);
+  });
+});
+
+describe("/mcp accounts", () => {
+  it("answers 403 when no verified account has the Access email", async () => {
+    users.get(USER)!.emailVerified = false;
+    expect((await rpc("tools/list", {})).status).toBe(403);
+    env.DEV_ACCESS_EMAIL = "nobody@example.com";
+    expect((await rpc("tools/list", {})).status).toBe(403);
+  });
+
+  it("only sees the decks of the account it acts for", async () => {
+    users.set("u_bob", { id: "u_bob", name: "Bob", email: "bob@example.com", emailVerified: true });
+    await DECKS.put("u_bob/bobs.json", JSON.stringify([{ front: "a", back: "1" }]));
+
+    expect((await callTool("read_deck", { key: "bobs.json" })).isError).toBe(true);
+    expect((await callTool("delete_deck", { key: "bobs.json" })).isError).toBe(true);
+    await callTool("create_deck", { name: "bobs", cards: [{ front: "q", back: "a" }] });
+    expect(DECKS.objects.has(`${USER}/bobs.json`)).toBe(true);
+    expect(JSON.parse(new TextDecoder().decode(DECKS.objects.get("u_bob/bobs.json")!.bytes))).toEqual([{ front: "a", back: "1" }]);
   });
 });
 
@@ -94,7 +119,7 @@ describe("/mcp tools", () => {
 });
 
 const stored = (key: string) =>
-  JSON.parse(new TextDecoder().decode(DECKS.objects.get(key)!.bytes));
+  JSON.parse(new TextDecoder().decode(DECKS.objects.get(`${USER}/${key}`)!.bytes));
 
 describe("/mcp create_deck", () => {
   it("writes a v2 deck with server-assigned ids, tool and timestamp", async () => {
@@ -109,7 +134,7 @@ describe("/mcp create_deck", () => {
 
     const deck = stored("d.json");
     expect(deck.version).toBe(2);
-    expect(deck.meta).toEqual({ author: null, tool: { kind: "mcp", generatedAt: expect.any(String) } });
+    expect(deck.meta).toEqual({ author: { id: USER, name: "Ada" }, tool: { kind: "mcp", generatedAt: expect.any(String) } });
     expect(Date.parse(deck.meta.tool.generatedAt)).toBeGreaterThanOrEqual(before - 1000);
     expect(deck.cards).toEqual([
       { id: expect.stringMatching(/^c_[0-9a-f]{12}$/), front: "a", back: "1", meta: { refs: [{ kind: "page", label: "4", source: "notes.pdf" }] } },
@@ -193,12 +218,12 @@ describe("/mcp add_cards", () => {
     expect(body).toMatchObject({ added: 2, cardCount: 3, firstNewIndex: 1 });
     expect(stored("d.json").cards.map((c: any) => c.front)).toEqual(["a", "b", "c"]);
     expect(stored("d.json").cards.slice(1).map((c: any) => c.id)).toEqual(body.ids);
-    expect(decks.get("d.json")?.size).toBe(DECKS.objects.get("d.json")!.bytes.byteLength);
+    expect(decks.get("d.json")?.size).toBe(DECKS.objects.get(`${USER}/d.json`)!.bytes.byteLength);
     expect(decks.get("d.json")?.cardCount).toBe(3);
   });
 
   it("upgrades a legacy deck, keeping deterministic ids for its existing cards", async () => {
-    await DECKS.put("old.json", JSON.stringify([{ front: "a", back: "1" }]));
+    await DECKS.put(`${USER}/old.json`, JSON.stringify([{ front: "a", back: "1" }]));
     const legacyId = JSON.parse((await callTool("read_deck", { key: "old.json" })).content[0].text).cards[0].id;
 
     await callTool("add_cards", { key: "old.json", cards: [{ front: "b", back: "2" }] });
@@ -326,7 +351,7 @@ describe("/mcp update_deck_meta", () => {
     const deck = stored("d.json");
     expect(deck.version).toBe(2);
     expect(deck.meta.tool).toEqual(before.meta.tool);
-    expect(deck.meta.author).toBeNull();
+    expect(deck.meta.author).toEqual({ id: USER, name: "Ada" });
     expect(deck.meta.sources).toBeUndefined();
   });
 

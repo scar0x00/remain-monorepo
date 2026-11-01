@@ -99,7 +99,7 @@ export async function createSession(
 ) {
   const { rows } = await pg.query<{ id: string }>(
     `INSERT INTO public.study_sessions (user_id, deck_id, deck_name, deck_etag, card_total)
-     VALUES ($1, (SELECT id FROM public.decks WHERE name = $2), $2, $3, $4)
+     VALUES ($1, (SELECT id FROM public.decks WHERE user_id = $1 AND name = $2), $2, $3, $4)
      RETURNING id`,
     [userId, input.deckName, input.deckEtag ?? null, input.cardTotal],
   );

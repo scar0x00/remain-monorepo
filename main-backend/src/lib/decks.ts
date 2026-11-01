@@ -1,9 +1,12 @@
 import type { Client } from "pg";
 import { formatOfKey, parseDeck, serializeDeck, type Deck, type DeckFormat, type DeckMeta } from "./deck-format";
+import { type DeckBucket } from "./user-bucket";
 
-export const SYSTEM_USER_ID = "system";
-
-export type DeckStore = { bucket: R2Bucket; pg: Client };
+/**
+ * One user's decks: `bucket` is scoped to the user (see `userBucket`) and every query filters on
+ * `userId`, so nothing here can read or change another user's deck.
+ */
+export type DeckStore = { bucket: DeckBucket; pg: Client; userId: string };
 
 const CONTENT_TYPES: Record<DeckFormat, string> = {
   json: "application/json",
@@ -36,15 +39,15 @@ export type DeckEntry = {
 export type DeckSummary = { cardCount: number; title: string | null; meta: DeckMeta };
 
 export async function listDecks(
-  { pg }: DeckStore,
+  { pg, userId }: DeckStore,
   searchTerm = "",
 ): Promise<DeckEntry[]> {
   const { rows } = await pg.query<DeckRow>(
     `SELECT name, size, "createdAt", etag, card_count, title, meta
      FROM public.decks
-     WHERE name ILIKE $1 OR title ILIKE $1
+     WHERE user_id = $2 AND (name ILIKE $1 OR title ILIKE $1)
      ORDER BY name`,
-    [`${searchTerm}%`],
+    [`${searchTerm}%`, userId],
   );
 
   return rows.map((row) => ({
@@ -75,6 +78,7 @@ export function summarizeDeckFile(key: string, body: ArrayBuffer | string): Deck
 
 export async function upsertDeckRow(
   pg: Client,
+  userId: string,
   key: string,
   object: Pick<R2Object, "size" | "httpEtag">,
   summary: DeckSummary | null,
@@ -82,11 +86,11 @@ export async function upsertDeckRow(
   await pg.query(
     `INSERT INTO public.decks (name, user_id, size, etag, card_count, title, meta)
      VALUES ($1, $2, $3, $4, $5, $6, $7)
-     ON CONFLICT (name) DO UPDATE SET size = EXCLUDED.size, etag = EXCLUDED.etag,
+     ON CONFLICT (user_id, name) DO UPDATE SET size = EXCLUDED.size, etag = EXCLUDED.etag,
        card_count = EXCLUDED.card_count, title = EXCLUDED.title, meta = EXCLUDED.meta`,
     [
       key,
-      SYSTEM_USER_ID,
+      userId,
       object.size,
       object.httpEtag,
       summary?.cardCount ?? null,
@@ -104,7 +108,7 @@ export type WriteCondition = { onlyIf?: R2Conditional | Headers };
  * which includes a failed `onlyIf` condition.
  */
 export async function putDeck(
-  { bucket, pg }: DeckStore,
+  { bucket, pg, userId }: DeckStore,
   key: string,
   body: ArrayBuffer | string,
   contentType?: string,
@@ -117,7 +121,7 @@ export async function putDeck(
 
   if (!object) return null;
 
-  await upsertDeckRow(pg, key, object, summarizeDeckFile(key, body));
+  await upsertDeckRow(pg, userId, key, object, summarizeDeckFile(key, body));
   return object;
 }
 
@@ -126,7 +130,7 @@ export async function putDeck(
  * which includes a failed `onlyIf` condition.
  */
 export async function saveDeck(
-  { bucket, pg }: DeckStore,
+  { bucket, pg, userId }: DeckStore,
   key: string,
   format: DeckFormat,
   deck: Deck,
@@ -139,17 +143,17 @@ export async function saveDeck(
 
   if (!object) return null;
 
-  await upsertDeckRow(pg, key, object, summarizeDeck(deck));
+  await upsertDeckRow(pg, userId, key, object, summarizeDeck(deck));
   return object;
 }
 
 /** Returns false when the deck does not exist. */
-export async function deleteDeck({ bucket, pg }: DeckStore, key: string) {
+export async function deleteDeck({ bucket, pg, userId }: DeckStore, key: string) {
   const existing = await bucket.head(key);
   if (!existing) return false;
 
   await bucket.delete(key);
-  await pg.query(`DELETE FROM public.decks WHERE name = $1`, [key]);
+  await pg.query(`DELETE FROM public.decks WHERE user_id = $2 AND name = $1`, [key, userId]);
   return true;
 }
 
@@ -158,10 +162,11 @@ export async function deleteDeck({ bucket, pg }: DeckStore, key: string) {
  * their files from R2. Bounded per call so a request never reads many files; the rest are filled on
  * later calls.
  */
-export async function backfillDeckRows({ bucket, pg }: DeckStore, limit = 10) {
+export async function backfillDeckRows({ bucket, pg, userId }: DeckStore, limit = 10) {
   const { rows } = await pg.query<{ name: string }>(
-    `SELECT name FROM public.decks WHERE (card_count IS NULL OR meta IS NULL) AND name ~* '\\.(json|ya?ml)$' LIMIT $1`,
-    [limit],
+    `SELECT name FROM public.decks
+     WHERE user_id = $2 AND (card_count IS NULL OR meta IS NULL) AND name ~* '\\.(json|ya?ml)$' LIMIT $1`,
+    [limit, userId],
   );
 
   for (const { name } of rows) {
@@ -169,11 +174,12 @@ export async function backfillDeckRows({ bucket, pg }: DeckStore, limit = 10) {
     if (!object) continue;
     const summary = summarizeDeckFile(name, await object.text());
     if (summary) {
-      await pg.query(`UPDATE public.decks SET card_count = $2, title = $3, meta = $4 WHERE name = $1`, [
+      await pg.query(`UPDATE public.decks SET card_count = $2, title = $3, meta = $4 WHERE user_id = $5 AND name = $1`, [
         name,
         summary.cardCount,
         summary.title,
         JSON.stringify(summary.meta),
+        userId,
       ]);
     }
   }
