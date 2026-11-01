@@ -15,6 +15,19 @@
                         </li>
                     }
                 </ul>
+                <div class="mt-2 border-t border-app-border pt-2">
+                    @if (auth.user(); as user) {
+                        <p class="flex flex-col px-3 py-2 text-sm">
+                            <span class="font-semibold">{{ user.name }}</span>
+                            <span class="truncate text-app-text-subtle">{{ user.email }}</span>
+                        </p>
+                        <button type="button" (click)="signOut()"
+                            class="flex min-h-11 w-full items-center rounded-xl px-3 text-left text-app-text-muted hover:bg-app-card-hover hover:text-app-text hover:cursor-pointer">Sign out</button>
+                    } @else {
+                        <a routerLink="/login" (click)="closeMenu()"
+                            class="flex min-h-11 items-center rounded-xl px-3 font-semibold text-app-text hover:bg-app-card-hover">Sign in</a>
+                    }
+                </div>
             </div>
         </li>
         <li>

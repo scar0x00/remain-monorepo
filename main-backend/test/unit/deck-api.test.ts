@@ -684,8 +684,7 @@ describe("accounts", () => {
         return Response.json({ error: "stop here" }, { status: 400 });
       },
     };
-    await signUp("zoe@example.com", "Zoë Ñ");
-    const zoe = await signUp("zoe2@example.com", "Zoë Ñ");
+    const zoe = await signUp("zoe@example.com", "Zoë Ñ");
     const body = new FormData();
     body.append("deckName", "a");
     await request(

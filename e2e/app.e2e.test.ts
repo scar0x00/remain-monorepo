@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from "bun:test";
-import { chromium, type Browser, type Page } from "playwright-core";
+import { chromium, type Browser, type BrowserContext, type Page } from "playwright-core";
+import { authedFetch, signUp, signedInContext, type Session } from "./auth";
 
 // Browser-driven checks against the running stack: frontend (4200) -> main-backend (8787)
 // -> flashcard-generator-agent (8788). Start the stack first with `./dev-server start`.
@@ -22,7 +23,11 @@ const GENERATE_TIMEOUT = 240_000;
 const STUDY_TIMEOUT = 180_000;
 
 let browser: Browser;
+let context: BrowserContext;
 let page: Page;
+let session: Session;
+// Shadows the global fetch: every API call in this file is made as the signed-in e2e user.
+let fetch: ReturnType<typeof authedFetch>;
 let cardCount = 0;
 
 type Card = { front: string; back: string };
@@ -48,7 +53,10 @@ async function waitFor<T>(read: () => Promise<T>, ok: (value: T) => boolean, tim
 
 beforeAll(async () => {
   browser = await chromium.launch(process.env.E2E_BROWSER_PATH ? { executablePath: process.env.E2E_BROWSER_PATH } : { channel: "chrome", headless: true });
-  page = await browser.newPage();
+  session = await signUp(BASE, "app");
+  fetch = authedFetch(session);
+  context = await signedInContext(browser, BASE, session);
+  page = await context.newPage();
 });
 
 afterAll(async () => {
