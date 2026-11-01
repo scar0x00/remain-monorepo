@@ -55,7 +55,7 @@ describe('AuthService', () => {
     });
 
     results['signIn.email'] = { error: { status: 429, message: 'Too many requests' } };
-    expect((await auth.signIn({ email: 'a@b.c', password: 'pw' }))?.message).toContain('Too many attempts');
+    expect(await auth.signIn({ email: 'a@b.c', password: 'pw' })).toMatchObject({ message: expect.stringContaining('Too many attempts') });
   });
 
   it('forgets the user on sign-out and on clear()', async () => {
@@ -73,5 +73,49 @@ describe('AuthService', () => {
       'signIn.social',
       { provider: 'github', callbackURL: '/deck-study/x', errorCallbackURL: '/login?returnTo=%2Fdeck-study%2Fx' },
     ]);
+  });
+
+  describe('two-step verification', () => {
+    it('returns the challenge instead of signing in when the account has 2FA', async () => {
+      const { auth, results } = setup();
+      results['signIn.email'] = { data: { twoFactorRedirect: true, twoFactorMethods: ['totp', 'otp'] } };
+      expect(await auth.signIn({ email: 'ada@example.com', password: 'pw' })).toEqual({ twoFactor: ['totp', 'otp'] });
+      expect(auth.isAuthenticated()).toBe(false);
+    });
+
+    it.each([
+      ['totp', 'twoFactor.verifyTotp'],
+      ['otp', 'twoFactor.verifyOtp'],
+      ['backup', 'twoFactor.verifyBackupCode'],
+    ] as const)('verifies a %s code with %s, then reads the new session', async (proof, method) => {
+      const { auth, calls, state } = setup();
+      state.session = { user: ADA };
+      expect(await auth.verifyTwoFactor(proof, ' 123456 ', true)).toBeNull();
+      expect(calls).toContainEqual([method, { code: '123456', trustDevice: true }]);
+      expect(auth.user()).toEqual(ADA);
+    });
+
+    it('explains a wrong code', async () => {
+      const { auth, results } = setup();
+      results['twoFactor.verifyTotp'] = { error: { code: 'INVALID_CODE', status: 401 } };
+      expect((await auth.verifyTwoFactor('totp', '000000', false))?.message).toContain('isn’t right');
+    });
+  });
+
+  describe('passkeys', () => {
+    it('signs in with a passkey and reads the session', async () => {
+      const { auth, calls, state } = setup();
+      state.session = { user: ADA };
+      expect(await auth.signInWithPasskey()).toBeNull();
+      expect(calls).toContainEqual(['signIn.passkey', { autoFill: false }]);
+      expect(auth.user()).toEqual(ADA);
+    });
+
+    it('reports a cancelled dialog with its code, so pages can stay quiet', async () => {
+      const { auth, results } = setup();
+      results['signIn.passkey'] = { error: { code: 'AUTH_CANCELLED', status: 400 } };
+      expect((await auth.signInWithPasskey(true))?.code).toBe('AUTH_CANCELLED');
+      expect(auth.isAuthenticated()).toBe(false);
+    });
   });
 });

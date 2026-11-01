@@ -18,11 +18,26 @@ export function createFakeAuthClient(session: { user: Record<string, unknown> } 
       return { data: state.session, error: null };
     },
     signUp: { email: call('signUp.email') },
-    signIn: { email: call('signIn.email'), social: call('signIn.social') },
+    signIn: { email: call('signIn.email'), social: call('signIn.social'), passkey: call('signIn.passkey') },
     signOut: call('signOut'),
     sendVerificationEmail: call('sendVerificationEmail'),
     requestPasswordReset: call('requestPasswordReset'),
     resetPassword: call('resetPassword'),
+    twoFactor: {
+      enable: call('twoFactor.enable'),
+      disable: call('twoFactor.disable'),
+      verifyTotp: call('twoFactor.verifyTotp'),
+      verifyOtp: call('twoFactor.verifyOtp'),
+      verifyBackupCode: call('twoFactor.verifyBackupCode'),
+      sendOtp: call('twoFactor.sendOtp'),
+      generateBackupCodes: call('twoFactor.generateBackupCodes'),
+    },
+    passkey: {
+      listUserPasskeys: call('passkey.listUserPasskeys'),
+      addPasskey: call('passkey.addPasskey'),
+      updatePasskey: call('passkey.updatePasskey'),
+      deletePasskey: call('passkey.deletePasskey'),
+    },
   };
   return { client: client as unknown as RemainAuthClient, calls, results, state };
 }

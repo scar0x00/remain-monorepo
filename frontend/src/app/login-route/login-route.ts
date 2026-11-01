@@ -1,7 +1,8 @@
-import { Component, inject, input, signal } from '@angular/core';
+import { Component, DestroyRef, afterNextRender, inject, input, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
+import { WebAuthnAbortService, browserSupportsWebAuthn, browserSupportsWebAuthnAutofill } from '@simplewebauthn/browser';
 import { AuthCard } from '../auth-card/auth-card';
-import { type AuthError, AuthService } from '../auth/auth.service';
+import { type AuthError, AuthService, PASSKEY_CANCELLED, isTwoFactorChallenge } from '../auth/auth.service';
 import { safeReturnTo } from '../auth/safe-return-to';
 
 @Component({
@@ -22,6 +23,19 @@ export class LoginRoute {
   protected readonly busy = signal(false);
   protected readonly failure = signal<AuthError | null>(null);
   protected readonly resent = signal(false);
+  protected readonly passkeys = browserSupportsWebAuthn();
+
+  constructor() {
+    // Passkey autofill: the browser offers saved passkeys in the email field's suggestions. The
+    // request waits until one is picked, so it is cancelled when the page goes away.
+    afterNextRender(async () => {
+      if (!(await browserSupportsWebAuthnAutofill())) return;
+      const failure = await this.auth.signInWithPasskey(true);
+      if (!failure) await this.router.navigateByUrl(this.target());
+      else if (failure.code !== PASSKEY_CANCELLED && failure.code !== 'ERROR_CEREMONY_ABORTED') this.failure.set(failure);
+    });
+    inject(DestroyRef).onDestroy(() => WebAuthnAbortService.cancelCeremony());
+  }
 
   protected target() {
     return safeReturnTo(this.returnTo());
@@ -31,10 +45,25 @@ export class LoginRoute {
     event.preventDefault();
     this.busy.set(true);
     this.resent.set(false);
-    const failure = await this.auth.signIn({ email: this.email().trim(), password: this.password() });
+    const result = await this.auth.signIn({ email: this.email().trim(), password: this.password() });
     this.busy.set(false);
-    this.failure.set(failure);
+    if (isTwoFactorChallenge(result)) {
+      await this.router.navigate(['/login/two-factor'], {
+        queryParams: { returnTo: this.target(), methods: result.twoFactor.join(',') },
+      });
+      return;
+    }
+    this.failure.set(result);
+    if (!result) await this.router.navigateByUrl(this.target());
+  }
+
+  async passkey() {
+    this.busy.set(true);
+    this.failure.set(null);
+    const failure = await this.auth.signInWithPasskey();
+    this.busy.set(false);
     if (!failure) await this.router.navigateByUrl(this.target());
+    else if (failure.code !== PASSKEY_CANCELLED) this.failure.set(failure);
   }
 
   async github() {

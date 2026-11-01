@@ -21,6 +21,8 @@
                             <span class="font-semibold">{{ user.name }}</span>
                             <span class="truncate text-app-text-subtle">{{ user.email }}</span>
                         </p>
+                        <a routerLink="/settings/security" (click)="closeMenu()"
+                            class="flex min-h-11 items-center rounded-xl px-3 text-app-text-muted hover:bg-app-card-hover hover:text-app-text">Security</a>
                         <button type="button" (click)="signOut()"
                             class="flex min-h-11 w-full items-center rounded-xl px-3 text-left text-app-text-muted hover:bg-app-card-hover hover:text-app-text hover:cursor-pointer">Sign out</button>
                     } @else {

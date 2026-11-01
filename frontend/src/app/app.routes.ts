@@ -21,6 +21,12 @@ export const routes: Routes = [
         loadComponent: () => import("./login-route/login-route").then((m) => m.LoginRoute),
     },
     {
+        // The second step of a password sign-in on an account with 2FA (`?methods=totp,otp`).
+        path: "login/two-factor",
+        canActivate: [guestGuard],
+        loadComponent: () => import("./two-factor-route/two-factor-route").then((m) => m.TwoFactorRoute),
+    },
+    {
         path: "signup",
         canActivate: [guestGuard],
         loadComponent: () => import("./signup-route/signup-route").then((m) => m.SignupRoute),
@@ -38,6 +44,12 @@ export const routes: Routes = [
         // better-auth redirects here from the reset link with `?token=` (or `?error=`).
         path: "reset-password",
         loadComponent: () => import("./reset-password-route/reset-password-route").then((m) => m.ResetPasswordRoute),
+    },
+    {
+        path: "settings/security",
+        canActivate: [authGuard],
+        loadComponent: () =>
+            import("./security-settings-route/security-settings-route").then((m) => m.SecuritySettingsRoute),
     },
     {
         path: "flashcard-chat",
