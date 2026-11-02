@@ -107,6 +107,7 @@ Playwright browser tests that run against the live stack (`bun run test`): `app.
 
 ### Other
 - CI: `.github/workflows/tests.yml` runs every suite on pull requests and pushes to `dev`/`main`: unit tests of each package, main-backend e2e (Postgres service container, migrations applied by `scripts/ci-migrate.sh`), the agent smoke test with `SMOKE_LIVE=1`, and the browser e2e against `./dev-server start`. The last two need the `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` repo secrets because the AI binding is remote. `.github/workflows/deploy.yml` deploys on push to `main`.
+- Dependencies: `.github/dependabot.yml` opens weekly update PRs against `dev` for each package and for the workflow actions (minor and patch grouped per package; security updates are separate and immediate). The `Dependency audit` workflow (`.github/workflows/dependency-audit.yml`, job `dependency-audit`) runs `scripts/audit.sh` on PRs and every Monday: `bun audit --audit-level=high` per package, which reads `bun.lock` and the same advisory database as Dependabot. Advisories that can't be fixed yet go in `.github/audit-ignore.txt` (`id | package dir | expiry | reason`); an expired entry fails the audit. Some fixes are `overrides` in a `package.json` because an upstream package pins an exact version (e.g. `miniflare` pins `undici`). Remove an override once the upstream catches up. `agent-smoke` and `e2e` are skipped for Dependabot PRs: they can't read the Cloudflare secrets and would spend model tokens.
 - `dev-server` (repo root): bash script that starts the whole stack with `./dev-server {start|stop|restart|status|logs}`. Ports: main-backend 8787, agent 8788, frontend 4200. It passes one `--persist-to` dir to both workers.
 - `test-decks/`, `test-pdfs/`: sample inputs for manual testing.
 - `spec.md`, `TODO.md`: old notes, not kept up to date.
@@ -119,7 +120,7 @@ Playwright browser tests that run against the live stack (`bun run test`): `app.
 
 ## Gotchas
 - main-backend and the agent must share local R2 state. Run both with `wrangler dev --persist-to <same dir>` (`./dev-server start` does this), or generation returns 500.
-- `frontend/` has both `package-lock.json` and `pnpm-lock.yaml`. Use `bun` for installs anyway.
+- `frontend/` still tracks a stale `pnpm-lock.yaml` next to `bun.lock` (`package-lock.json` is gone). `bun.lock` is the only lockfile that counts: use `bun` for installs, and CI installs with `--frozen-lockfile`.
 - `main-backend/src/lib/auth.ts` creates its DB client differently on Cloudflare and locally; locally it reads `CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_PG`.
 
 ## Browser automation

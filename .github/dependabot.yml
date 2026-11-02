@@ -1,0 +1,56 @@
+# Weekly dependency updates. There is no root workspace, so every package has its own entry.
+# Minor and patch updates are grouped into one PR per package so the Tests workflow runs once, not
+# per dependency. Majors stay separate. `applies-to: version-updates` keeps the groups off security
+# updates, which arrive one PR per advisory, right away, whatever the schedule says.
+# Everything targets `dev`, like human PRs, because a push to `main` deploys.
+version: 2
+updates:
+  - package-ecosystem: bun
+    directory: /flashcard-generator-agent
+    target-branch: dev
+    schedule:
+      interval: weekly
+    groups:
+      minor-and-patch:
+        applies-to: version-updates
+        update-types: [minor, patch]
+
+  - package-ecosystem: bun
+    directory: /main-backend
+    target-branch: dev
+    schedule:
+      interval: weekly
+    groups:
+      minor-and-patch:
+        applies-to: version-updates
+        update-types: [minor, patch]
+
+  - package-ecosystem: bun
+    directory: /frontend
+    target-branch: dev
+    schedule:
+      interval: weekly
+    groups:
+      minor-and-patch:
+        applies-to: version-updates
+        update-types: [minor, patch]
+
+  - package-ecosystem: bun
+    directory: /e2e
+    target-branch: dev
+    schedule:
+      interval: weekly
+    groups:
+      minor-and-patch:
+        applies-to: version-updates
+        update-types: [minor, patch]
+
+  - package-ecosystem: github-actions
+    directory: /
+    target-branch: dev
+    schedule:
+      interval: weekly
+    groups:
+      actions:
+        applies-to: version-updates
+        patterns: ["*"]

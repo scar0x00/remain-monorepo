@@ -1,0 +1,13 @@
+# Advisories the dependency audit (scripts/audit.sh) knows about and lets through.
+# One per line: <advisory id> | <package directory> | <expires YYYY-MM-DD> | <reason>
+# Once the date has passed the audit fails again, so every entry gets looked at again.
+# Remove an entry as soon as the dependency is fixed; Dependabot will usually do that for you.
+GHSA-6qxp-vccf-f47h | flashcard-generator-agent | 2026-12-01 | @modelcontextprotocol/* comes in only as an exact-pinned peer of `agents`. The agent exposes no MCP endpoint (main-backend does), so this code never runs.
+GHSA-22jm-h49p-29qw | flashcard-generator-agent | 2026-12-01 | Same as above.
+GHSA-46jr-4wx8-v453 | flashcard-generator-agent | 2026-12-01 | Same as above.
+GHSA-f897-62hf-6gxq | flashcard-generator-agent | 2026-12-01 | Same as above.
+GHSA-jm63-cq47-j5jp | flashcard-generator-agent | 2026-12-01 | Same as above.
+GHSA-6qxp-vccf-f47h | frontend | 2026-12-01 | @modelcontextprotocol/sdk is exact-pinned by @angular/cli (its `ng mcp` server). Dev tooling only; it is not in the deployed bundle.
+GHSA-22jm-h49p-29qw | frontend | 2026-12-01 | Same as above.
+GHSA-46jr-4wx8-v453 | frontend | 2026-12-01 | Same as above.
+GHSA-f897-62hf-6gxq | frontend | 2026-12-01 | Same as above.

@@ -80,6 +80,7 @@ jobs:
         with:
           node-version: 24
       - uses: oven-sh/setup-bun@v2
-      - run: bun install
+      - run: bun install --frozen-lockfile
       - run: bun run build
-      - run: bunx wrangler@4 deploy
+      # wrangler is a devDependency, so the lockfile (and Dependabot) pins the version.
+      - run: bunx wrangler deploy

@@ -1,0 +1,30 @@
+name: Dependency audit
+
+# Fails on high and critical advisories in any package's bun.lock (see scripts/audit.sh and
+# .github/audit-ignore.txt). It also runs weekly, so a new advisory shows up even when nobody
+# touches a lockfile; GitHub emails the repo admins when a scheduled run fails.
+# The job name `dependency-audit` is the check to require in the "Protect dev and main" ruleset.
+on:
+  pull_request:
+    branches: [dev, main]
+  push:
+    branches: [dev, main]
+  schedule:
+    - cron: "17 6 * * 1"
+  workflow_dispatch:
+
+concurrency:
+  group: dependency-audit-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  dependency-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: oven-sh/setup-bun@v2
+      # bun audit works from bun.lock alone, no install needed.
+      - run: scripts/audit.sh

@@ -27,5 +27,8 @@
     "typecheck": "tsc --noEmit",
     "test": "bun test test/unit",
     "test:smoke": "bun test test/smoke"
+  },
+  "overrides": {
+    "undici": "^7.30.1"
   }
 }
