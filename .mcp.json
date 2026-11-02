@@ -3,11 +3,18 @@
     "angular-mcp": {
       "type": "stdio",
       "command": "bunx",
-      "args": ["@angular/cli", "mcp"]
+      "args": [
+        "@angular/cli",
+        "mcp"
+      ]
     },
     "cloudflare-docs": {
       "type": "http",
       "url": "https://docs.mcp.cloudflare.com/mcp"
+    },
+    "Neon": {
+      "type": "http",
+      "url": "https://mcp.neon.tech/mcp"
     }
   }
 }
