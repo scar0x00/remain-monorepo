@@ -44,6 +44,41 @@ Open the app at `http://localhost:4200`, not a LAN IP: cookies and the GitHub ca
 `localhost`. Sign up, then open the verification link printed in the main-backend log
 (`./dev-server logs`).
 
+### Claiming pre-accounts decks locally
+
+`../scripts/claim-system-data.ts` (see step 5 of the production setup) gives the decks and study
+history of the placeholder user `system` to a real account. To try it against your dev database and
+the local dev R2 instead of production:
+
+1. **Have an account.** Sign up locally and open the verification link from the log (`./dev-server logs`).
+   The script only accepts an account whose email is verified.
+2. **Have something to claim.** There must be `system` rows in the database you point it at (a dev
+   database that predates accounts has them), and the same files at the top level of the *local* R2
+   bucket (`<name>`, not `<userId>/<name>`). A fresh local R2 is empty, so seed it from `test-decks/`:
+   ```sh
+   cd main-backend
+   STATE="${TMPDIR:-/tmp/opencode}/dev-server/wrangler-state"   # the dir ./dev-server passes to wrangler
+   for f in ../test-decks/*.json; do
+     bunx wrangler r2 object put "remain-decks/$(basename "$f")" --local --persist-to "$STATE" \
+       --file "$f" --content-type application/json
+   done
+   ```
+   The sizes recorded in the `decks` rows may differ from these files; they are refreshed on the next
+   write.
+3. **Run it with `--local`**, from the repo root, with the dev connection string
+   (`CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_PG`, not Hyperdrive) and the same persist dir:
+   ```sh
+   STATE="${TMPDIR:-/tmp/opencode}/dev-server/wrangler-state"
+   DATABASE_URL=<dev db url> bun scripts/claim-system-data.ts --email you@example.com --local --persist-to "$STATE"           # dry run
+   DATABASE_URL=<dev db url> bun scripts/claim-system-data.ts --email you@example.com --local --persist-to "$STATE" --apply
+   ```
+4. **Check the app** (`http://localhost:4200/deck-browse`, open a deck), then delete the old top-level
+   objects with the `wrangler r2 object delete ... --local --persist-to ...` commands the script prints.
+
+Without `--local` the script reads and writes the **production** R2 bucket (`--remote`) whatever
+`DATABASE_URL` is, so never combine a dev database with a run that omits it. `--persist-to` is only
+valid together with `--local`; leave it out to use wrangler's default state in `main-backend/.wrangler/`.
+
 ## Production setup
 
 1. **Migrations**: apply `better-auth_migrations/2026-11-01T00-00-00.000Z.sql` (makes
@@ -63,3 +98,5 @@ Open the app at `http://localhost:4200`, not a LAN IP: cookies and the GitHub ca
    DATABASE_URL=<neon url> bun scripts/claim-system-data.ts --email you@example.com          # dry run
    DATABASE_URL=<neon url> bun scripts/claim-system-data.ts --email you@example.com --apply
    ```
+   This copies files in the real R2 bucket. To rehearse against local dev, see "Claiming pre-accounts
+   decks locally" above.

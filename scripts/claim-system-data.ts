@@ -6,8 +6,10 @@
 //   DATABASE_URL=postgres://... bun scripts/claim-system-data.ts --email you@example.com          # dry run
 //   DATABASE_URL=postgres://... bun scripts/claim-system-data.ts --email you@example.com --apply
 //
-// DATABASE_URL is the Neon connection string (not Hyperdrive). R2 objects are copied with
-// `wrangler r2 object get/put --remote`, so wrangler must be logged in to the account.
+// DATABASE_URL is the Postgres connection string (not Hyperdrive). By default R2 objects are copied
+// in the real bucket with `wrangler r2 object get/put --remote`, so wrangler must be logged in to the
+// account. For a local test pass `--local` (plus `--persist-to <dir>`, the same directory the dev
+// workers use, e.g. the one `./dev-server` passes to wrangler) to copy in the local R2 state instead.
 //
 // What it does, in this order:
 //   1. Copies every `system` deck file `<name>` in R2 to `<ownerId>/<name>`. The originals stay, so
@@ -18,7 +20,7 @@
 import { SQL } from "bun";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { parseArgs } from "node:util";
 
 const BUCKET = "remain-decks";
@@ -32,12 +34,24 @@ const CONTENT_TYPES: Record<string, string> = {
 };
 
 const { values } = parseArgs({
-  options: { email: { type: "string" }, apply: { type: "boolean", default: false } },
+  options: {
+    email: { type: "string" },
+    apply: { type: "boolean", default: false },
+    local: { type: "boolean", default: false },
+    "persist-to": { type: "string" },
+  },
 });
-if (!values.email || !process.env.DATABASE_URL) {
-  console.error("Usage: DATABASE_URL=... bun scripts/claim-system-data.ts --email <owner email> [--apply]");
+if (!values.email || !process.env.DATABASE_URL || (values["persist-to"] && !values.local)) {
+  console.error(
+    "Usage: DATABASE_URL=... bun scripts/claim-system-data.ts --email <owner email> [--apply] [--local [--persist-to <dir>]]",
+  );
   process.exit(1);
 }
+
+// Where R2 objects are read and written: the real bucket, or the local state of `wrangler dev`.
+const R2_TARGET = values.local
+  ? ["--local", ...(values["persist-to"] ? ["--persist-to", resolve(values["persist-to"])] : [])]
+  : ["--remote"];
 
 const sql = new SQL(process.env.DATABASE_URL);
 
@@ -75,8 +89,8 @@ try {
     for (const [i, { name }] of moving.entries()) {
       const file = join(dir, String(i));
       const type = CONTENT_TYPES[name.split(".").pop()?.toLowerCase() ?? ""] ?? "application/octet-stream";
-      await wrangler("r2", "object", "get", `${BUCKET}/${name}`, "--remote", "--file", file);
-      await wrangler("r2", "object", "put", `${BUCKET}/${owner.id}/${name}`, "--remote", "--file", file, "--content-type", type);
+      await wrangler("r2", "object", "get", `${BUCKET}/${name}`, ...R2_TARGET, "--file", file);
+      await wrangler("r2", "object", "put", `${BUCKET}/${owner.id}/${name}`, ...R2_TARGET, "--file", file, "--content-type", type);
       console.log(`copied ${name} -> ${owner.id}/${name}`);
     }
   } finally {
@@ -90,7 +104,7 @@ try {
     await tx`UPDATE public.study_sessions SET user_id = ${owner.id} WHERE user_id = ${SYSTEM_USER_ID}`;
   });
   console.log("\nDone. Check the app, then delete the old top-level R2 objects:");
-  for (const { name } of moving) console.log(`  bunx wrangler r2 object delete ${BUCKET}/${name} --remote`);
+  for (const { name } of moving) console.log(`  bunx wrangler r2 object delete ${BUCKET}/${name} ${R2_TARGET.join(" ")}`);
 } catch (error) {
   console.error((error as Error).message);
   process.exitCode = 1;
