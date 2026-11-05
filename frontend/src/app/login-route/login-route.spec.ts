@@ -15,6 +15,7 @@ describe('LoginRoute', () => {
     if (returnTo) fixture.componentRef.setInput('returnTo', returnTo);
     await fixture.whenStable();
     const navigate = vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
+    const navigateTo = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
     const el = fixture.nativeElement as HTMLElement;
     const type = (selector: string, value: string) => {
       const input = el.querySelector(selector) as HTMLInputElement;
@@ -26,7 +27,7 @@ describe('LoginRoute', () => {
       await new Promise((resolve) => setTimeout(resolve));
       await fixture.whenStable();
     };
-    return { ...fake, el, type, submit, navigate };
+    return { ...fake, el, type, submit, navigate, navigateTo };
   };
 
   it('signs in and goes back where the user was heading', async () => {
@@ -59,5 +60,23 @@ describe('LoginRoute', () => {
     type('#login-email', 'ada@example.com');
     await submit();
     expect(navigate).toHaveBeenCalledWith('/deck-browse');
+  });
+
+  it('sends an account with 2FA to the code page, keeping where it was heading', async () => {
+    const { results, type, submit, navigate, navigateTo } = await setup('/dashboard');
+    results['signIn.email'] = { data: { twoFactorRedirect: true, twoFactorMethods: ['totp', 'otp'] } };
+    type('#login-email', 'ada@example.com');
+    type('#login-password', 'secret password');
+    await submit();
+
+    expect(navigateTo).toHaveBeenCalledWith(['/login/two-factor'], {
+      queryParams: { returnTo: '/dashboard', methods: 'totp,otp' },
+    });
+    expect(navigate).not.toHaveBeenCalled();
+  });
+
+  it('lets the email field offer saved passkeys', async () => {
+    const { el } = await setup();
+    expect(el.querySelector('#login-email')!.getAttribute('autocomplete')).toBe('username webauthn');
   });
 });

@@ -2,6 +2,7 @@ import { type Context, Hono, MiddlewareHandler } from "hono";
 import { Client } from "pg";
 import { createMcpHandler } from "agents/mcp/server";
 import { accessAuth } from "./lib/access-auth";
+import { securityStatus } from "./lib/account-security";
 import { type AnalyticsProperties, track } from "./lib/analytics";
 import { AUTH_BASE_PATH } from "./lib/auth";
 import { formatOfKey, parseDeck, readDeck } from "./lib/deck-format";
@@ -83,13 +84,17 @@ const pgDbMiddleware: MiddlewareHandler = async (c, next) => {
   }
 };
 
-// better-auth: sign-up, sign-in, GitHub OAuth, email verification, password reset, sessions.
+// better-auth: sign-up, sign-in, GitHub OAuth, email verification, password reset, sessions, 2FA,
+// passkeys.
 app.on(["GET", "POST"], `${AUTH_BASE_PATH}/*`, (c) => withAuth(c, (auth) => auth.handler(c.req.raw)));
 
 // Every other /api/v1 route needs a signed-in user, and only ever sees that user's data.
 app.use("/api/v1/*", async (c, next) =>
   c.req.path.startsWith(`${AUTH_BASE_PATH}/`) ? next() : requireUser(c, next),
 );
+
+// The security settings page: 2FA and password state better-auth's client doesn't expose.
+app.get("/api/v1/account/security", (c) => withAuth(c, async (auth) => c.json(await securityStatus(auth, c.get("user").id))));
 
 // Doesn't use Postgres: the R2 key is under the user's prefix, so the key itself enforces ownership.
 app.get("/api/v1/deck/:key", async (c) => {

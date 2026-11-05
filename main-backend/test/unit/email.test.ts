@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { EMAIL_SENDER, resetPasswordEmail, sendMail, verificationEmail } from "../../src/lib/email";
+import { EMAIL_SENDER, resetPasswordEmail, sendMail, twoFactorCodeEmail, verificationEmail } from "../../src/lib/email";
 import { createFakeEmail } from "../helpers/test-auth";
 
 const url = "https://remain.scar0x00.click/api/v1/auth/verify-email?token=abc&callbackURL=%2Fverify-email";
@@ -20,6 +20,14 @@ describe("emails", () => {
     const mail = resetPasswordEmail({ email: "x@example.com", name: '<img src=x onerror="alert(1)">' }, url);
     expect(mail.html).not.toContain("<img");
     expect(mail.html).toContain("&lt;img");
+  });
+
+  it("puts a two-factor code in the body only, never in the subject (failed sends log it)", () => {
+    const mail = twoFactorCodeEmail({ email: "ada@example.com", name: "Ada" }, "042137");
+    expect(mail.subject).not.toContain("042137");
+    expect(mail.text).toContain("\n042137\n");
+    expect(mail.html).toContain(">042137<");
+    expect(mail.html).not.toContain("<a ");
   });
 
   it("logs instead of sending when DEV_LOG_EMAILS is on", async () => {

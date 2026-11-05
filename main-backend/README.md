@@ -40,8 +40,8 @@ DEV_SKIP_ACCESS_AUTH=true
 DEV_ACCESS_EMAIL=you@example.com
 ```
 
-Open the app at `http://localhost:4200`, not a LAN IP: cookies and the GitHub callback are bound to
-`localhost`. Sign up, then open the verification link printed in the main-backend log
+Open the app at `http://localhost:4200`, not a LAN IP: cookies, passkeys and the GitHub callback are
+bound to `localhost`. Sign up, then open the verification link printed in the main-backend log
 (`./dev-server logs`).
 
 ### Claiming pre-accounts decks locally
@@ -82,9 +82,11 @@ valid together with `--local`; leave it out to use wrangler's default state in `
 ## Production setup
 
 1. **Migrations**: apply `better-auth_migrations/2026-11-01T00-00-00.000Z.sql` (makes
-   `account.issuer` nullable; without it every sign-up fails on better-auth 1.7.3+) and
+   `account.issuer` nullable; without it every sign-up fails on better-auth 1.7.3+),
+   `better-auth_migrations/2026-11-01T12-00-00.000Z.sql` (the `passkey` table) and
    `migrations/0005_decks_per_user.sql` to the production database: Supabase, which the Worker's
-   Hyperdrive config (`supabase-postgres`) points at. Neon is only the dev database.
+   Hyperdrive config (`supabase-postgres`) points at. Neon is only the dev database. The
+   `twoFactor` table already exists (from an earlier better-auth migration).
 2. **Upstash**: create a Redis database (global, with a read region near your users) and set
    `wrangler secret put UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN`.
 3. **Secrets**: `wrangler secret put BETTER_AUTH_SECRET` (`openssl rand -base64 32`). For GitHub,

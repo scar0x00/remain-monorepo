@@ -6,6 +6,21 @@ export type AuthUser = { id: string; name: string; email: string; image?: string
 /** What a failed auth call tells the UI: a message to show and better-auth's code, if any. */
 export type AuthError = { message: string; code?: string; status?: number };
 
+/** Second factors the server offers after a password sign-in. Backup codes come with `totp`. */
+export type TwoFactorMethod = 'totp' | 'otp';
+
+/** The password was right, but the account has 2FA: no session until a code is verified. */
+export type TwoFactorChallenge = { twoFactor: TwoFactorMethod[] };
+
+/** How a second factor is proven: an authenticator app code, an emailed code or a backup code. */
+export type TwoFactorProof = 'totp' | 'otp' | 'backup';
+
+/** The user closed or cancelled the browser's passkey dialog: not worth a message. */
+export const PASSKEY_CANCELLED = 'AUTH_CANCELLED';
+
+export const isTwoFactorChallenge = (value: unknown): value is TwoFactorChallenge =>
+  typeof value === 'object' && value !== null && 'twoFactor' in value;
+
 type ClientError = { message?: string; code?: string; status?: number; statusText?: string } | null | undefined;
 
 const MESSAGES: Record<string, string> = {
@@ -15,9 +30,20 @@ const MESSAGES: Record<string, string> = {
   USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL: 'There is already an account with that email. Sign in instead.',
   PASSWORD_TOO_SHORT: 'Use at least 10 characters for your password.',
   INVALID_TOKEN: 'This link is invalid or has expired. Ask for a new one.',
+  INVALID_PASSWORD: 'That password isn’t right.',
+  INVALID_CODE: 'That code isn’t right. Check it and try again.',
+  INVALID_BACKUP_CODE: 'That backup code isn’t right, or it was already used.',
+  OTP_HAS_EXPIRED: 'That code has expired. Send a new one.',
+  TOO_MANY_ATTEMPTS_REQUEST_NEW_CODE: 'Too many wrong codes. Send a new one.',
+  ACCOUNT_TEMPORARILY_LOCKED: 'Too many wrong codes. Wait 15 minutes, then sign in again.',
+  INVALID_TWO_FACTOR_COOKIE: 'This sign-in has expired. Sign in again.',
+  PASSKEY_NOT_FOUND: 'That passkey isn’t registered with Remain. Sign in another way, then add it under Security.',
+  AUTHENTICATION_FAILED: 'That passkey didn’t work. Try again or sign in another way.',
+  PREVIOUSLY_REGISTERED: 'This passkey is already registered.',
+  ERROR_AUTHENTICATOR_PREVIOUSLY_REGISTERED: 'This passkey is already registered.',
 };
 
-function toAuthError(error: ClientError): AuthError {
+export function toAuthError(error: ClientError): AuthError {
   const code = error?.code;
   if (error?.status === 429) return { message: 'Too many attempts. Wait a minute and try again.', code, status: 429 };
   return {
@@ -77,10 +103,53 @@ export class AuthService {
    * Signs in without a `callbackURL`: with one, better-auth's client answers success by setting
    * `window.location` to it, which would race the caller's own navigation to `returnTo`.
    */
-  async signIn(input: { email: string; password: string; rememberMe?: boolean }): Promise<AuthError | null> {
+  async signIn(input: {
+    email: string;
+    password: string;
+    rememberMe?: boolean;
+  }): Promise<AuthError | TwoFactorChallenge | null> {
     const { data, error } = await this.client.signIn.email(input);
     if (error) return toAuthError(error);
-    this.current.set((data?.user as AuthUser | undefined) ?? null);
+    if (data && 'twoFactorRedirect' in data && data.twoFactorRedirect) {
+      const methods = (data as { twoFactorMethods?: TwoFactorMethod[] }).twoFactorMethods ?? [];
+      return { twoFactor: methods };
+    }
+    this.current.set(((data as { user?: AuthUser } | null)?.user) ?? null);
+    return null;
+  }
+
+  /**
+   * Finishes a sign-in that asked for a second factor. `trustDevice` skips the code on this browser
+   * for 30 days.
+   */
+  async verifyTwoFactor(proof: TwoFactorProof, code: string, trustDevice: boolean): Promise<AuthError | null> {
+    const input = { code: code.trim(), trustDevice };
+    const { error } =
+      proof === 'totp'
+        ? await this.client.twoFactor.verifyTotp(input)
+        : proof === 'otp'
+          ? await this.client.twoFactor.verifyOtp(input)
+          : await this.client.twoFactor.verifyBackupCode(input);
+    if (error) return toAuthError(error);
+    await this.refresh();
+    return null;
+  }
+
+  /** Emails a code: during a sign-in challenge, or from the settings page with a session. */
+  async sendTwoFactorCode(): Promise<AuthError | null> {
+    const { error } = await this.client.twoFactor.sendOtp();
+    return error ? toAuthError(error) : null;
+  }
+
+  /**
+   * Signs in with a passkey. With `autoFill`, waits for the user to pick one from the email field's
+   * autofill (conditional UI) instead of opening the browser's dialog. A cancelled dialog resolves to
+   * an error with code `PASSKEY_CANCELLED`.
+   */
+  async signInWithPasskey(autoFill = false): Promise<AuthError | null> {
+    const { error } = await this.client.signIn.passkey({ autoFill });
+    if (error) return toAuthError(error);
+    await this.refresh();
     return null;
   }
 

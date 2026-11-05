@@ -11,18 +11,29 @@ type Mail = { to: string; subject: string; html: string; text: string };
 const escapeHtml = (value: string) =>
   value.replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[char]!);
 
-// One plain layout for every message: a heading, a paragraph, a button and the link as text, since
-// some clients block buttons.
-function layout({ heading, body, action, url, footer }: { heading: string; body: string; action: string; url: string; footer: string }) {
-  const link = escapeHtml(url);
+// One plain layout for every message: a heading, a paragraph, then either a button with the link as
+// text (some clients block buttons) or a one-time code in large type.
+type Content = { heading: string; body: string; footer: string } & (
+  | { action: string; url: string; code?: never }
+  | { code: string; action?: never; url?: never }
+);
+
+function layout({ heading, body, footer, ...content }: Content) {
+  let middle: string;
+  if (content.code !== undefined) {
+    middle = `<p style="margin:0 0 24px;font-size:32px;font-weight:700;letter-spacing:8px;font-family:ui-monospace,Menlo,Consolas,monospace">${escapeHtml(content.code)}</p>`;
+  } else {
+    const link = escapeHtml(content.url);
+    middle = `<p style="margin:0 0 24px"><a href="${link}" style="display:inline-block;background:#e0a526;color:#2b2620;text-decoration:none;font-weight:600;padding:12px 20px;border-radius:999px">${escapeHtml(content.action)}</a></p>
+    <p style="margin:0 0 8px;font-size:13px;color:#6b6258">Or open this link:</p>
+    <p style="margin:0 0 24px;font-size:13px;word-break:break-all"><a href="${link}" style="color:#6b6258">${link}</a></p>`;
+  }
   return `<!doctype html>
 <html><body style="margin:0;padding:24px;background:#f6f3ee;font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;color:#2b2620">
   <div style="max-width:480px;margin:0 auto;background:#ffffff;border-radius:12px;padding:32px">
     <h1 style="margin:0 0 16px;font-size:22px">${escapeHtml(heading)}</h1>
     <p style="margin:0 0 24px;line-height:1.5">${escapeHtml(body)}</p>
-    <p style="margin:0 0 24px"><a href="${link}" style="display:inline-block;background:#e0a526;color:#2b2620;text-decoration:none;font-weight:600;padding:12px 20px;border-radius:999px">${escapeHtml(action)}</a></p>
-    <p style="margin:0 0 8px;font-size:13px;color:#6b6258">Or open this link:</p>
-    <p style="margin:0 0 24px;font-size:13px;word-break:break-all"><a href="${link}" style="color:#6b6258">${link}</a></p>
+    ${middle}
     <p style="margin:0;font-size:13px;color:#6b6258">${escapeHtml(footer)}</p>
   </div>
 </body></html>`;
@@ -49,6 +60,21 @@ export function resetPasswordEmail(user: { email: string; name: string }, url: s
     subject: "Reset your Remain password",
     html: layout({ heading: "Reset your password", body, action: "Choose a new password", url, footer }),
     text: `${body}\n\n${url}\n\n${footer}\n`,
+  };
+}
+
+/** How long an emailed two-factor code works. Shared with the twoFactor plugin's `otpOptions.period`. */
+export const TWO_FACTOR_CODE_MINUTES = 5;
+
+export function twoFactorCodeEmail(user: { email: string; name: string }, code: string): Mail {
+  const body = `${greeting(user.name)} here is your Remain verification code.`;
+  const footer = `The code expires in ${TWO_FACTOR_CODE_MINUTES} minutes. If you didn't just sign in or change your security settings, someone may know your password: change it.`;
+  return {
+    to: user.email,
+    // Not in the subject: failed sends log the subject.
+    subject: "Your Remain verification code",
+    html: layout({ heading: "Your verification code", body, code, footer }),
+    text: `${body}\n\n${code}\n\n${footer}\n`,
   };
 }
 

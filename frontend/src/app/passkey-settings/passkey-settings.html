@@ -1,0 +1,71 @@
+<section class="flex flex-col gap-5 rounded-xl bg-app-card p-6 shadow-e3" aria-labelledby="passkeys-heading">
+    <header class="flex flex-col gap-1">
+        <h2 id="passkeys-heading" class="text-xl font-semibold">Passkeys</h2>
+        <p class="text-app-text-muted leading-relaxed">
+            Sign in with your fingerprint, face or device PIN instead of a password. Add one on each device you use, so losing one doesn’t lock you out.
+        </p>
+    </header>
+
+    @if (passkeys(); as passkeys) {
+        @if (passkeys.length) {
+            <ul class="flex flex-col divide-y divide-app-border" aria-label="Your passkeys">
+                @for (passkey of passkeys; track passkey.id) {
+                    <li class="flex flex-col gap-3 py-3">
+                        @if (editing() === passkey.id) {
+                            <form class="flex flex-wrap items-end gap-2" (submit)="rename($event, passkey.id)">
+                                <label class="flex flex-1 flex-col gap-2 text-sm font-semibold text-app-text-muted">
+                                    Name
+                                    <input name="name" maxlength="64" required
+                                        class="rounded-lg border-2 border-app-border bg-app-bg px-3 py-2 font-normal text-app-text shadow-inset focus:border-action focus:outline-none"
+                                        [value]="editName()" (input)="editName.set($any($event.target).value)" />
+                                </label>
+                                <button type="submit" [disabled]="busy()" class="min-h-10 rounded-full bg-action px-4 text-sm font-bold text-app-bg shadow-raised hover:bg-action-hover hover:cursor-pointer disabled:opacity-60">Save</button>
+                                <button type="button" (click)="editing.set(null)" class="min-h-10 rounded-full px-3 text-sm font-semibold text-app-text-muted hover:text-app-text hover:cursor-pointer">Cancel</button>
+                            </form>
+                        } @else {
+                            <div class="flex flex-wrap items-center justify-between gap-3">
+                                <div class="flex flex-col">
+                                    <span class="font-semibold">{{ passkey.name || 'Passkey' }}</span>
+                                    <span class="text-sm text-app-text-muted">
+                                        Added {{ passkey.createdAt | date: 'mediumDate' }}{{ passkey.backedUp ? ' · Synced' : ' · This device only' }}
+                                    </span>
+                                </div>
+                                <div class="flex gap-1">
+                                    <button type="button" (click)="startRename(passkey)" class="min-h-10 rounded-full px-3 text-sm font-semibold text-app-text-muted hover:bg-app-card-hover hover:text-app-text hover:cursor-pointer">Rename</button>
+                                    <button type="button" (click)="removing.set(passkey.id)" class="min-h-10 rounded-full px-3 text-sm font-semibold text-accent hover:bg-app-card-hover hover:cursor-pointer">Remove</button>
+                                </div>
+                            </div>
+                            @if (removing() === passkey.id) {
+                                <div role="alertdialog" aria-label="Remove passkey" class="flex flex-wrap items-center gap-3 rounded-lg bg-app-bg p-3 text-sm">
+                                    <span class="flex-1">Remove “{{ passkey.name || 'Passkey' }}”? Also delete it from your device or password manager.</span>
+                                    <button type="button" (click)="remove(passkey.id)" [disabled]="busy()" class="min-h-10 rounded-full bg-accent px-4 font-bold text-app-bg hover:cursor-pointer disabled:opacity-60">Remove</button>
+                                    <button type="button" (click)="removing.set(null)" class="min-h-10 rounded-full px-3 font-semibold text-app-text-muted hover:text-app-text hover:cursor-pointer">Keep</button>
+                                </div>
+                            }
+                        }
+                    </li>
+                }
+            </ul>
+        } @else {
+            <p class="text-sm text-app-text-subtle">No passkeys yet.</p>
+        }
+    }
+
+    @if (supported) {
+        <form class="flex flex-wrap items-end gap-2" (submit)="add($event)">
+            <label class="flex flex-1 flex-col gap-2 text-sm font-semibold text-app-text-muted">
+                Name it, so you can tell your passkeys apart
+                <input name="new-passkey-name" maxlength="64" placeholder="e.g. Work laptop"
+                    class="rounded-lg border-2 border-app-border bg-app-bg px-3 py-2 font-normal text-app-text shadow-inset placeholder:text-app-text-subtle focus:border-action focus:outline-none"
+                    [value]="newName()" (input)="newName.set($any($event.target).value)" />
+            </label>
+            <button type="submit" [disabled]="busy()" class="min-h-11 rounded-full bg-action px-5 font-bold text-app-bg shadow-raised hover:bg-action-hover hover:cursor-pointer disabled:opacity-60">Add a passkey</button>
+        </form>
+    } @else {
+        <p class="text-sm text-app-text-subtle">This browser doesn’t support passkeys.</p>
+    }
+
+    @if (failure(); as failure) {
+        <p role="alert" class="text-sm text-accent">{{ failure.message }}</p>
+    }
+</section>

@@ -9,6 +9,14 @@
         Continue with GitHub
     </button>
 
+    @if (passkeys) {
+        <button type="button" (click)="passkey()" [disabled]="busy()"
+            class="flex min-h-11 items-center justify-center gap-3 rounded-full border-2 border-app-border px-5 font-semibold hover:bg-app-card-hover hover:cursor-pointer disabled:opacity-60">
+            <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="7" r="4"/><path d="M3 21v-1a6 6 0 0 1 9-5.2"/><circle cx="18" cy="13" r="2.5"/><path d="M18 15.5V21l1.5-1.5L18 18"/></svg>
+            Sign in with a passkey
+        </button>
+    }
+
     <div class="flex items-center gap-3 text-xs uppercase tracking-wide text-app-text-subtle" aria-hidden="true">
         <span class="h-px flex-1 bg-app-border"></span>or<span class="h-px flex-1 bg-app-border"></span>
     </div>
@@ -16,7 +24,7 @@
     <form class="flex flex-col gap-4" (submit)="submit($event)">
         <div class="flex flex-col gap-2">
             <label for="login-email" class="text-sm font-semibold text-app-text-muted">Email</label>
-            <input id="login-email" type="email" name="email" autocomplete="username" required
+            <input id="login-email" type="email" name="email" autocomplete="username webauthn" required
                 class="rounded-lg border-2 border-app-border bg-app-bg px-3 py-2 text-app-text shadow-inset placeholder:text-app-text-subtle focus:border-action focus:outline-none"
                 [value]="email()" (input)="email.set($any($event.target).value)" />
         </div>
