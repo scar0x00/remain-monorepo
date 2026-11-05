@@ -7,6 +7,10 @@
         "@angular/cli",
         "mcp"
       ]
+    },
+    "better-auth": {
+      "type": "remote",
+      "url": "https://mcp.better-auth.com/mcp"
     }
   }
 }

@@ -1,0 +1,45 @@
+@if (sentTo(); as sentTo) {
+    <app-auth-card heading="Check your inbox" subheading="One more step to finish your account.">
+        <p class="leading-relaxed text-app-text-muted">We sent a verification link to <strong class="text-app-text">{{ sentTo }}</strong>. Open it on this device to sign in. It expires in one hour.</p>
+        @if (failure(); as failure) {
+            <p role="alert" class="text-sm text-accent">{{ failure.message }}</p>
+        }
+        @if (resent()) {
+            <p role="status" class="text-sm text-app-text-muted">Sent again.</p>
+        }
+        <button type="button" (click)="resend()" [disabled]="busy()"
+            class="min-h-11 rounded-full border-2 border-app-border px-5 font-semibold hover:bg-app-card-hover hover:cursor-pointer disabled:opacity-60">
+            Send the link again
+        </button>
+    </app-auth-card>
+} @else {
+    <app-auth-card heading="Create your account" subheading="Your decks and study history stay yours.">
+        <form class="flex flex-col gap-4" (submit)="submit($event)">
+            <div class="flex flex-col gap-2">
+                <label for="signup-name" class="text-sm font-semibold text-app-text-muted">Name</label>
+                <input id="signup-name" name="name" autocomplete="name" required class="rounded-lg border-2 border-app-border bg-app-bg px-3 py-2 text-app-text shadow-inset placeholder:text-app-text-subtle focus:border-action focus:outline-none"
+                    [value]="name()" (input)="name.set($any($event.target).value)" />
+            </div>
+            <div class="flex flex-col gap-2">
+                <label for="signup-email" class="text-sm font-semibold text-app-text-muted">Email</label>
+                <input id="signup-email" type="email" name="email" autocomplete="email" required class="rounded-lg border-2 border-app-border bg-app-bg px-3 py-2 text-app-text shadow-inset placeholder:text-app-text-subtle focus:border-action focus:outline-none"
+                    [value]="email()" (input)="email.set($any($event.target).value)" />
+            </div>
+            <div class="flex flex-col gap-2">
+                <label for="signup-password" class="text-sm font-semibold text-app-text-muted">Password <span class="font-normal text-app-text-subtle">· at least 10 characters</span></label>
+                <input id="signup-password" type="password" name="password" autocomplete="new-password" required minlength="10" class="rounded-lg border-2 border-app-border bg-app-bg px-3 py-2 text-app-text shadow-inset placeholder:text-app-text-subtle focus:border-action focus:outline-none"
+                    [value]="password()" (input)="password.set($any($event.target).value)" />
+            </div>
+
+            @if (failure(); as failure) {
+                <p role="alert" class="text-sm text-accent">{{ failure.message }}</p>
+            }
+
+            <button type="submit" [disabled]="busy()" class="min-h-11 rounded-full bg-action px-5 font-bold text-app-bg shadow-raised hover:bg-action-hover hover:cursor-pointer disabled:opacity-60">Create account</button>
+        </form>
+
+        <p footer class="text-center text-sm text-app-text-muted">
+            Already have an account? <a routerLink="/login" [queryParams]="returnTo() ? { returnTo: returnTo() } : {}" class="font-semibold text-app-text hover:underline">Sign in</a>
+        </p>
+    </app-auth-card>
+}

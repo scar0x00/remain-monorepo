@@ -1,6 +1,10 @@
 import { beforeAll, beforeEach, describe, expect, it } from "bun:test";
 import type { Client } from "pg";
-import { SYSTEM_USER_ID, backfillDeckRows } from "../../src/lib/decks";
+import { backfillDeckRows } from "../../src/lib/decks";
+import { userBucket } from "../../src/lib/user-bucket";
+
+// Seeded by migrations/0001_decks_metadata.sql.
+const SYSTEM_USER_ID = "system";
 import {
   getActivity,
   getOverview,
@@ -284,7 +288,7 @@ describe("listDeckSessions", () => {
 
 describe("backfillDeckRows", () => {
   it("fills in missing card counts, titles and metadata from the deck files", async () => {
-    const bucket = createFakeR2();
+    const bucket = userBucket(createFakeR2() as unknown as R2Bucket, SYSTEM_USER_ID);
     await bucket.put("old.json", JSON.stringify([{ front: "a", back: "b" }, { front: "c", back: "d" }]));
     await bucket.put("broken.json", "not json");
     const meta = { title: "Signals", tool: { kind: "agent", model: "m" } };
@@ -294,7 +298,7 @@ describe("backfillDeckRows", () => {
       [SYSTEM_USER_ID],
     );
 
-    await backfillDeckRows({ bucket: bucket as unknown as R2Bucket, pg });
+    await backfillDeckRows({ bucket, pg, userId: SYSTEM_USER_ID });
 
     const { rows } = await pg.query<{ name: string; card_count: number | null }>(
       `SELECT name, card_count, title, meta FROM public.decks ORDER BY name`,

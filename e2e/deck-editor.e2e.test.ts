@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "bun:test";
-import { chromium, type Browser, type Page } from "playwright-core";
+import { chromium, type Browser, type BrowserContext, type Page } from "playwright-core";
+import { authedFetch, signUp, signedInContext, type Session } from "./auth";
 
 // Deck editor (#14) against the running stack: frontend (4200) -> main-backend (8787). Unlike
 // app.e2e.test.ts it needs no model calls, so the flashcard agent doesn't have to run.
@@ -21,7 +22,11 @@ const SEED: Deck = {
 };
 
 let browser: Browser;
+let context: BrowserContext;
 let page: Page;
+let session: Session;
+// Shadows the global fetch: every API call in this file is made as the signed-in e2e user.
+let fetch: ReturnType<typeof authedFetch>;
 let name: string;
 const created: string[] = [];
 
@@ -41,6 +46,9 @@ async function readDeck(key: string): Promise<Deck> {
 beforeAll(async () => {
   const executablePath = process.env.E2E_BROWSER_PATH;
   browser = await chromium.launch(executablePath ? { executablePath } : { channel: "chrome", headless: true });
+  session = await signUp(BASE, "editor");
+  fetch = authedFetch(session);
+  context = await signedInContext(browser, BASE, session);
 });
 
 beforeEach(async () => {
@@ -48,7 +56,7 @@ beforeEach(async () => {
   created.push(`${name}.json`);
   await putDeck(`${name}.json`, SEED);
   await page?.close();
-  page = await browser.newPage();
+  page = await context.newPage();
 });
 
 afterAll(async () => {

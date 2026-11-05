@@ -136,13 +136,22 @@ jobs:
       - name: Apply migrations
         working-directory: main-backend
         run: ../scripts/ci-migrate.sh
+      # Accounts (#12): every route needs a session. The tests sign up and follow the verification
+      # link main-backend logs instead of emailing it (DEV_LOG_EMAILS).
+      - name: Configure main-backend
+        run: |
+          {
+            echo "BETTER_AUTH_URL=http://localhost:4200"
+            echo "BETTER_AUTH_SECRET=$(openssl rand -base64 32)"
+            echo "DEV_LOG_EMAILS=true"
+          } > main-backend/.env
       - name: Start the stack
         run: |
           ./dev-server start
-          # Any answer from the agent means it is up; the deck list has to succeed through the
-          # frontend's proxy, which needs both the frontend and main-backend.
+          # Any answer from the agent means it is up; better-auth's health check has to succeed through
+          # the frontend's proxy, which needs both the frontend and main-backend.
           timeout 300 bash -c 'until curl -s -o /dev/null http://localhost:8788; do sleep 2; done' \
-            && timeout 300 bash -c 'until curl -sf -o /dev/null http://localhost:4200/api/v1/decks; do sleep 2; done' \
+            && timeout 300 bash -c 'until curl -sf -o /dev/null http://localhost:4200/api/v1/auth/ok; do sleep 2; done' \
             || { echo "The stack did not come up"; tail -n 100 "${TMPDIR:-/tmp/opencode}"/dev-server/*.log; exit 1; }
       # Uses the Google Chrome that ships on ubuntu-latest (playwright-core, channel "chrome").
       - name: Run browser e2e

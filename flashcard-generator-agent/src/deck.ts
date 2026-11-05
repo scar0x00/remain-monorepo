@@ -13,6 +13,8 @@ export function buildDeck(options: {
   description?: string;
   language?: string;
   model: string;
+  /** The user the deck is generated for. */
+  author?: { id: string; name: string } | null;
   sources: string[];
   now?: Date;
 }): Deck {
@@ -20,7 +22,7 @@ export function buildDeck(options: {
     title: options.title,
     description: options.description,
     language: options.language,
-    author: null,
+    author: options.author ?? null,
     tool: { kind: "agent", model: options.model, generatedAt: (options.now ?? new Date()).toISOString() },
     sources: options.sources.map((name) => ({ name })),
   };

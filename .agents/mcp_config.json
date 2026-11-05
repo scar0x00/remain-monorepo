@@ -10,8 +10,14 @@
             "serverUrl": "https://docs.mcp.cloudflare.com/mcp"
         },
         "angular-cli": {
-          "command": "bunx",
-          "args": ["@angular/cli", "mcp"]
+            "command": "bunx",
+            "args": [
+                "@angular/cli",
+                "mcp"
+            ]
+        },
+        "better-auth": {
+            "serverUrl": "https://mcp.better-auth.com/mcp"
         }
     }
 }

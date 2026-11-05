@@ -1,0 +1,25 @@
+@if (checking()) {
+    <app-auth-card heading="Verifying…" />
+} @else if (!error() && auth.user()) {
+    <app-auth-card heading="Email verified" [subheading]="'You’re signed in as ' + auth.user()!.email + '.'">
+        <a routerLink="/deck-browse" class="min-h-11 rounded-full bg-action px-5 font-bold text-app-bg shadow-raised hover:bg-action-hover hover:cursor-pointer disabled:opacity-60 flex items-center justify-center">Go to your decks</a>
+    </app-auth-card>
+} @else {
+    <app-auth-card heading="This link didn’t work" subheading="It may have expired or been used already. Get a new one below.">
+        <form class="flex flex-col gap-4" (submit)="resend($event)">
+            <div class="flex flex-col gap-2">
+                <label for="verify-email" class="text-sm font-semibold text-app-text-muted">Email</label>
+                <input id="verify-email" type="email" name="email" autocomplete="email" required class="rounded-lg border-2 border-app-border bg-app-bg px-3 py-2 text-app-text shadow-inset placeholder:text-app-text-subtle focus:border-action focus:outline-none"
+                    [value]="email()" (input)="email.set($any($event.target).value)" />
+            </div>
+            @if (failure(); as failure) {
+                <p role="alert" class="text-sm text-accent">{{ failure.message }}</p>
+            }
+            @if (resent()) {
+                <p role="status" class="text-sm text-app-text-muted">If that address has an account waiting for verification, a new link is on its way.</p>
+            }
+            <button type="submit" [disabled]="busy()" class="min-h-11 rounded-full bg-action px-5 font-bold text-app-bg shadow-raised hover:bg-action-hover hover:cursor-pointer disabled:opacity-60">Send a new link</button>
+        </form>
+        <p footer class="text-center text-sm text-app-text-muted"><a routerLink="/login" class="font-semibold text-app-text hover:underline">Back to sign in</a></p>
+    </app-auth-card>
+}

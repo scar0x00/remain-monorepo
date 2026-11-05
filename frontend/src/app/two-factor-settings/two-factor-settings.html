@@ -1,0 +1,144 @@
+<section class="flex flex-col gap-5 rounded-xl bg-app-card p-6 shadow-e3" aria-labelledby="two-factor-heading">
+    <header class="flex flex-col gap-1">
+        <div class="flex items-center gap-3">
+            <h2 id="two-factor-heading" class="text-xl font-semibold">Two-step verification</h2>
+            <span class="rounded-full px-2.5 py-0.5 text-xs font-semibold"
+                [class]="status().twoFactorEnabled ? 'bg-honey-100 text-honey-800 dark:bg-honey-400/15 dark:text-honey-300' : 'bg-app-bg text-app-text-subtle'">
+                {{ status().twoFactorEnabled ? 'On' : 'Off' }}
+            </span>
+        </div>
+        <p class="text-app-text-muted leading-relaxed">
+            After your password, Remain asks for a code. Signing in with GitHub or a passkey doesn’t need one: both already prove it’s you.
+        </p>
+    </header>
+
+    @switch (step()) {
+        @case ('app-password') {
+            <form class="flex flex-col gap-3" (submit)="requestSetup($event)">
+                <ng-container *ngTemplateOutlet="passwordField" />
+                <ng-container *ngTemplateOutlet="actions; context: { $implicit: 'Continue' }" />
+            </form>
+        }
+        @case ('app-scan') {
+            <form class="flex flex-col gap-4" (submit)="confirmApp($event)">
+                <ol class="flex list-decimal flex-col gap-2 pl-5 text-app-text-muted">
+                    <li>Scan this code with an authenticator app, such as 1Password, Google Authenticator or Authy.</li>
+                    <li>Enter the 6-digit code the app shows.</li>
+                </ol>
+                <app-qr-code class="size-48 self-center" [value]="setup()!.totpURI" label="QR code for your authenticator app" />
+                <p class="text-center text-sm text-app-text-muted">
+                    Can’t scan it? Enter this key instead:<br />
+                    <code class="font-mono text-app-text" data-testid="totp-key">{{ setupKey() }}</code>
+                </p>
+                <ng-container *ngTemplateOutlet="codeField" />
+                <ng-container *ngTemplateOutlet="actions; context: { $implicit: 'Turn on' }" />
+            </form>
+        }
+        @case ('app-saved-codes') {
+            <ng-container *ngTemplateOutlet="savedCodes; context: { $implicit: 'Your authenticator app is set up. Save these backup codes: each one signs you in once if you lose your phone. They won’t be shown again.' }" />
+        }
+        @case ('email-code') {
+            <form class="flex flex-col gap-3" (submit)="confirmEmail($event)">
+                <p role="status" class="text-app-text-muted">We emailed you a code. Enter it to turn on email codes.</p>
+                <ng-container *ngTemplateOutlet="codeField" />
+                <ng-container *ngTemplateOutlet="actions; context: { $implicit: 'Turn on' }" />
+                <button type="button" (click)="resendEmail()" [disabled]="busy()" class="self-start text-sm text-app-text-subtle hover:text-app-text hover:cursor-pointer">Send a new code</button>
+            </form>
+        }
+        @case ('disable') {
+            <form class="flex flex-col gap-3" (submit)="disable($event)">
+                <p class="text-app-text-muted">This turns off your authenticator app, email codes and backup codes. Signing in will only need your password.</p>
+                @if (status().hasPassword) {
+                    <ng-container *ngTemplateOutlet="passwordField" />
+                }
+                <ng-container *ngTemplateOutlet="actions; context: { $implicit: 'Turn off' }" />
+            </form>
+        }
+        @case ('regenerate') {
+            <form class="flex flex-col gap-3" (submit)="regenerate($event)">
+                <p class="text-app-text-muted">New backup codes replace the old ones, which stop working.</p>
+                @if (status().hasPassword) {
+                    <ng-container *ngTemplateOutlet="passwordField" />
+                }
+                <ng-container *ngTemplateOutlet="actions; context: { $implicit: 'Get new codes' }" />
+            </form>
+        }
+        @case ('regenerated-codes') {
+            <ng-container *ngTemplateOutlet="savedCodes; context: { $implicit: 'Your new backup codes. Save them now: they won’t be shown again.' }" />
+        }
+        @default {
+            <ul class="flex flex-col divide-y divide-app-border">
+                <li class="flex flex-wrap items-center justify-between gap-3 py-3">
+                    <div class="flex flex-col">
+                        <span class="font-semibold">Authenticator app</span>
+                        <span class="text-sm text-app-text-muted">
+                            {{ status().authenticatorApp ? 'Set up. Comes with backup codes.' : 'Recommended. Codes from an app on your phone.' }}
+                        </span>
+                    </div>
+                    @if (status().authenticatorApp) {
+                        <button type="button" (click)="askRegenerate()" [disabled]="busy()" class="min-h-10 rounded-full border-2 border-app-border px-4 text-sm font-semibold hover:bg-app-card-hover hover:cursor-pointer disabled:opacity-60">New backup codes</button>
+                    } @else {
+                        <button type="button" (click)="startApp()" [disabled]="busy()" class="min-h-10 rounded-full bg-action px-4 text-sm font-bold text-app-bg shadow-raised hover:bg-action-hover hover:cursor-pointer disabled:opacity-60">Set up</button>
+                    }
+                </li>
+                <li class="flex flex-wrap items-center justify-between gap-3 py-3">
+                    <div class="flex max-w-md flex-col">
+                        <span class="font-semibold">Email codes</span>
+                        <span class="text-sm text-app-text-muted">
+                            @if (status().twoFactorEnabled) {
+                                On. You can always ask for a code by email.
+                            } @else {
+                                Codes sent to your inbox. Weaker than an app: anyone who can read your email can also reset your password.
+                            }
+                        </span>
+                    </div>
+                    @if (!status().twoFactorEnabled) {
+                        <button type="button" (click)="startEmail()" [disabled]="busy()" class="min-h-10 rounded-full border-2 border-app-border px-4 text-sm font-semibold hover:bg-app-card-hover hover:cursor-pointer disabled:opacity-60">Turn on</button>
+                    }
+                </li>
+            </ul>
+            @if (failure(); as failure) {
+                <p role="alert" class="text-sm text-accent">{{ failure.message }}</p>
+            }
+            @if (status().twoFactorEnabled) {
+                <button type="button" (click)="askDisable()" class="self-start text-sm font-semibold text-accent hover:underline hover:cursor-pointer">Turn off two-step verification</button>
+            }
+        }
+    }
+</section>
+
+<ng-template #passwordField>
+    <div class="flex flex-col gap-2">
+        <label for="two-factor-password" class="text-sm font-semibold text-app-text-muted">Your password</label>
+        <input id="two-factor-password" type="password" name="password" autocomplete="current-password" required
+            class="rounded-lg border-2 border-app-border bg-app-bg px-3 py-2 text-app-text shadow-inset focus:border-action focus:outline-none"
+            [value]="password()" (input)="password.set($any($event.target).value)" />
+    </div>
+</ng-template>
+
+<ng-template #codeField>
+    <div class="flex flex-col gap-2">
+        <label for="two-factor-setup-code" class="text-sm font-semibold text-app-text-muted">6-digit code</label>
+        <input id="two-factor-setup-code" name="code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" required
+            class="w-40 rounded-lg border-2 border-app-border bg-app-bg px-3 py-2 font-mono text-lg tracking-widest text-app-text shadow-inset focus:border-action focus:outline-none"
+            [value]="code()" (input)="code.set($any($event.target).value)" />
+    </div>
+</ng-template>
+
+<ng-template #actions let-label>
+    @if (failure(); as failure) {
+        <p role="alert" class="text-sm text-accent">{{ failure.message }}</p>
+    }
+    <div class="flex flex-wrap gap-2">
+        <button type="submit" [disabled]="busy()" class="min-h-10 rounded-full bg-action px-5 text-sm font-bold text-app-bg shadow-raised hover:bg-action-hover hover:cursor-pointer disabled:opacity-60">{{ label }}</button>
+        <button type="button" (click)="cancel()" class="min-h-10 rounded-full px-4 text-sm font-semibold text-app-text-muted hover:text-app-text hover:cursor-pointer">Cancel</button>
+    </div>
+</ng-template>
+
+<ng-template #savedCodes let-intro>
+    <div class="flex flex-col gap-4">
+        <p role="status" class="text-app-text-muted">{{ intro }}</p>
+        <app-backup-codes [codes]="codes()" />
+        <button type="button" (click)="cancel()" class="min-h-10 self-start rounded-full bg-action px-5 text-sm font-bold text-app-bg shadow-raised hover:bg-action-hover hover:cursor-pointer">I’ve saved them</button>
+    </div>
+</ng-template>

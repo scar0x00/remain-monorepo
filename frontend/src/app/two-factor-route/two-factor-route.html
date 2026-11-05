@@ -1,0 +1,65 @@
+<app-auth-card heading="Two-step verification" [subheading]="subheading()">
+    @if (proof() === 'otp' && !emailSent()) {
+        <p class="text-app-text-muted leading-relaxed">We’ll email a 6-digit code to the address on your account.</p>
+        <button type="button" (click)="sendEmail()" [disabled]="busy()"
+            class="min-h-11 rounded-full bg-action px-5 font-bold text-app-bg shadow-raised hover:bg-action-hover hover:cursor-pointer disabled:opacity-60">
+            Email me a code
+        </button>
+        @if (failure(); as failure) {
+            <p role="alert" class="text-sm text-accent">{{ failure.message }}</p>
+        }
+    } @else {
+        <form class="flex flex-col gap-4" (submit)="submit($event)">
+            @if (proof() === 'otp') {
+                <p role="status" class="text-sm text-app-text-muted">Sent. The code works for 5 minutes.</p>
+            }
+            <div class="flex flex-col gap-2">
+                <label for="two-factor-code" class="text-sm font-semibold text-app-text-muted">
+                    {{ proof() === 'backup' ? 'Backup code' : '6-digit code' }}
+                </label>
+                <input id="two-factor-code" name="code" required
+                    [attr.inputmode]="proof() === 'backup' ? 'text' : 'numeric'"
+                    [attr.autocomplete]="proof() === 'backup' ? 'off' : 'one-time-code'"
+                    [attr.maxlength]="proof() === 'backup' ? 32 : 6"
+                    class="rounded-lg border-2 border-app-border bg-app-bg px-3 py-2 font-mono text-lg tracking-widest text-app-text shadow-inset focus:border-action focus:outline-none"
+                    [value]="code()" (input)="code.set($any($event.target).value)" />
+            </div>
+
+            <label class="flex items-center gap-3 text-sm text-app-text-muted">
+                <input type="checkbox" class="size-4 accent-action" [checked]="trustDevice()" (change)="trustDevice.set($any($event.target).checked)" />
+                Don’t ask again on this browser for 30 days
+            </label>
+
+            @if (failure(); as failure) {
+                <div role="alert" class="flex flex-col gap-2 text-sm text-accent">
+                    <p>{{ failure.message }}</p>
+                    @if (failure.code === 'INVALID_TWO_FACTOR_COOKIE' || failure.code === 'ACCOUNT_TEMPORARILY_LOCKED') {
+                        <a routerLink="/login" [queryParams]="loginLink()" class="self-start font-semibold text-app-text underline">Back to sign in</a>
+                    }
+                </div>
+            }
+
+            <button type="submit" [disabled]="busy()"
+                class="min-h-11 rounded-full bg-action px-5 font-bold text-app-bg shadow-raised hover:bg-action-hover hover:cursor-pointer disabled:opacity-60">
+                Verify
+            </button>
+
+            @if (proof() === 'otp') {
+                <button type="button" (click)="sendEmail()" [disabled]="busy()" class="self-center text-sm text-app-text-subtle hover:text-app-text hover:cursor-pointer">Send a new code</button>
+            }
+        </form>
+    }
+
+    <ul footer class="flex flex-col items-center gap-2 text-sm">
+        @if (hasApp() && proof() !== 'totp') {
+            <li><button type="button" (click)="use('totp')" class="font-semibold text-app-text hover:underline hover:cursor-pointer">Use your authenticator app</button></li>
+        }
+        @if (hasEmail() && proof() !== 'otp') {
+            <li><button type="button" (click)="use('otp')" class="font-semibold text-app-text hover:underline hover:cursor-pointer">Email me a code instead</button></li>
+        }
+        @if (hasApp() && proof() !== 'backup') {
+            <li><button type="button" (click)="use('backup')" class="font-semibold text-app-text hover:underline hover:cursor-pointer">Use a backup code</button></li>
+        }
+        <li><a routerLink="/login" [queryParams]="loginLink()" class="text-app-text-subtle hover:text-app-text">Cancel and sign in again</a></li>
+    </ul>
+</app-auth-card>

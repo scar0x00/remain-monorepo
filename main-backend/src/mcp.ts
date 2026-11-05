@@ -15,7 +15,8 @@ import {
 } from "./lib/deck-format";
 import { track } from "./lib/analytics";
 import { deleteDeck, listDecks, saveDeck, type DeckStore } from "./lib/decks";
-import { type Bindings } from "./types";
+import { type DeckBucket, userBucket } from "./lib/user-bucket";
+import { type AuthUser, type Bindings } from "./types";
 
 const DeckName = z
   .string()
@@ -45,18 +46,18 @@ const text = (value: unknown) => ({
 const failure = (message: string) => ({ ...text(message), isError: true });
 
 // Opens a Postgres client for the duration of one tool call, like pgDbMiddleware does for REST routes.
-async function withStore<T>(env: Bindings, run: (store: DeckStore) => Promise<T>): Promise<T> {
+async function withStore<T>(env: Bindings, user: AuthUser, run: (store: DeckStore) => Promise<T>): Promise<T> {
   const pg = new Client({ connectionString: env.PG.connectionString });
   await pg.connect();
   try {
-    return await run({ bucket: env.DECKS, pg });
+    return await run({ bucket: userBucket(env.DECKS, user.id), pg, userId: user.id });
   } finally {
     await pg.end();
   }
 }
 
 async function loadDeck(
-  bucket: R2Bucket,
+  bucket: DeckBucket,
   key: string,
 ): Promise<{ error: string } | { deck: Deck; format: DeckFormat }> {
   const format = formatOfKey(key);
@@ -71,8 +72,8 @@ async function loadDeck(
   return { deck, format };
 }
 
-async function storeDeck(env: Bindings, key: string, format: DeckFormat, deck: Deck) {
-  return withStore(env, (store) => saveDeck(store, key, format, deck));
+async function storeDeck(env: Bindings, user: AuthUser, key: string, format: DeckFormat, deck: Deck) {
+  return withStore(env, user, (store) => saveDeck(store, key, format, deck));
 }
 
 /** A stored card from the client's fields, keeping the metadata of the card it replaces. */
@@ -107,8 +108,10 @@ const TOOL_EVENTS: Record<string, string> = {
   delete_deck: "deck_deleted",
 };
 
-export function createServer(env: Bindings, ctx?: Pick<ExecutionContext, "waitUntil">) {
+/** An MCP server acting for `user`: every tool only sees and changes that user's decks. */
+export function createServer(env: Bindings, user: AuthUser, ctx?: Pick<ExecutionContext, "waitUntil">) {
   const server = new McpServer({ name: "remain", version: "1.0.0" });
+  const bucket = userBucket(env.DECKS, user.id);
 
   // Every tool call is recorded as `mcp_tool_called`, plus its deck event when it changed a deck.
   const registerTool = server.registerTool.bind(server) as (...args: unknown[]) => unknown;
@@ -116,11 +119,11 @@ export function createServer(env: Bindings, ctx?: Pick<ExecutionContext, "waitUn
     registerTool(name, config, async (args: any, extra: unknown) => {
       const result = await handler(args, extra);
       const ok = !result.isError;
-      track(env, ctx, "mcp_tool_called", { tool: name, ok });
+      track(env, ctx, user.id, "mcp_tool_called", { tool: name, ok });
       const event = TOOL_EVENTS[name];
       if (ok && event) {
         const deck = args.key ?? `${args.name}.${args.format}`;
-        track(env, ctx, event, name === "create_deck" ? { deck, source: "mcp", format: args.format, card_count: args.cards.length } : { deck, via: "mcp", tool: name });
+        track(env, ctx, user.id, event, name === "create_deck" ? { deck, source: "mcp", format: args.format, card_count: args.cards.length } : { deck, via: "mcp", tool: name });
       }
       return result;
     })) as unknown as typeof server.registerTool;
@@ -134,7 +137,7 @@ export function createServer(env: Bindings, ctx?: Pick<ExecutionContext, "waitUn
       }),
       annotations: { readOnlyHint: true },
     },
-    async ({ searchTerm }) => text(await withStore(env, (store) => listDecks(store, searchTerm))),
+    async ({ searchTerm }) => text(await withStore(env, user, (store) => listDecks(store, searchTerm))),
   );
 
   server.registerTool(
@@ -146,7 +149,7 @@ export function createServer(env: Bindings, ctx?: Pick<ExecutionContext, "waitUn
       annotations: { readOnlyHint: true },
     },
     async ({ key }) => {
-      const loaded = await loadDeck(env.DECKS, key);
+      const loaded = await loadDeck(bucket, key);
       if (!("deck" in loaded)) return failure(loaded.error);
       const { meta, cards } = loaded.deck;
       return text({
@@ -181,7 +184,7 @@ export function createServer(env: Bindings, ctx?: Pick<ExecutionContext, "waitUn
     },
     async ({ name, cards, format, title, description, language, tags }) => {
       const key = `${name}.${format}`;
-      if (await env.DECKS.head(key)) return failure(`Deck '${key}' already exists`);
+      if (await bucket.head(key)) return failure(`Deck '${key}' already exists`);
 
       const deck: Deck = {
         version: 2,
@@ -189,13 +192,13 @@ export function createServer(env: Bindings, ctx?: Pick<ExecutionContext, "waitUn
           ...(title ? { title } : {}),
           ...(description ? { description } : {}),
           ...(language ? { language } : {}),
-          author: null,
+          author: { id: user.id, name: user.name },
           tool: { kind: "mcp", generatedAt: new Date().toISOString() },
           ...(tags?.length ? { tags } : {}),
         },
         cards: cards.map((card) => toCard(newCardId(), card)),
       };
-      if (!(await storeDeck(env, key, format, deck))) return failure("Upload failed");
+      if (!(await storeDeck(env, user, key, format, deck))) return failure("Upload failed");
       return text({ key, format, cardCount: cards.length });
     },
   );
@@ -218,7 +221,7 @@ export function createServer(env: Bindings, ctx?: Pick<ExecutionContext, "waitUn
       annotations: { idempotentHint: true },
     },
     async ({ key, cards }) => {
-      const loaded = await loadDeck(env.DECKS, key);
+      const loaded = await loadDeck(bucket, key);
       if (!("deck" in loaded)) return failure(loaded.error);
 
       const existing = new Map(loaded.deck.cards.map((card) => [card.id, card]));
@@ -236,7 +239,7 @@ export function createServer(env: Bindings, ctx?: Pick<ExecutionContext, "waitUn
           id ? toCard(id, card, existing.get(id)!.meta) : toCard(newCardId(), card),
         ),
       };
-      if (!(await storeDeck(env, key, loaded.format, deck))) return failure("Upload failed");
+      if (!(await storeDeck(env, user, key, loaded.format, deck))) return failure("Upload failed");
       return text({ key, format: loaded.format, cardCount: cards.length });
     },
   );
@@ -248,12 +251,12 @@ export function createServer(env: Bindings, ctx?: Pick<ExecutionContext, "waitUn
       inputSchema: z.object({ key: DeckKey, cards: z.array(NewCard).min(1) }),
     },
     async ({ key, cards }) => {
-      const loaded = await loadDeck(env.DECKS, key);
+      const loaded = await loadDeck(bucket, key);
       if (!("deck" in loaded)) return failure(loaded.error);
 
       const added = cards.map((card) => toCard(newCardId(), card));
       const deck: Deck = { ...loaded.deck, cards: [...loaded.deck.cards, ...added] };
-      if (!(await storeDeck(env, key, loaded.format, deck))) return failure("Upload failed");
+      if (!(await storeDeck(env, user, key, loaded.format, deck))) return failure("Upload failed");
       return text({
         key,
         added: added.length,
@@ -273,7 +276,7 @@ export function createServer(env: Bindings, ctx?: Pick<ExecutionContext, "waitUn
       annotations: { idempotentHint: true },
     },
     async ({ key, edits }) => {
-      const loaded = await loadDeck(env.DECKS, key);
+      const loaded = await loadDeck(bucket, key);
       if (!("deck" in loaded)) return failure(loaded.error);
       const current = loaded.deck.cards;
 
@@ -292,7 +295,7 @@ export function createServer(env: Bindings, ctx?: Pick<ExecutionContext, "waitUn
         return toCard(card.id, { front: edit.front ?? card.front, back: edit.back ?? card.back, refs: edit.refs }, card.meta);
       });
 
-      if (!(await storeDeck(env, key, loaded.format, { ...loaded.deck, cards }))) return failure("Upload failed");
+      if (!(await storeDeck(env, user, key, loaded.format, { ...loaded.deck, cards }))) return failure("Upload failed");
       return text({ key, edited: edits.length, cardCount: cards.length });
     },
   );
@@ -316,7 +319,7 @@ export function createServer(env: Bindings, ctx?: Pick<ExecutionContext, "waitUn
       annotations: { idempotentHint: true },
     },
     async ({ key, title, description, language, tags }) => {
-      const loaded = await loadDeck(env.DECKS, key);
+      const loaded = await loadDeck(bucket, key);
       if (!("deck" in loaded)) return failure(loaded.error);
 
       const { title: oldTitle, description: oldDescription, language: oldLanguage, tags: oldTags, ...rest } = loaded.deck.meta;
@@ -333,7 +336,7 @@ export function createServer(env: Bindings, ctx?: Pick<ExecutionContext, "waitUn
         }).filter(([, value]) => value !== undefined),
       );
 
-      if (!(await storeDeck(env, key, loaded.format, { ...loaded.deck, meta }))) return failure("Upload failed");
+      if (!(await storeDeck(env, user, key, loaded.format, { ...loaded.deck, meta }))) return failure("Upload failed");
       return text({ key, meta });
     },
   );
@@ -346,7 +349,7 @@ export function createServer(env: Bindings, ctx?: Pick<ExecutionContext, "waitUn
       annotations: { destructiveHint: true, idempotentHint: true },
     },
     async ({ key }) => {
-      const deleted = await withStore(env, (store) => deleteDeck(store, key));
+      const deleted = await withStore(env, user, (store) => deleteDeck(store, key));
       return deleted ? text(`Deleted ${key}`) : failure(`Deck '${key}' not found`);
     },
   );
