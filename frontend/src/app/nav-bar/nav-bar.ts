@@ -1,5 +1,6 @@
-import { Component, ElementRef, viewChild } from '@angular/core';
-import { RouterLink, RouterLinkActive } from '@angular/router';
+import { Component, ElementRef, inject, viewChild } from '@angular/core';
+import { Router, RouterLink, RouterLinkActive } from '@angular/router';
+import { AuthService } from '../auth/auth.service';
 
 @Component({
   selector: 'app-nav-bar',
@@ -14,7 +15,15 @@ export class NavBar {
     { path: '/deck-upload', label: 'Upload a deck' },
   ];
 
+  protected readonly auth = inject(AuthService);
+  private readonly router = inject(Router);
   private readonly menu = viewChild.required<ElementRef<HTMLElement>>('menu');
+
+  async signOut() {
+    this.closeMenu();
+    await this.auth.signOut();
+    await this.router.navigateByUrl('/');
+  }
 
   /** The menu is a native popover; close it once a link is picked. */
   closeMenu() {

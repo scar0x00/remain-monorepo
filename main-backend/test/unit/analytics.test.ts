@@ -1,11 +1,12 @@
 import { beforeEach, describe, expect, it, mock } from "bun:test";
-import { FakeClient, resetDecks } from "../helpers/fake-pg";
+import { fakePg, resetDecks, users } from "../helpers/fake-pg";
 import { createFakeR2 } from "../helpers/fake-r2";
+import { signedInAs } from "../helpers/test-auth";
 
 type Captured = { distinctId: string; event: string; properties: Record<string, unknown> };
 const captured: Captured[] = [];
 
-mock.module("pg", () => ({ Client: FakeClient }));
+mock.module("pg", fakePg);
 mock.module("posthog-node", () => ({
   PostHog: class {
     async captureImmediate(message: Captured) {
@@ -14,7 +15,8 @@ mock.module("posthog-node", () => ({
   },
 }));
 
-const { default: app } = await import("../../src/index");
+const { default: realApp } = await import("../../src/index");
+let app: Awaited<ReturnType<typeof signedInAs>>;
 const { track } = await import("../../src/lib/analytics");
 
 let env: Record<string, unknown>;
@@ -22,7 +24,7 @@ let pending: Promise<unknown>[];
 const ctx = () => ({ waitUntil: (promise: Promise<unknown>) => pending.push(promise), passThroughOnException() {} });
 
 const request = async (url: string, init?: RequestInit) => {
-  const res = await app.request(url, init, env as any, ctx() as any);
+  const res = await app.request(url, init, ctx());
   // MCP answers as a stream, and the tool runs while it is read.
   await res.clone().text();
   await Promise.all(pending);
@@ -31,33 +33,37 @@ const request = async (url: string, init?: RequestInit) => {
 
 const events = () => captured.map(({ event, properties }) => ({ event, ...properties }));
 
-beforeEach(() => {
+beforeEach(async () => {
   resetDecks();
-  captured.length = 0;
   pending = [];
   env = {
     PG: { connectionString: "postgres://fake" },
     DECKS: createFakeR2(),
     DEV_SKIP_ACCESS_AUTH: "true",
+    DEV_ACCESS_EMAIL: "ada@example.com",
     POSTHOG_KEY: "phc_test",
     POSTHOG_HOST: "https://us.i.posthog.com",
   };
+  app = await signedInAs(realApp, env);
+  // The account MCP calls resolve to, as fake-pg's "user" table.
+  users.set(app.userId, { id: app.userId, name: "Ada", email: "ada@example.com", emailVerified: true });
+  captured.length = 0;
 });
 
 describe("track", () => {
   it("sends nothing without a token", async () => {
-    track({ POSTHOG_HOST: "https://us.i.posthog.com" }, ctx(), "deck_deleted");
+    track({ POSTHOG_HOST: "https://us.i.posthog.com" }, ctx(), "u_1", "deck_deleted");
     await Promise.all(pending);
     expect(pending).toHaveLength(0);
     expect(captured).toHaveLength(0);
   });
 
   it("sends an anonymous event under waitUntil", async () => {
-    track(env as any, ctx(), "deck_deleted", { deck: "a.json" });
+    track(env as any, ctx(), "u_1", "deck_deleted", { deck: "a.json" });
     expect(pending).toHaveLength(1);
     await Promise.all(pending);
     expect(captured).toEqual([
-      { distinctId: "system", event: "deck_deleted", properties: { deck: "a.json", $process_person_profile: false } },
+      { distinctId: "u_1", event: "deck_deleted", properties: { deck: "a.json", $process_person_profile: false } },
     ]);
   });
 });

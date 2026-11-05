@@ -20,8 +20,20 @@
     "ACCESS_AUD": "0c24cfd80b60bd24ef9f666a5bd0348b71c81c2d42577c7683d5c4a907ffa656",
     // PostHog (usage analytics). The token, POSTHOG_KEY, is a Worker secret in production only
     // (`wrangler secret put POSTHOG_KEY`), so `wrangler dev`, tests and CI send nothing.
-    "POSTHOG_HOST": "https://us.i.posthog.com"
+    "POSTHOG_HOST": "https://us.i.posthog.com",
+    // better-auth: the origin the browser sees. Secrets (`wrangler secret put <NAME>`):
+    // BETTER_AUTH_SECRET, GITHUB_CLIENT_ID, GITHUB_CLIENT_SECRET, UPSTASH_REDIS_REST_URL and
+    // UPSTASH_REDIS_REST_TOKEN. Locally they go in .dev.vars (see README.md).
+    "BETTER_AUTH_URL": "https://remain.scar0x00.click"
   },
+  // Cloudflare Email Service: verification and password reset emails. `wrangler dev` simulates it
+  // (messages are logged, never sent); don't set `remote: true`, which would send real mail.
+  "send_email": [
+    {
+      "name": "EMAIL",
+      "allowed_sender_addresses": ["no-reply@remain.scar0x00.click"]
+    }
+  ],
   // "kv_namespaces": [
   //   {
   //     "binding": "MY_KV_NAMESPACE",

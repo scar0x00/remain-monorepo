@@ -1,26 +1,61 @@
 import { beforeEach, describe, expect, it, mock } from "bun:test";
-import { FakeClient, decks, resetDecks } from "../helpers/fake-pg";
+import { fakePg, decksOf, resetDecks, sessions } from "../helpers/fake-pg";
 import { createFakeR2, type FakeR2 } from "../helpers/fake-r2";
+import { AUTH_ENV, createFakeEmail, createTestAuth, signUpAndVerify, withTestAuth } from "../helpers/test-auth";
 import { legacyCardId } from "../../src/lib/deck-format";
 
-mock.module("pg", () => ({ Client: FakeClient }));
+mock.module("pg", fakePg);
 
-const { default: app } = await import("../../src/index");
+const { default: realApp } = await import("../../src/index");
 
 const BASE = "http://localhost/api/v1";
 let DECKS: FakeR2;
 let env: Record<string, unknown>;
+let app: ReturnType<typeof withTestAuth>;
+let email: ReturnType<typeof createFakeEmail>;
 
-const request = (path: string, init?: RequestInit) =>
-  app.request(`${BASE}${path}`, init, env as any);
+type User = { cookie: string; userId: string };
+// Ada is signed in for every test; Bob is the other user in the isolation tests.
+let ada: User;
+let USER: string;
 
-beforeEach(() => {
+const authRequest = (path: string, init?: RequestInit) => app.request(`http://localhost${path}`, init, env as any);
+
+/** A request to /api/v1 as `as` (Ada by default), or signed out with `as: null`. */
+const request = (path: string, init: RequestInit = {}, as: User | null = ada) => {
+  const headers = new Headers(init.headers);
+  if (as) headers.set("cookie", as.cookie);
+  return app.request(`${BASE}${path}`, { ...init, headers }, env as any);
+};
+
+const signUp = (address: string, name: string) => signUpAndVerify(authRequest, email, { address, name });
+
+// Ada's R2 objects and deck rows, by the deck file names the API speaks.
+const mine = {
+  get: (key: string) => DECKS.objects.get(`${USER}/${key}`),
+  has: (key: string) => DECKS.objects.has(`${USER}/${key}`),
+};
+const rows = {
+  get: (name: string) => decksOf(USER).get(name),
+  has: (name: string) => decksOf(USER).has(name),
+  get size() {
+    return decksOf(USER).size;
+  },
+};
+
+beforeEach(async () => {
   resetDecks();
   DECKS = createFakeR2();
+  email = createFakeEmail();
   env = {
+    ...AUTH_ENV,
     PG: { connectionString: "postgres://fake" },
     DECKS,
+    EMAIL: email,
   };
+  app = withTestAuth(realApp, createTestAuth());
+  ada = await signUp("ada@example.com", "Ada");
+  USER = ada.userId;
 });
 
 describe("PUT /deck/:key", () => {
@@ -33,9 +68,9 @@ describe("PUT /deck/:key", () => {
 
     expect(res.status).toBe(200);
     expect(await res.text()).toBe("Put alpha.apkg successfully!");
-    expect(DECKS.objects.get("alpha.apkg")?.bytes.byteLength).toBe(10);
-    expect(decks.get("alpha.apkg")?.size).toBe(10);
-    expect(decks.get("alpha.apkg")?.cardCount).toBeNull();
+    expect(mine.get("alpha.apkg")?.bytes.byteLength).toBe(10);
+    expect(rows.get("alpha.apkg")?.size).toBe(10);
+    expect(rows.get("alpha.apkg")?.cardCount).toBeNull();
   });
 
   it("records the card count of a .json or .yaml deck", async () => {
@@ -45,8 +80,8 @@ describe("PUT /deck/:key", () => {
     });
     await request("/deck/cards.yaml", { method: "PUT", body: "- front: Q\n  back: A\n" });
 
-    expect(decks.get("cards.json")?.cardCount).toBe(2);
-    expect(decks.get("cards.yaml")?.cardCount).toBe(1);
+    expect(rows.get("cards.json")?.cardCount).toBe(2);
+    expect(rows.get("cards.yaml")?.cardCount).toBe(1);
   });
 
   it("stores a legacy deck as v2, stamped as an upload, with deterministic card ids", async () => {
@@ -57,14 +92,14 @@ describe("PUT /deck/:key", () => {
     const deck = JSON.parse(await (await request("/deck/legacy.json")).text());
     expect(deck).toEqual({
       version: 2,
-      meta: { tool: { kind: "upload", generatedAt: expect.any(String) }, author: null },
+      meta: { tool: { kind: "upload", generatedAt: expect.any(String) }, author: { id: USER, name: "Ada" } },
       cards: [{ id: expect.stringMatching(/^[0-9a-f]{8}$/), front: "Q1", back: "A1" }],
     });
 
     await request("/deck/legacy-again.json", { method: "PUT", body });
     const again = JSON.parse(await (await request("/deck/legacy-again.json")).text());
     expect(again.cards[0].id).toBe(deck.cards[0].id);
-    expect(decks.get("legacy.json")?.size).toBe(DECKS.objects.get("legacy.json")!.bytes.byteLength);
+    expect(rows.get("legacy.json")?.size).toBe(mine.get("legacy.json")!.bytes.byteLength);
   });
 
   it("keeps the tool, author, ids and refs of an uploaded v2 deck", async () => {
@@ -80,7 +115,7 @@ describe("PUT /deck/:key", () => {
     await request("/deck/signals.json", { method: "PUT", body: JSON.stringify(deck) });
 
     expect(JSON.parse(await (await request("/deck/signals.json")).text())).toEqual(deck);
-    expect(decks.get("signals.json")).toMatchObject({ title: "Signals", cardCount: 1, meta: deck.meta });
+    expect(rows.get("signals.json")).toMatchObject({ title: "Signals", cardCount: 1, meta: deck.meta });
   });
 
   it("stores a YAML upload as YAML", async () => {
@@ -88,7 +123,7 @@ describe("PUT /deck/:key", () => {
 
     const text = await (await request("/deck/cards.yaml")).text();
     expect(text).toStartWith("version: 2\n");
-    expect(DECKS.objects.get("cards.yaml")?.contentType).toBe("application/yaml");
+    expect(mine.get("cards.yaml")?.contentType).toBe("application/yaml");
   });
 
   it.each([
@@ -101,8 +136,8 @@ describe("PUT /deck/:key", () => {
 
     expect(res.status).toBe(400);
     expect(await res.text()).toContain(message);
-    expect(DECKS.objects.has(key)).toBe(false);
-    expect(decks.has(key)).toBe(false);
+    expect(mine.has(key)).toBe(false);
+    expect(rows.has(key)).toBe(false);
   });
 
   it("rejects an empty body with 400 and stores nothing", async () => {
@@ -110,8 +145,8 @@ describe("PUT /deck/:key", () => {
 
     expect(res.status).toBe(400);
     expect(await res.text()).toBe("Body is required");
-    expect(DECKS.objects.has("empty.apkg")).toBe(false);
-    expect(decks.has("empty.apkg")).toBe(false);
+    expect(mine.has("empty.apkg")).toBe(false);
+    expect(rows.has("empty.apkg")).toBe(false);
   });
 
   it("overwrites an existing deck and updates its metadata", async () => {
@@ -122,8 +157,8 @@ describe("PUT /deck/:key", () => {
     });
 
     expect(res.status).toBe(200);
-    expect(decks.size).toBe(1);
-    expect(decks.get("alpha.apkg")?.size).toBe(21);
+    expect(rows.size).toBe(1);
+    expect(rows.get("alpha.apkg")?.size).toBe(21);
   });
 });
 
@@ -159,29 +194,29 @@ describe("PUT /deck/:key with If-Match (editor saves)", () => {
 
     expect(res.status).toBe(200);
     const newEtag = res.headers.get("etag");
-    expect(newEtag).toBe(DECKS.objects.get("signals.json")!.httpEtag);
+    expect(newEtag).toBe(mine.get("signals.json")!.httpEtag);
     expect(newEtag).not.toBe(etag);
-    expect(decks.get("signals.json")).toMatchObject({ etag: newEtag, cardCount: 2 });
+    expect(rows.get("signals.json")).toMatchObject({ etag: newEtag, cardCount: 2 });
     expect(JSON.parse(await (await request("/deck/signals.json")).text())).toEqual(edited);
   });
 
   it("answers 412 and stores nothing when the deck changed since it was loaded", async () => {
     const etag = await seed();
     await seed(); // e.g. the agent refined it meanwhile
-    const current = DECKS.objects.get("signals.json")!.bytes;
+    const current = mine.get("signals.json")!.bytes;
 
     const res = await save("signals.json", etag, { ...stored, cards: [{ id: "c_1", front: "Mine", back: "A" }] });
 
     expect(res.status).toBe(412);
     expect(await res.text()).toContain("changed since it was loaded");
-    expect(DECKS.objects.get("signals.json")!.bytes).toBe(current);
+    expect(mine.get("signals.json")!.bytes).toBe(current);
   });
 
   it("answers 412 when the deck no longer exists", async () => {
     const res = await save("gone.json", '"some-etag"', stored);
 
     expect(res.status).toBe(412);
-    expect(DECKS.objects.has("gone.json")).toBe(false);
+    expect(mine.has("gone.json")).toBe(false);
   });
 
   it("answers 412 when R2 rejects the conditional write", async () => {
@@ -214,8 +249,8 @@ describe("PUT /deck/:key with If-Match (editor saves)", () => {
   });
 
   it("upgrades a legacy deck without stamping it as an upload and keeps its card ids", async () => {
-    await DECKS.put("old.json", JSON.stringify([{ front: "Q", back: "A" }]));
-    const etag = DECKS.objects.get("old.json")!.httpEtag;
+    await DECKS.put(`${USER}/old.json`, JSON.stringify([{ front: "Q", back: "A" }]));
+    const etag = mine.get("old.json")!.httpEtag;
     // The editor loads it with `normalizeDeck`, so it sends the id study answers already use.
     const id = legacyCardId({ front: "Q", back: "A" });
 
@@ -231,7 +266,7 @@ describe("PUT /deck/:key with If-Match (editor saves)", () => {
 
   it("writes a JSON body to a .yaml deck as YAML", async () => {
     await request("/deck/cards.yaml", { method: "PUT", body: "- front: Q\n  back: A\n" });
-    const etag = DECKS.objects.get("cards.yaml")!.httpEtag;
+    const etag = mine.get("cards.yaml")!.httpEtag;
 
     const res = await save("cards.yaml", etag, { version: 2, meta: {}, cards: [{ id: "c_1", front: "Q2", back: "A2" }] });
 
@@ -239,7 +274,7 @@ describe("PUT /deck/:key with If-Match (editor saves)", () => {
     const text = await (await request("/deck/cards.yaml")).text();
     expect(text).toStartWith("version: 2\n");
     expect(text).toContain("front: Q2");
-    expect(DECKS.objects.get("cards.yaml")?.contentType).toBe("application/yaml");
+    expect(mine.get("cards.yaml")?.contentType).toBe("application/yaml");
   });
 
   it("accepts the weak etag Cloudflare sends for a compressed response", async () => {
@@ -301,8 +336,8 @@ describe("DELETE /deck/:key", () => {
 
     expect(res.status).toBe(200);
     expect(await res.text()).toBe("Deleted alpha.apkg successfully!");
-    expect(DECKS.objects.has("alpha.apkg")).toBe(false);
-    expect(decks.has("alpha.apkg")).toBe(false);
+    expect(mine.has("alpha.apkg")).toBe(false);
+    expect(rows.has("alpha.apkg")).toBe(false);
   });
 
   it("returns 404 when the deck does not exist", async () => {
@@ -326,8 +361,8 @@ describe("DELETE /deck/:key", () => {
 
     await request("/deck/alpha.apkg", { method: "DELETE" });
 
-    expect(decks.has("beta.apkg")).toBe(true);
-    expect(DECKS.objects.has("beta.apkg")).toBe(true);
+    expect(rows.has("beta.apkg")).toBe(true);
+    expect(mine.has("beta.apkg")).toBe(true);
   });
 });
 
@@ -432,7 +467,7 @@ describe("POST /flashcards/:deckName", () => {
     const form = await request.formData();
     const key = `${deckName}.json`;
     await DECKS.put(
-      key,
+      `${USER}/${key}`,
       JSON.stringify([{ front: "Q?", back: String(form.get("cardCount")) }]),
     );
     return Response.json(
@@ -467,28 +502,28 @@ describe("POST /flashcards/:deckName", () => {
       cardCount: 1,
     });
     expect(new URL(agentRequests[0]!.url).pathname).toBe(
-      "/agents/flashcard-agent/my-deck",
+      `/agents/flashcard-agent/${USER}:my-deck`,
     );
     expect(agentRequests[0]!.contentType).toMatch(/^multipart\/form-data/);
-    expect(decks.get("my-deck.json")?.size).toBe(
-      DECKS.objects.get("my-deck.json")?.bytes.byteLength,
+    expect(rows.get("my-deck.json")?.size).toBe(
+      mine.get("my-deck.json")?.bytes.byteLength,
     );
-    expect(decks.get("my-deck.json")?.etag).toBe(
-      DECKS.objects.get("my-deck.json")?.httpEtag,
+    expect(rows.get("my-deck.json")?.etag).toBe(
+      mine.get("my-deck.json")?.httpEtag,
     );
-    expect(decks.get("my-deck.json")?.cardCount).toBe(1);
+    expect(rows.get("my-deck.json")?.cardCount).toBe(1);
   });
 
   it("records the title and metadata of the generated deck file", async () => {
     const meta = { title: "Biology", author: null, tool: { kind: "agent", model: "m", generatedAt: "2026-10-24T00:00:00.000Z" } };
     env.FLASHCARD_AGENT = agentStub(async () => {
-      await DECKS.put("bio.json", JSON.stringify({ version: 2, meta, cards: [{ id: "c_1", front: "Q", back: "A" }] }));
+      await DECKS.put(`${USER}/bio.json`, JSON.stringify({ version: 2, meta, cards: [{ id: "c_1", front: "Q", back: "A" }] }));
       return Response.json({ key: "bio.json", format: "json", cardCount: 1 }, { status: 201 });
     });
 
     await request("/flashcards/bio", form({ deckName: "bio", text: "hi" }));
 
-    expect(decks.get("bio.json")).toMatchObject({ title: "Biology", cardCount: 1, meta });
+    expect(rows.get("bio.json")).toMatchObject({ title: "Biology", cardCount: 1, meta });
   });
 
   it("encodes the deck name when building the agent path", async () => {
@@ -497,7 +532,7 @@ describe("POST /flashcards/:deckName", () => {
     await request("/flashcards/a%20b", form({ deckName: "a b", text: "hi" }));
 
     expect(new URL(agentRequests[0]!.url).pathname).toBe(
-      "/agents/flashcard-agent/a%20b",
+      `/agents/flashcard-agent/${USER}:a%20b`,
     );
   });
 
@@ -518,12 +553,12 @@ describe("POST /flashcards/:deckName", () => {
     expect(await res.json()).toEqual({
       error: "Deck my-deck.json already exists",
     });
-    expect(decks.size).toBe(0);
+    expect(rows.size).toBe(0);
   });
 
   it("passes refine through to the agent and updates the existing Postgres row", async () => {
     await request("/deck/my-deck.json", { method: "PUT", body: JSON.stringify([{ front: "Q?", back: "A" }]) });
-    const oldSize = decks.get("my-deck.json")!.size;
+    const oldSize = rows.get("my-deck.json")!.size;
     const refinedFlags: string[] = [];
     env.FLASHCARD_AGENT = agentStub(async (req) => {
       const fields = await req.clone().formData();
@@ -534,7 +569,7 @@ describe("POST /flashcards/:deckName", () => {
       );
     });
     await DECKS.put(
-      "my-deck.json",
+      `${USER}/my-deck.json`,
       JSON.stringify([{ front: "Q?", back: "A much longer answer" }]),
     );
 
@@ -549,11 +584,11 @@ describe("POST /flashcards/:deckName", () => {
 
     expect(res.status).toBe(200);
     expect(refinedFlags).toEqual(["true"]);
-    expect(decks.size).toBe(1);
-    expect(decks.get("my-deck.json")?.size).toBe(
-      DECKS.objects.get("my-deck.json")?.bytes.byteLength,
+    expect(rows.size).toBe(1);
+    expect(rows.get("my-deck.json")?.size).toBe(
+      mine.get("my-deck.json")?.bytes.byteLength,
     );
-    expect(decks.get("my-deck.json")?.size).not.toBe(oldSize);
+    expect(rows.get("my-deck.json")?.size).not.toBe(oldSize);
   });
 
   it("returns 500 when the agent reports a key that is not in R2", async () => {
@@ -573,6 +608,106 @@ describe("POST /flashcards/:deckName", () => {
     expect(await res.text()).toBe(
       "Generated deck ghost.json could not be found",
     );
-    expect(decks.has("ghost.json")).toBe(false);
+    expect(rows.has("ghost.json")).toBe(false);
+  });
+});
+
+describe("accounts", () => {
+  const routes: [string, string][] = [
+    ["GET", "/decks"],
+    ["GET", "/deck/a.json"],
+    ["PUT", "/deck/a.json"],
+    ["DELETE", "/deck/a.json"],
+    ["POST", "/flashcards/a"],
+    ["GET", "/study-sessions"],
+    ["POST", "/study-sessions"],
+    ["GET", "/stats/overview"],
+  ];
+
+  it.each(routes)("%s %s answers 401 without a session", async (method, path) => {
+    env.FLASHCARD_AGENT = { fetch: () => Promise.reject(new Error("must not be called")) };
+    const res = await request(path, { method, body: method === "GET" || method === "DELETE" ? undefined : "x" }, null);
+    expect(res.status).toBe(401);
+    expect(DECKS.objects.size).toBe(0);
+  });
+
+  it("keeps two users' decks with the same name apart", async () => {
+    const bob = await signUp("bob@example.com", "Bob");
+    const deck = (back: string) => JSON.stringify([{ front: "Q", back }]);
+
+    await request("/deck/spanish.json", { method: "PUT", body: deck("Ada's") });
+    await request("/deck/spanish.json", { method: "PUT", body: deck("Bob's") }, bob);
+
+    expect(DECKS.objects.has(`${ada.userId}/spanish.json`)).toBe(true);
+    expect(DECKS.objects.has(`${bob.userId}/spanish.json`)).toBe(true);
+    expect(JSON.parse(await (await request("/deck/spanish.json")).text()).cards[0].back).toBe("Ada's");
+    expect(JSON.parse(await (await request("/deck/spanish.json", {}, bob)).text()).cards[0].back).toBe("Bob's");
+
+    // Bob deleting his deck leaves Ada's alone.
+    expect((await request("/deck/spanish.json", { method: "DELETE" }, bob)).status).toBe(200);
+    expect(DECKS.objects.has(`${ada.userId}/spanish.json`)).toBe(true);
+    expect(decksOf(ada.userId).has("spanish.json")).toBe(true);
+  });
+
+  it("never shows, reads, overwrites or deletes another user's deck", async () => {
+    const bob = await signUp("bob@example.com", "Bob");
+    await request("/deck/private.json", { method: "PUT", body: JSON.stringify([{ front: "Q", back: "A" }]) });
+    const etag = mine.get("private.json")!.httpEtag;
+
+    expect(await (await request("/decks", {}, bob)).json()).toEqual([]);
+    expect((await request("/deck/private.json", {}, bob)).status).toBe(404);
+    // An edit against Ada's etag can't reach her deck: for Bob it doesn't exist.
+    const edit = await request(
+      "/deck/private.json",
+      { method: "PUT", headers: { "if-match": etag, "content-type": "application/json" }, body: JSON.stringify({ version: 2, meta: {}, cards: [] }) },
+      bob,
+    );
+    expect(edit.status).toBe(412);
+    expect((await request("/deck/private.json", { method: "DELETE" }, bob)).status).toBe(404);
+    // Keys can't climb out of the user's prefix.
+    expect((await request(`/deck/${encodeURIComponent(`../${ada.userId}/private.json`)}`, {}, bob)).status).toBe(404);
+
+    expect(mine.get("private.json")!.httpEtag).toBe(etag);
+    expect(rows.has("private.json")).toBe(true);
+  });
+
+  it("stamps an uploaded deck with the uploader as author", async () => {
+    await request("/deck/mine.json", { method: "PUT", body: JSON.stringify([{ front: "Q", back: "A" }]) });
+    expect(rows.get("mine.json")?.meta).toMatchObject({ author: { id: USER, name: "Ada" } });
+  });
+
+  it("tells the agent who the request is for, whatever the client sends", async () => {
+    let seen: Headers | undefined;
+    env.FLASHCARD_AGENT = {
+      fetch: async (req: Request) => {
+        seen = req.headers;
+        return Response.json({ error: "stop here" }, { status: 400 });
+      },
+    };
+    const zoe = await signUp("zoe@example.com", "Zoë Ñ");
+    const body = new FormData();
+    body.append("deckName", "a");
+    await request(
+      "/flashcards/a",
+      { method: "POST", body, headers: { "x-remain-user-id": ada.userId, "x-remain-user-name": "Mallory" } },
+      zoe,
+    );
+
+    expect(seen?.get("x-remain-user-id")).toBe(zoe.userId);
+    expect(decodeURIComponent(seen!.get("x-remain-user-name")!)).toBe("Zoë Ñ");
+  });
+
+  it("scopes study sessions to the user", async () => {
+    const bob = await signUp("bob@example.com", "Bob");
+    const created = await request("/study-sessions", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ deckName: "a.json", cardTotal: 3 }),
+    });
+    const { id } = (await created.json()) as { id: string };
+
+    expect(sessions.get(id)?.user_id).toBe(USER);
+    expect((await request(`/study-sessions/${id}`, {}, bob)).status).toBe(404);
+    expect(((await (await request("/study-sessions", {}, bob)).json()) as { sessions: unknown[] }).sessions).toEqual([]);
   });
 });

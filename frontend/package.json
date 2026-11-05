@@ -20,6 +20,7 @@
     "@angular/platform-server": "^22.1.0",
     "@angular/router": "^22.1.0",
     "@angular/ssr": "^22.1.2",
+    "better-auth": "1.7.7",
     "echarts": "6.1.0",
     "express": "^5.1.0",
     "katex": "^0.18.4",
