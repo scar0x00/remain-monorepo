@@ -25,8 +25,10 @@ describe('DeckSearchTerm', () => {
   // A flushed response reaches the resource asynchronously.
   const settle = () => TestBed.inject(ApplicationRef).whenStable();
 
-  it('lists every deck without a term', () => {
+  it('lists every deck without a term, and does not count the first load as searching', () => {
     TestBed.tick();
+    expect(service.deck.isLoading()).toBe(true);
+    expect(service.searching()).toBe(false);
     http.expectOne('/api/v1/decks').flush([]);
   });
 
@@ -62,10 +64,12 @@ describe('DeckSearchTerm', () => {
     TestBed.tick();
     const req = http.expectOne('/api/v1/decks?searchTerm=bio');
     expect(service.deck.isLoading()).toBe(true);
+    expect(service.searching()).toBe(true);
     expect(service.decks()?.map((d) => d.deckName)).toEqual(['biology.json', 'history.json']);
 
     req.flush([entry('biology.json')]);
     await settle();
+    expect(service.searching()).toBe(false);
     expect(service.decks()?.map((d) => d.deckName)).toEqual(['biology.json']);
   });
 

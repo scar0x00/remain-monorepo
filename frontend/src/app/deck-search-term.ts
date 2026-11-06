@@ -1,5 +1,5 @@
 import { httpResource } from "@angular/common/http";
-import { Service, linkedSignal, signal } from "@angular/core";
+import { Service, computed, linkedSignal, signal } from "@angular/core";
 import { DeckEntry } from "../types/DeckEntry";
 
 @Service({ autoProvided: false })
@@ -22,6 +22,9 @@ export class DeckSearchTerm {
         }),
         computation: ({ value, loading }, previous) => value ?? (loading ? previous?.value : undefined),
     });
+
+    /** A search is loading while earlier results are still on screen (the first load shows the list's own spinner). */
+    readonly searching = computed(() => this.deck.isLoading() && this.decks() !== undefined);
 
     setTerm(term: string) {
         // The signal ignores a value equal to the current one, so trailing spaces don't refetch.
