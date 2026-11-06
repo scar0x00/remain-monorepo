@@ -38,6 +38,12 @@ export type DeckEntry = {
 /** What the decks row keeps from a deck file. */
 export type DeckSummary = { cardCount: number; title: string | null; meta: DeckMeta };
 
+/** Escapes the LIKE wildcards (`%`, `_`) and the escape character itself, so a term matches literally. */
+export function escapeLike(term: string): string {
+  return term.replace(/[\\%_]/g, (c) => `\\${c}`);
+}
+
+/** The user's decks whose name or title contains `searchTerm` anywhere, ignoring case. */
 export async function listDecks(
   { pg, userId }: DeckStore,
   searchTerm = "",
@@ -45,9 +51,9 @@ export async function listDecks(
   const { rows } = await pg.query<DeckRow>(
     `SELECT name, size, "createdAt", etag, card_count, title, meta
      FROM public.decks
-     WHERE user_id = $2 AND (name ILIKE $1 OR title ILIKE $1)
+     WHERE user_id = $2 AND (name ILIKE $1 ESCAPE '\\' OR title ILIKE $1 ESCAPE '\\')
      ORDER BY name`,
-    [`${searchTerm}%`, userId],
+    [`%${escapeLike(searchTerm.trim())}%`, userId],
   );
 
   return rows.map((row) => ({

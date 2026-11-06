@@ -1,11 +1,11 @@
-@if (searchTerm.deck.value()?.length === 0) {
+@if (searchTerm.decks()?.length === 0) {
     <div class="flex flex-col items-center gap-4 rounded-xl bg-app-card px-6 py-16 text-center shadow-e1">
         <span class="grid size-14 place-items-center rounded-full bg-honey-100 text-honey-800 dark:bg-honey-400/15 dark:text-honey-300">
             <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="18" x="3" y="4" rx="2"/><path d="M7 2h12a2 2 0 0 1 2 2v14"/></svg>
         </span>
         @if (searchTerm.term()) {
             <h2 class="text-lg font-semibold text-app-text">No decks match “{{ searchTerm.term() }}”</h2>
-            <p class="max-w-sm text-app-text-muted">Deck names are matched from the start. Try fewer letters.</p>
+            <p class="max-w-sm text-app-text-muted">Names and titles are matched anywhere. Check the spelling or try fewer letters.</p>
         } @else {
             <h2 class="text-lg font-semibold text-app-text">No decks yet</h2>
             <p class="max-w-sm text-app-text-muted">Let AI turn your notes into flashcards, or upload a deck you already have.</p>
@@ -15,9 +15,9 @@
             </div>
         }
     </div>
-} @else if (searchTerm.deck.value()) {
+} @else if (searchTerm.decks()) {
     <ul class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-app-text-muted">
-        @for (deck of searchTerm.deck.value(); track deck.etag) {
+        @for (deck of searchTerm.decks(); track deck.etag) {
             <li class="flex flex-col gap-2 rounded-xl rounded-l-none border-l-4 bg-app-card shadow-e1 p-5 transition-shadow hover:shadow-e3"
                 [class]="borderClasses(deck.recentAccuracy)">
                 <div class="flex flex-col gap-1.5">

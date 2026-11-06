@@ -422,14 +422,14 @@ describe("GET /decks", () => {
     expect(names).toEqual(["sig.json"]);
   });
 
-  it("filters by searchTerm as a case-insensitive prefix", async () => {
+  it("filters by searchTerm as a case-insensitive substring", async () => {
     await request("/deck/Biology.apkg", { method: "PUT", body: "x" });
     await request("/deck/biochem.apkg", { method: "PUT", body: "x" });
     await request("/deck/history.apkg", { method: "PUT", body: "x" });
 
     const names = async (term: string) =>
       (
-        (await (await request(`/decks?searchTerm=${term}`)).json()) as Array<{
+        (await (await request(`/decks?searchTerm=${encodeURIComponent(term)}`)).json()) as Array<{
           deckName: string;
         }>
       )
@@ -437,7 +437,36 @@ describe("GET /decks", () => {
         .sort();
 
     expect(await names("BIO")).toEqual(["Biology.apkg", "biochem.apkg"]);
-    expect(await names("ology")).toEqual([]);
+    expect(await names("OLOGY")).toEqual(["Biology.apkg"]);
+    expect(await names("stor")).toEqual(["history.apkg"]);
+    expect(await names("  chem ")).toEqual(["biochem.apkg"]);
+    expect(await names("zoo")).toEqual([]);
+  });
+
+  it("matches the title in the middle too", async () => {
+    await request("/deck/sig.json", {
+      method: "PUT",
+      body: JSON.stringify({ version: 2, meta: { title: "Linear modulation" }, cards: [] }),
+    });
+
+    const res = await request("/decks?searchTerm=modul");
+    expect(((await res.json()) as Array<{ deckName: string }>).map((d) => d.deckName)).toEqual(["sig.json"]);
+  });
+
+  it("treats LIKE wildcards in the search term literally", async () => {
+    await request("/deck/100%25 recall.apkg", { method: "PUT", body: "x" });
+    await request("/deck/1000 words.apkg", { method: "PUT", body: "x" });
+    await request("/deck/snake_case.apkg", { method: "PUT", body: "x" });
+    await request("/deck/snakescase.apkg", { method: "PUT", body: "x" });
+
+    const names = async (term: string) =>
+      ((await (await request(`/decks?searchTerm=${encodeURIComponent(term)}`)).json()) as Array<{ deckName: string }>)
+        .map((d) => d.deckName)
+        .sort();
+
+    expect(await names("%")).toEqual(["100% recall.apkg"]);
+    expect(await names("0%")).toEqual(["100% recall.apkg"]);
+    expect(await names("e_c")).toEqual(["snake_case.apkg"]);
   });
 });
 

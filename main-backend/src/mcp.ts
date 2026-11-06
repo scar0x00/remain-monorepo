@@ -131,9 +131,9 @@ export function createServer(env: Bindings, user: AuthUser, ctx?: Pick<Execution
   server.registerTool(
     "list_decks",
     {
-      description: "List the flashcard decks in Remain, optionally filtered by a name prefix.",
+      description: "List the flashcard decks in Remain, optionally filtered by text that appears anywhere in the deck name or title.",
       inputSchema: z.object({
-        searchTerm: z.string().optional().describe("Case-insensitive name prefix"),
+        searchTerm: z.string().optional().describe("Case-insensitive text to find anywhere in the deck name or title"),
       }),
       annotations: { readOnlyHint: true },
     },
