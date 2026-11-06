@@ -16,3 +16,18 @@ export interface DeckEntry {
   recentAccuracy?: number | null,
   lastStudied?: string
 }
+
+export type DeckSort = "name" | "created" | "success";
+export type SortOrder = "asc" | "desc";
+
+/** One page of `GET /api/v1/decks`. */
+export interface DeckPage {
+  decks: DeckEntry[],
+  // Decks matching the search, over all pages.
+  total: number,
+  // One-based.
+  page: number,
+  pageSize: number,
+  sort: DeckSort,
+  order: SortOrder
+}

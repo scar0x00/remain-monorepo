@@ -28,6 +28,9 @@ const request = (path: string, init: RequestInit = {}, as: User | null = ada) =>
   return app.request(`${BASE}${path}`, { ...init, headers }, env as any);
 };
 
+/** The decks of a `GET /decks` page. */
+const listed = async (res: Response) => ((await res.json()) as { decks: Array<Record<string, any>> }).decks;
+
 const signUp = (address: string, name: string) => signUpAndVerify(authRequest, email, { address, name });
 
 // Ada's R2 objects and deck rows, by the deck file names the API speaks.
@@ -371,7 +374,7 @@ describe("GET /decks", () => {
     const res = await request("/decks");
 
     expect(res.status).toBe(200);
-    expect(await res.json()).toEqual([]);
+    expect(await res.json()).toEqual({ decks: [], total: 0, page: 1, pageSize: 10, sort: "name", order: "asc" });
   });
 
   it("lists decks with the expected shape, sorted by name", async () => {
@@ -379,7 +382,7 @@ describe("GET /decks", () => {
     await request("/deck/a.apkg", { method: "PUT", body: "123" });
 
     const res = await request("/decks");
-    const body = (await res.json()) as Array<Record<string, unknown>>;
+    const body = await listed(res);
 
     expect(body.map((d) => d.deckName)).toEqual(["a.apkg", "b.apkg"]);
     expect(body[0]).toMatchObject({ deckName: "a.apkg", size: 3 });
@@ -400,7 +403,7 @@ describe("GET /decks", () => {
       }),
     });
 
-    const [deck] = (await (await request("/decks")).json()) as Array<Record<string, unknown>>;
+    const [deck] = await listed(await request("/decks"));
     expect(deck).toMatchObject({
       deckName: "signals.json",
       title: "Signals",
@@ -416,28 +419,138 @@ describe("GET /decks", () => {
       body: JSON.stringify({ version: 2, meta: { title: "Linear modulation" }, cards: [] }),
     });
 
-    const names = ((await (await request("/decks?searchTerm=linear")).json()) as Array<{ deckName: string }>).map(
-      (d) => d.deckName,
-    );
+    const names = (await listed(await request("/decks?searchTerm=linear"))).map((d) => d.deckName);
     expect(names).toEqual(["sig.json"]);
   });
 
-  it("filters by searchTerm as a case-insensitive prefix", async () => {
+  it("filters by searchTerm as a case-insensitive substring", async () => {
     await request("/deck/Biology.apkg", { method: "PUT", body: "x" });
     await request("/deck/biochem.apkg", { method: "PUT", body: "x" });
     await request("/deck/history.apkg", { method: "PUT", body: "x" });
 
     const names = async (term: string) =>
-      (
-        (await (await request(`/decks?searchTerm=${term}`)).json()) as Array<{
-          deckName: string;
-        }>
-      )
-        .map((d) => d.deckName)
-        .sort();
+      (await listed(await request(`/decks?searchTerm=${encodeURIComponent(term)}`))).map((d) => d.deckName).sort();
 
     expect(await names("BIO")).toEqual(["Biology.apkg", "biochem.apkg"]);
-    expect(await names("ology")).toEqual([]);
+    expect(await names("OLOGY")).toEqual(["Biology.apkg"]);
+    expect(await names("stor")).toEqual(["history.apkg"]);
+    expect(await names("  chem ")).toEqual(["biochem.apkg"]);
+    expect(await names("zoo")).toEqual([]);
+  });
+
+  it("matches the title in the middle too", async () => {
+    await request("/deck/sig.json", {
+      method: "PUT",
+      body: JSON.stringify({ version: 2, meta: { title: "Linear modulation" }, cards: [] }),
+    });
+
+    const res = await request("/decks?searchTerm=modul");
+    expect((await listed(res)).map((d) => d.deckName)).toEqual(["sig.json"]);
+  });
+
+  it("treats LIKE wildcards in the search term literally", async () => {
+    await request("/deck/100%25 recall.apkg", { method: "PUT", body: "x" });
+    await request("/deck/1000 words.apkg", { method: "PUT", body: "x" });
+    await request("/deck/snake_case.apkg", { method: "PUT", body: "x" });
+    await request("/deck/snakescase.apkg", { method: "PUT", body: "x" });
+
+    const names = async (term: string) =>
+      (await listed(await request(`/decks?searchTerm=${encodeURIComponent(term)}`))).map((d) => d.deckName).sort();
+
+    expect(await names("%")).toEqual(["100% recall.apkg"]);
+    expect(await names("0%")).toEqual(["100% recall.apkg"]);
+    expect(await names("e_c")).toEqual(["snake_case.apkg"]);
+  });
+});
+
+describe("GET /decks pages and sorting", () => {
+  // Ada's decks d01.apkg .. d23.apkg, created a minute apart, d01 first.
+  const seed = async (count = 23) => {
+    for (let i = 1; i <= count; i++) {
+      const name = `d${String(i).padStart(2, "0")}.apkg`;
+      await request(`/deck/${name}`, { method: "PUT", body: "x" });
+      rows.get(name)!.createdAt = new Date(Date.UTC(2026, 0, 1, 0, i));
+    }
+  };
+  const page = async (query: string) => (await request(`/decks?${query}`)).json() as Promise<any>;
+  const names = (body: { decks: { deckName: string }[] }) => body.decks.map((d) => d.deckName);
+
+  it("returns 10 decks a page with the total", async () => {
+    await seed();
+
+    const first = await page("");
+    expect(names(first)).toEqual(Array.from({ length: 10 }, (_, i) => `d${String(i + 1).padStart(2, "0")}.apkg`));
+    expect(first).toMatchObject({ total: 23, page: 1, pageSize: 10 });
+
+    const last = await page("page=3");
+    expect(names(last)).toEqual(["d21.apkg", "d22.apkg", "d23.apkg"]);
+    expect(last.total).toBe(23);
+  });
+
+  it("still reports the total on a page past the end", async () => {
+    await seed(3);
+
+    const body = await page("page=5");
+    expect(body.decks).toEqual([]);
+    expect(body.total).toBe(3);
+  });
+
+  it("pages the search results", async () => {
+    await seed();
+    await request("/deck/other.apkg", { method: "PUT", body: "x" });
+
+    const body = await page("searchTerm=d1&page=2&pageSize=5");
+    expect(names(body)).toEqual(["d15.apkg", "d16.apkg", "d17.apkg", "d18.apkg", "d19.apkg"]);
+    expect(body.total).toBe(10);
+  });
+
+  it("sorts by name case-insensitively, in either order", async () => {
+    for (const name of ["banana.apkg", "Apple.apkg", "cherry.apkg"]) {
+      await request(`/deck/${name}`, { method: "PUT", body: "x" });
+    }
+
+    expect(names(await page("sort=name"))).toEqual(["Apple.apkg", "banana.apkg", "cherry.apkg"]);
+    expect(names(await page("sort=name&order=desc"))).toEqual(["cherry.apkg", "banana.apkg", "Apple.apkg"]);
+  });
+
+  it("sorts by creation date, newest first by default", async () => {
+    await seed(12);
+
+    const newest = await page("sort=created");
+    expect(newest).toMatchObject({ sort: "created", order: "desc" });
+    expect(names(newest).slice(0, 3)).toEqual(["d12.apkg", "d11.apkg", "d10.apkg"]);
+    expect(names(await page("sort=created&page=2"))).toEqual(["d02.apkg", "d01.apkg"]);
+    expect(names(await page("sort=created&order=asc")).slice(0, 2)).toEqual(["d01.apkg", "d02.apkg"]);
+  });
+
+  it("sorts by success rate, with decks never studied last either way", async () => {
+    await seed(4);
+    // d01 50%, d02 100%, d03 0%, d04 never studied.
+    for (const [deckName, correct] of [
+      ["d01.apkg", [true, false]],
+      ["d02.apkg", [true, true]],
+      ["d03.apkg", [false, false]],
+    ] as const) {
+      const { id } = (await (
+        await request("/study-sessions", { method: "POST", body: JSON.stringify({ deckName, cardTotal: 2 }) })
+      ).json()) as { id: string };
+      await request(`/study-sessions/${id}/answers`, {
+        method: "POST",
+        body: JSON.stringify({ answers: correct.map((c, position) => ({ position, cardId: `c${position}`, correct: c })) }),
+      });
+      await request(`/study-sessions/${id}/finish`, { method: "POST" });
+    }
+
+    const best = await page("sort=success");
+    expect(best.order).toBe("desc");
+    expect(names(best)).toEqual(["d02.apkg", "d01.apkg", "d03.apkg", "d04.apkg"]);
+    expect(best.decks[0]).toMatchObject({ studyCount: 1, recentAccuracy: 1 });
+    expect(best.decks[3]).not.toHaveProperty("studyCount");
+    expect(names(await page("sort=success&order=asc"))).toEqual(["d03.apkg", "d01.apkg", "d02.apkg", "d04.apkg"]);
+  });
+
+  it.each(["sort=size", "order=up", "page=0", "page=abc", "pageSize=51"])("answers 400 for %s", async (query) => {
+    expect((await request(`/decks?${query}`)).status).toBe(400);
   });
 });
 
@@ -654,7 +767,7 @@ describe("accounts", () => {
     await request("/deck/private.json", { method: "PUT", body: JSON.stringify([{ front: "Q", back: "A" }]) });
     const etag = mine.get("private.json")!.httpEtag;
 
-    expect(await (await request("/decks", {}, bob)).json()).toEqual([]);
+    expect(await listed(await request("/decks", {}, bob))).toEqual([]);
     expect((await request("/deck/private.json", {}, bob)).status).toBe(404);
     // An edit against Ada's etag can't reach her deck: for Bob it doesn't exist.
     const edit = await request(

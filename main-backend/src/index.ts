@@ -1,6 +1,7 @@
 import { type Context, Hono, MiddlewareHandler } from "hono";
 import { Client } from "pg";
 import { createMcpHandler } from "agents/mcp/server";
+import { z } from "zod";
 import { accessAuth } from "./lib/access-auth";
 import { securityStatus } from "./lib/account-security";
 import { type AnalyticsProperties, track } from "./lib/analytics";
@@ -8,9 +9,12 @@ import { AUTH_BASE_PATH } from "./lib/auth";
 import { formatOfKey, parseDeck, readDeck } from "./lib/deck-format";
 import {
   type DeckStore,
+  DECK_PAGE_SIZE,
+  DECK_SORTS,
+  MAX_DECK_PAGE_SIZE,
   backfillDeckRows,
   deleteDeck,
-  listDecks,
+  listDeckPage,
   putDeck,
   saveDeck,
   summarizeDeckFile,
@@ -33,7 +37,6 @@ import {
   finishSession,
   getAnswers,
   getSession,
-  listDeckStats,
   listSessions,
   saveAnswers,
 } from "./lib/study-sessions";
@@ -283,14 +286,22 @@ app.delete("/api/v1/deck/:key", pgDbMiddleware, async (c) => {
   return c.text(`Deleted ${key} successfully!`);
 });
 
-app.get("/api/v1/decks", pgDbMiddleware, async (c) => {
-  const store = deckStore(c);
-  const [decks, stats] = await Promise.all([
-    listDecks(store, c.req.query("searchTerm")),
-    listDeckStats(store.pg, store.userId),
-  ]);
+const DeckPageQuerySchema = z.object({
+  searchTerm: z.string().optional(),
+  sort: z.enum(DECK_SORTS).optional(),
+  order: z.enum(["asc", "desc"]).optional(),
+  page: z.coerce.number().int().min(1).optional(),
+  pageSize: z.coerce.number().int().min(1).max(MAX_DECK_PAGE_SIZE).default(DECK_PAGE_SIZE),
+});
 
-  return c.json(decks.map((deck) => ({ ...deck, ...stats.get(deck.deckName) })));
+// One page of decks: `?searchTerm=&sort=name|created|success&order=asc|desc&page=1&pageSize=10`.
+app.get("/api/v1/decks", pgDbMiddleware, async (c) => {
+  const parsed = DeckPageQuerySchema.safeParse(c.req.query());
+  if (!parsed.success) {
+    return c.json({ error: z.prettifyError(parsed.error) }, 400);
+  }
+
+  return c.json(await listDeckPage(deckStore(c), parsed.data));
 });
 
 // Study sessions, always the signed-in user's.

@@ -69,7 +69,8 @@ describe("deck browsing", () => {
   it("lists stored decks without the .json suffix", async () => {
     await page.goto(`${BASE}/deck-browse`);
     const res = await fetch(`${API}/decks`);
-    const stored = (await res.json()) as { deckName: string }[];
+    // The first page, which is what the deck list shows.
+    const { decks: stored } = (await res.json()) as { decks: { deckName: string }[] };
 
     for (const { deckName } of stored) {
       const name = deckName.replace(/\.json$/i, "");
