@@ -129,6 +129,11 @@
   }
 }
 
+/* Screens with room for a fixed-height chat (log scrolling between a header and a composer).
+   Below this, on phones and short windows, the composer alone takes most of the height, so the
+   chat route falls back to one scrolling page. */
+@custom-variant chat (@media (min-width: 40rem) and (min-height: 45rem));
+
 /* 3. Register Semantic Utility Tokens with Tailwind CSS v4 */
 @theme {
   --color-app-bg: var(--app-bg);
