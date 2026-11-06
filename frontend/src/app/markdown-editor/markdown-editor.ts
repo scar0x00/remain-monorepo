@@ -1,4 +1,4 @@
-import { Component, ElementRef, afterRenderEffect, input, model, viewChild } from "@angular/core";
+import { Component, DestroyRef, ElementRef, afterNextRender, afterRenderEffect, inject, input, model, viewChild } from "@angular/core";
 
 /**
  * The raw markdown field of a card side. A plain textarea for now; it is the only place that knows
@@ -17,13 +17,38 @@ export class MarkdownEditor {
     private readonly textarea = viewChild.required<ElementRef<HTMLTextAreaElement>>("textarea");
 
     constructor() {
-        // Grows with its content, so the whole card stays visible without an inner scrollbar.
+        // Grows with its content up to a cap (max-h in the template), then scrolls inside (#66).
         afterRenderEffect(() => {
             this.value();
-            const el = this.textarea().nativeElement;
-            el.style.height = "auto";
-            el.style.height = `${el.scrollHeight + 4}px`;
+            this.fit();
         });
+
+        // A field measured while hidden (the quick edit dialog before it opens, a phone tab) has no
+        // size yet, and a new width rewraps the text, so fit again when the width changes.
+        const destroyRef = inject(DestroyRef);
+        afterNextRender(() => {
+            if (typeof ResizeObserver === "undefined") return;
+            const el = this.textarea().nativeElement;
+            let width = el.clientWidth;
+            const observer = new ResizeObserver(() => {
+                if (el.clientWidth === width) return;
+                width = el.clientWidth;
+                this.fit();
+            });
+            observer.observe(el);
+            destroyRef.onDestroy(() => observer.disconnect());
+        });
+    }
+
+    private fit() {
+        const el = this.textarea().nativeElement;
+        if (!el.clientWidth) return; // Not rendered: there is nothing to measure yet.
+        const scrollTop = el.scrollTop;
+        const borders = el.offsetHeight - el.clientHeight;
+        el.style.height = "auto";
+        el.style.height = `${el.scrollHeight + borders}px`;
+        // Collapsing to auto resets the inner scroll, which would move the caret out of view.
+        el.scrollTop = scrollTop;
     }
 
     onInput(event: Event) {

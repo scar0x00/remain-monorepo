@@ -151,6 +151,40 @@ describe("study quick edit", () => {
   });
 });
 
+describe("long card sides (#66)", () => {
+  const LONG = Array.from({ length: 40 }, (_, i) => `Line ${i + 1} of a long answer.`).join("\n");
+  const LONG_DECK: Deck = { ...SEED, cards: SEED.cards.map((card) => ({ ...card, back: LONG })) };
+
+  // The field grows with its content up to a cap, then scrolls inside instead of clipping it.
+  async function expectScrollable(field: ReturnType<Page["locator"]>) {
+    // Fitted after render, and in the dialog only once it opens.
+    await page.waitForFunction((el) => el!.clientHeight > 200, await field.elementHandle());
+    const box = await field.evaluate((el) => ({
+      client: el.clientHeight,
+      scroll: el.scrollHeight,
+      overflowY: getComputedStyle(el).overflowY,
+    }));
+    expect(box.overflowY).toBe("auto");
+    expect(box.scroll).toBeGreaterThan(box.client);
+    await field.evaluate((el) => el.scrollTo({ top: el.scrollHeight }));
+    expect(await field.evaluate((el) => el.scrollTop)).toBeGreaterThan(0);
+  }
+
+  it("scrolls a long back in the full editor", async () => {
+    await putDeck(`${name}.json`, LONG_DECK);
+    await page.goto(`${BASE}/deck-edit/${name}?card=c_aaaaaaaaaaaa`);
+    await expectScrollable(page.locator("#back-c_aaaaaaaaaaaa"));
+  });
+
+  it("scrolls a long back in the study quick edit", async () => {
+    await putDeck(`${name}.json`, LONG_DECK);
+    await page.goto(`${BASE}/deck-study/${name}`);
+    await page.getByRole("button", { name: "Edit card" }).click();
+    const dialog = page.getByRole("dialog", { name: "Edit card" });
+    await expectScrollable(dialog.locator('textarea[id^="back-"]'));
+  });
+});
+
 describe("deck list pages", () => {
   it("shows 10 decks a page, pages through the rest and sorts by creation date", async () => {
     // With the decks the other tests made, more than one page.
