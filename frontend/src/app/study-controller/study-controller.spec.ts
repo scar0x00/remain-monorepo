@@ -26,7 +26,8 @@ describe('StudyController', () => {
 
   let createBody: unknown;
 
-  async function setup(cardIds?: string, createStatus = 201, deck: object = DECK, params: Params = {}) {
+  // `beforeLoad` runs once the deck request is out, before it answers.
+  async function setup(cardIds?: string, createStatus = 201, deck: object = DECK, params: Params = {}, beforeLoad?: () => void) {
     queryParams = new BehaviorSubject(convertToParamMap(cardIds ? { cardIds, ...params } : params));
     await TestBed.configureTestingModule({
       imports: [StudyController],
@@ -49,6 +50,7 @@ describe('StudyController', () => {
     fixture = TestBed.createComponent(StudyController);
     component = fixture.componentInstance;
     fixture.detectChanges();
+    beforeLoad?.();
     http.expectOne('/api/v1/deck/alpha.json').flush(deck, { headers: { etag: '"e1"' } });
     await fixture.whenStable();
     if (createStatus === 0) return;
@@ -123,6 +125,21 @@ describe('StudyController', () => {
     expect(component.deckEtag()).toBe('"e2"');
   });
 
+  it('shows no answer buttons while the deck loads, then "Show back" for the first card', async () => {
+    const buttons = () => fixture.nativeElement.textContent as string;
+    let whileLoading = '';
+    await setup(undefined, 201, DECK, {}, () => {
+      fixture.detectChanges();
+      whileLoading = buttons();
+    });
+    fixture.detectChanges();
+
+    expect(whileLoading).not.toContain('Show back');
+    expect(fixture.nativeElement.querySelector('button[aria-label="Edit card"]')).not.toBeNull();
+    expect(buttons()).toContain('Show back');
+    expect(buttons()).not.toContain('Right');
+  });
+
   it('opens the quick edit for the current card', async () => {
     await setup();
     polyfillDialog();
@@ -156,8 +173,16 @@ describe('StudyController', () => {
     };
 
     it('shows the setup screen and starts no session for ?quick', async () => {
-      await setup(undefined, 0, TAGGED, { quick: '' });
+      let whileLoading = '';
+      await setup(undefined, 0, TAGGED, { quick: '' }, () => {
+        fixture.detectChanges();
+        whileLoading = fixture.nativeElement.textContent;
+      });
       fixture.detectChanges();
+
+      // No "Show back" flashes before the setup screen (#77).
+      expect(whileLoading).not.toContain('Show back');
+      expect(fixture.nativeElement.querySelector('button[aria-label="Edit card"]')).toBeNull();
 
       expect(component.showQuickSetup()).toBe(true);
       expect(component.shuffledIndexes()).toBeUndefined();
