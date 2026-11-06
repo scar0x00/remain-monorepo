@@ -41,6 +41,7 @@ describe("POST /study-sessions", () => {
 
   it("rejects an invalid body", async () => {
     expect((await post("", { deckName: "", cardTotal: -1 })).status).toBe(400);
+    expect((await post("", { deckName: "alpha.json", cardTotal: 3, mode: "sideways" })).status).toBe(400);
   });
 });
 

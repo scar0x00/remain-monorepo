@@ -9,6 +9,9 @@ export const CreateSessionSchema = z.object({
   deckName: z.string().min(1),
   deckEtag: z.string().nullish(),
   cardTotal: z.number().int().min(0),
+  // Which cards the run covers: the whole deck, a quick session (#60) or the cards missed last run.
+  // Only sent to analytics; not stored.
+  mode: z.enum(["full", "quick", "missed"]).optional(),
 });
 
 export const AnswersSchema = z.object({

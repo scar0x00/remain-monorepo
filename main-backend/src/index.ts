@@ -304,7 +304,11 @@ app.post("/api/v1/study-sessions", async (c) => {
   }
 
   const id = await createSession(c.get("pg"), c.get("user").id, parsed.data);
-  trackRequest(c, "study_session_started", { deck: parsed.data.deckName, card_total: parsed.data.cardTotal });
+  trackRequest(c, "study_session_started", {
+    deck: parsed.data.deckName,
+    card_total: parsed.data.cardTotal,
+    mode: parsed.data.mode ?? "full",
+  });
   return c.json({ id }, 201);
 });
 
