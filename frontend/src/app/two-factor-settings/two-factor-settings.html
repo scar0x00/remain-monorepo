@@ -1,7 +1,7 @@
-<section class="flex flex-col gap-5 rounded-xl bg-app-card p-6 shadow-e3" aria-labelledby="two-factor-heading">
+<section class="flex flex-col gap-5 rounded-xl bg-app-card p-6 shadow-e1" aria-labelledby="two-factor-heading">
     <header class="flex flex-col gap-1">
         <div class="flex items-center gap-3">
-            <h2 id="two-factor-heading" class="text-xl font-semibold">Two-step verification</h2>
+            <h2 id="two-factor-heading" class="text-lg font-semibold">Two-step verification</h2>
             <span class="rounded-full px-2.5 py-0.5 text-xs font-semibold"
                 [class]="status().twoFactorEnabled ? 'bg-honey-100 text-honey-800 dark:bg-honey-400/15 dark:text-honey-300' : 'bg-app-bg text-app-text-subtle'">
                 {{ status().twoFactorEnabled ? 'On' : 'Off' }}

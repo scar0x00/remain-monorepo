@@ -20,8 +20,8 @@
                 [class]="count() === available() ? 'border-action bg-action text-app-bg' : 'border-app-border text-app-text hover:bg-app-card-hover'">
                 All {{ available() }}
             </button>
-            <label class="flex items-center gap-2 text-sm text-app-text-muted sm:ml-auto">
-                <span>Or</span>
+            <label class="ml-1 flex items-center gap-2 text-sm text-app-text-muted">
+                <span>or</span>
                 <input id="quick-count" type="number" inputmode="numeric" min="1" [max]="available()" [value]="count()"
                     aria-label="Number of cards" (input)="setCount($any($event.target).value)" (change)="$any($event.target).value = count()"
                     class="w-20 rounded-lg border-2 border-app-border bg-app-bg px-3 py-1.5 text-app-text tabular-nums shadow-inset focus:border-action focus:outline-none" />
