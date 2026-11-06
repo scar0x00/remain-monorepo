@@ -7,6 +7,13 @@
   <base href="/">
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script>
+    // Apply the theme picked in the nav menu before anything paints (see app/theme/theme.ts).
+    try {
+      var theme = localStorage.getItem('remain-theme');
+      if (theme === 'light' || theme === 'dark') document.documentElement.setAttribute('data-theme', theme);
+    } catch (e) {}
+  </script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link

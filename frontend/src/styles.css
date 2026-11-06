@@ -57,8 +57,12 @@
   --ember-900: hsl(0 70% 24%);
 }
 
-/* 2. Semantic tokens, dark by default */
+/* 2. Semantic tokens, dark by default.
+   The theme is the user's choice from the nav menu (theme/theme.ts): `data-theme="light"` or
+   `"dark"` on <html>, or no attribute to follow the OS. index.html sets it before the app boots.
+   Light applies when it is picked, or when the OS prefers light and dark isn't picked. */
 :root {
+  color-scheme: dark;
   /* Surfaces & base UI */
   --app-bg: var(--sand-950);
   --app-card: var(--sand-900);
@@ -77,8 +81,26 @@
   --shadow-strength: 2.5;
 }
 
+:root[data-theme='light'] {
+  color-scheme: light;
+  --shadow-hsl: 24 30% 20%;
+  --shadow-strength: 1;
+  --app-bg: var(--sand-50);
+  --app-card: hsl(0 0% 100%);
+  --app-card-hover: var(--sand-100);
+  --app-border: var(--sand-200);
+  --app-text: var(--sand-900);
+  --app-text-muted: var(--sand-600);
+  --app-text-subtle: var(--sand-500);
+  --app-action: var(--honey-700);
+  --app-action-hover: var(--honey-800);
+  --app-accent: var(--ember-700);
+}
+
+/* Same values as above, for "System" on a light OS. Keep the two blocks in sync. */
 @media (prefers-color-scheme: light) {
-  :root {
+  :root:not([data-theme]) {
+    color-scheme: light;
     --shadow-hsl: 24 30% 20%;
     --shadow-strength: 1;
     --app-bg: var(--sand-50);
@@ -91,6 +113,19 @@
     --app-action: var(--honey-700);
     --app-action-hover: var(--honey-800);
     --app-accent: var(--ember-700);
+  }
+}
+
+/* Tailwind's `dark:` follows the same rule as the tokens: dark when it is picked, or when it
+   isn't light by the OS (this includes browsers with no preference, whose tokens are dark). */
+@custom-variant dark {
+  &:where([data-theme='dark'], [data-theme='dark'] *) {
+    @slot;
+  }
+  @media not (prefers-color-scheme: light) {
+    &:where(:root:not([data-theme]), :root:not([data-theme]) *) {
+      @slot;
+    }
   }
 }
 
