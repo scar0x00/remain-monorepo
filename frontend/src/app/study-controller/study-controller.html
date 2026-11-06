@@ -3,7 +3,10 @@
         <p class="text-sm text-app-text-muted text-center mb-2">Results not saved, you can keep studying.</p>
     }
     @defer (on immediate) {
-        @if (this.finished()) {
+        @if (this.showQuickSetup()) {
+            <app-quick-session-setup [title]="currentDeck()?.meta?.title || deckId() || ''" [cards]="currentDeck()!.cards"
+                [initialTags]="tagFilter()" (start)="startQuick($event)" />
+        } @else if (this.finished()) {
             <div class="flex justify-start flex-col items-center gap-10 pt-6">
                 <div class="flex flex-col items-center gap-1 text-center">
                     <p class="text-xs font-semibold uppercase tracking-widest text-app-text-muted">You're done!</p>
@@ -32,6 +35,17 @@
                             [routerLink]="[]" [queryParams]="{ cardIds: this.missedIds() }">Study missed cards</a>
                     </div>
                 }
+                @if (this.isQuick()) {
+                    <div class="flex flex-col items-center gap-3">
+                        <button type="button" (click)="anotherQuickSession()"
+                            class="inline-flex items-center gap-2 rounded-full border-2 border-app-border px-6 py-2.5 font-bold text-app-text hover:bg-app-card-hover active:translate-y-px">
+                            <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m18 14 4 4-4 4"/><path d="m18 2 4 4-4 4"/><path d="M2 18h1.973a4 4 0 0 0 3.3-1.7l5.454-7.6a4 4 0 0 1 3.3-1.7H22"/><path d="M2 6h1.972a4 4 0 0 1 3.6 2.2"/><path d="M22 18h-6.041a4 4 0 0 1-3.3-1.8l-.359-.45"/></svg>
+                            Another {{ this.shuffledIndexes()?.length }} random cards
+                        </button>
+                        <a class="text-sm text-app-text-muted hover:text-app-text" [routerLink]="[]"
+                            [queryParams]="{ quick: '', tags: this.tagFilter().length ? this.tagFilter().join(',') : null }">Change quick session</a>
+                    </div>
+                }
                 @if (this.sessions.saveFailed()) {
                     <p class="text-sm text-app-text-subtle">Results could not be saved.</p>
                 }
@@ -40,6 +54,9 @@
                 </a>
             </div>
         } @else {
+            @if (this.isQuick() && this.shuffledIndexes(); as order) {
+                <p class="mb-3 text-center text-sm text-app-text-muted tabular-nums">Quick session · card {{ this.currentCard() + 1 }} of {{ order.length }}</p>
+            }
             <app-flashcard class="block min-h-[calc(100dvh-17rem)] rounded-xl bg-app-card p-6 shadow-e3 sm:min-h-[calc(100dvh-18rem)] sm:p-10 text-base sm:text-lg" [front]="currentMd()?.front" [back]="currentMd()?.back" [refs]="currentMd()?.meta?.refs" [hideBack]="hideBack()" />
             @if (editing() && currentMd() && currentDeck()) {
                 <app-card-quick-edit [deckKey]="deckKey()" [deck]="currentDeck()!" [etag]="deckEtag()" [cardId]="currentMd()!.id"
@@ -84,7 +101,7 @@
             Wrong
         </button>
     }
-    @if (hideBack() && !this.finished()) {
+    @if (hideBack() && !this.finished() && !this.showQuickSetup()) {
         <button class="flex-1 font-bold bg-action hover:bg-action-hover px-6 py-3 rounded-full shadow-raised active:translate-y-px" (click)="flipCard()">Show back</button>
     }
 </div>

@@ -4,6 +4,9 @@ import { firstValueFrom } from 'rxjs';
 import { StudyAnswer, StudySession } from '../../types/StudySession';
 
 const API = '/api/v1/study-sessions';
+
+/** Which cards a run covers: the whole deck, a quick session (#60) or the cards missed last run. */
+export type StudyMode = 'full' | 'quick' | 'missed';
 const MAX_ATTEMPTS = 4;
 const RETRY_DELAY_MS = 1000;
 
@@ -22,12 +25,12 @@ export class StudySessionService {
 
   readonly saveFailed = signal(false);
 
-  start(deckName: string, deckEtag: string | null, cardTotal: number) {
+  start(deckName: string, deckEtag: string | null, cardTotal: number, mode: StudyMode = 'full') {
     this.pending = [];
     this.resolvedId = null;
     this.saveFailed.set(false);
     this.sessionId = firstValueFrom(
-      this.http.post<{ id: string }>(API, { deckName, deckEtag, cardTotal }),
+      this.http.post<{ id: string }>(API, { deckName, deckEtag, cardTotal, mode }),
     )
       .then((r) => (this.resolvedId = r.id))
       .catch(() => {

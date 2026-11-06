@@ -1,6 +1,6 @@
 import { Component, computed, effect, inject, signal, untracked } from "@angular/core";
 import { httpResource } from "@angular/common/http";
-import { ActivatedRoute } from "@angular/router";
+import { ActivatedRoute, Router } from "@angular/router";
 import { toSignal } from "@angular/core/rxjs-interop";
 import { Flashcard } from "../flashcard/flashcard";
 import { RouterLink } from "@angular/router";
@@ -12,16 +12,20 @@ import { StudySessionService } from "../study-session/study-session.service";
 import { normalizeDeck } from "../deck-format/deck-format";
 import { CardQuickEdit } from "../card-quick-edit/card-quick-edit";
 import { Card } from "../../types/Card";
+import { QuickSessionSetup } from "../quick-session-setup/quick-session-setup";
+import { QuickSessionOptions, hasAnyTag, parseQuickParam, parseTagsParam } from "../quick-session-setup/quick-session";
+import { StudyMode } from "../study-session/study-session.service";
 
 @Component({
     selector: "app-study-controller",
-    imports: [Flashcard, RouterLink, MarkdownComponent, PercentPipe, DecimalPipe, CardQuickEdit],
+    imports: [Flashcard, RouterLink, MarkdownComponent, PercentPipe, DecimalPipe, CardQuickEdit, QuickSessionSetup],
     templateUrl: "./study-controller.html",
     providers: [StudySessionService],
     host: { "(window:pagehide)": "sessions.flushOnPageHide()" },
 })
 export class StudyController {
     private readonly route = inject(ActivatedRoute);
+    private readonly router = inject(Router);
     protected readonly sessions = inject(StudySessionService);
     private paramMap = toSignal(this.route.paramMap);
     private queryParamMap = toSignal(this.route.queryParamMap);
@@ -31,6 +35,14 @@ export class StudyController {
         const raw = this.queryParamMap()?.get("cardIds");
         return raw ? new Set(raw.split(",")) : undefined;
     });
+    // Quick session (#60): `?quick=<n>` studies n random cards, `?quick` alone shows the setup screen.
+    private readonly quick = computed(() => parseQuickParam(this.queryParamMap()?.get("quick")));
+    // `?tags=a,b` keeps only cards with any of these tags.
+    readonly tagFilter = computed(() => parseTagsParam(this.queryParamMap()?.get("tags")));
+    readonly isQuick = computed(() => this.quick() !== undefined);
+    readonly mode = computed<StudyMode>(() => (this.isQuick() ? "quick" : this.cardIdFilter() ? "missed" : "full"));
+    // Bumped by "Another quick session" to draw a new set of cards with the same options.
+    private readonly reshuffles = signal(0);
 
     // Legacy decks (a bare array of cards) are upgraded to v2 here, with deterministic card ids.
     protected readonly deck = httpResource<Deck>(
@@ -53,21 +65,30 @@ export class StudyController {
     private startedAt = Date.now();
 
     shuffledIndexes = computed(() => {
+        this.reshuffles();
         const cards = this.deck.value()?.cards;
-        if (!cards?.length) return undefined;
+        const quick = this.quick();
+        if (!cards?.length || quick === "setup") return undefined;
 
         const filter = this.cardIdFilter();
+        const tags = new Set(this.tagFilter());
         const arr = Array.from({ length: cards.length }, (_, i) => i).filter(
-            (i) => !filter || filter.has(cards[i].id),
+            (i) => (!filter || filter.has(cards[i].id)) && hasAnyTag(cards[i], tags),
         );
+        // Nothing matches the tags: back to the setup screen rather than an empty run.
+        if (!arr.length && tags.size) return undefined;
 
         for (let i = arr.length - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1));
             [arr[i], arr[j]] = [arr[j], arr[i]];
         }
 
-        return arr;
+        // A uniform shuffle, so its first n are a uniformly random subset.
+        return quick === undefined ? arr : arr.slice(0, quick);
     });
+    readonly showQuickSetup = computed(
+        () => !!this.deck.value()?.cards.length && (this.quick() === "setup" || (this.tagFilter().length > 0 && !this.shuffledIndexes())),
+    );
     // Cards saved from the quick edit, by id. Applied on top of the loaded deck instead of replacing
     // it, so the run (its order and answers) carries on with the fixed text.
     private readonly editedCards = signal<Record<string, Card>>({});
@@ -102,6 +123,8 @@ export class StudyController {
     });
     readonly elapsedMs = signal(0);
     readonly previousRun = signal<StudySession | null>(null);
+    // The deck the quick edits in `editedCards` apply to; they are dropped when another one loads.
+    private editedDeck: Deck | undefined;
 
     constructor() {
         // A new run starts whenever the set of cards to study changes (deck loaded, "Study missed cards").
@@ -115,10 +138,13 @@ export class StudyController {
                 this.elapsedMs.set(0);
                 this.previousRun.set(null);
                 this.startedAt = this.shownAt = Date.now();
-                const etag = this.deck.headers()?.get("etag") ?? null;
-                this.editedCards.set({});
-                this.savedEtag.set(undefined);
-                this.sessions.start(this.deckKey(), etag, order.length);
+                // A new run of the same deck (missed cards, another quick session) keeps its quick edits.
+                if (this.deck.value() !== this.editedDeck) {
+                    this.editedDeck = this.deck.value();
+                    this.editedCards.set({});
+                    this.savedEtag.set(undefined);
+                }
+                this.sessions.start(this.deckKey(), this.deckEtag(), order.length, this.mode());
             });
         });
 
@@ -132,7 +158,8 @@ export class StudyController {
     private async finishRun() {
         this.elapsedMs.set(Date.now() - this.startedAt);
         const session = await this.sessions.finish();
-        if (session) {
+        // A quick session is a different set of cards each time, so "last time" says little about it.
+        if (session && !this.isQuick()) {
             this.previousRun.set(await this.sessions.previousRun(session.deckName, session.id));
         }
     }
@@ -161,6 +188,17 @@ export class StudyController {
 
     wrongAnswer() {
         this.answer(false);
+    }
+
+    startQuick({ count, tags }: QuickSessionOptions) {
+        void this.router.navigate([], {
+            relativeTo: this.route,
+            queryParams: { quick: count, tags: tags.length ? tags.join(",") : null },
+        });
+    }
+
+    anotherQuickSession() {
+        this.reshuffles.update((n) => n + 1);
     }
 
     flipCard() {
