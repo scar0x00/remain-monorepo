@@ -209,39 +209,23 @@ export type DeckStudyStats = {
   lastStudied: Date;
 };
 
-/** Per-deck stats over completed runs, keyed by deck name. */
-export async function listDeckStats(pg: Client, userId: string) {
-  const { rows } = await pg.query<{
-    deck_name: string;
-    study_count: string;
-    recent_accuracy: number | null;
-    last_studied: Date;
-  }>(
-    `WITH done AS (
-       SELECT s.deck_name, s.started_at,
-         COUNT(a.position) FILTER (WHERE a.correct)::float8 / NULLIF(COUNT(a.position), 0) AS accuracy,
-         ROW_NUMBER() OVER (PARTITION BY s.deck_name ORDER BY s.started_at DESC) AS rn
-       FROM public.study_sessions s
-       LEFT JOIN public.study_answers a ON a.session_id = s.id
-       WHERE s.user_id = $1 AND s.status = 'completed'
-       GROUP BY s.id
-     )
-     SELECT deck_name, COUNT(*) AS study_count,
-       AVG(accuracy) FILTER (WHERE rn <= 3) AS recent_accuracy,
-       MAX(started_at) AS last_studied
-     FROM done
-     GROUP BY deck_name`,
-    [userId],
-  );
-
-  return new Map(
-    rows.map((r): [string, DeckStudyStats] => [
-      r.deck_name,
-      {
-        studyCount: Number(r.study_count),
-        recentAccuracy: r.recent_accuracy,
-        lastStudied: r.last_studied,
-      },
-    ]),
-  );
-}
+/**
+ * Per-deck stats over completed runs, one row per studied deck name: `deck_name`, `study_count`,
+ * `recent_accuracy` (average of the last three runs) and `last_studied`. $1 = user id. Used as a
+ * subquery so deck lists can sort on it.
+ */
+export const DECK_STUDY_STATS_SQL = `
+  WITH done AS (
+    SELECT s.deck_name, s.started_at,
+      COUNT(a.position) FILTER (WHERE a.correct)::float8 / NULLIF(COUNT(a.position), 0) AS accuracy,
+      ROW_NUMBER() OVER (PARTITION BY s.deck_name ORDER BY s.started_at DESC) AS rn
+    FROM public.study_sessions s
+    LEFT JOIN public.study_answers a ON a.session_id = s.id
+    WHERE s.user_id = $1 AND s.status = 'completed'
+    GROUP BY s.id
+  )
+  SELECT deck_name, COUNT(*) AS study_count,
+    AVG(accuracy) FILTER (WHERE rn <= 3) AS recent_accuracy,
+    MAX(started_at) AS last_studied
+  FROM done
+  GROUP BY deck_name`;
