@@ -1,4 +1,5 @@
-import { DestroyRef, Service, inject, signal } from '@angular/core';
+import { DestroyRef, Service, effect, inject, signal } from '@angular/core';
+import { Theme } from '../theme/theme';
 
 export interface ChartColors {
   bg: string;
@@ -21,13 +22,19 @@ const FALLBACK: ChartColors = {
 
 /**
  * The app's `--app-*` colour tokens as plain values for ECharts, which can't read CSS variables.
- * Re-read when the colour scheme flips, so charts follow light and dark mode like the rest of the page.
+ * Re-read when the colour scheme flips or the user picks a theme, so charts follow light and dark
+ * mode like the rest of the page.
  */
 @Service()
 export class ChartTheme {
   readonly colors = signal<ChartColors>(readColors());
 
   constructor() {
+    const theme = inject(Theme);
+    effect(() => {
+      theme.preference();
+      this.colors.set(readColors());
+    });
     if (typeof matchMedia === 'undefined') return;
     const query = matchMedia('(prefers-color-scheme: light)');
     const update = () => this.colors.set(readColors());

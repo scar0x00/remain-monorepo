@@ -1,6 +1,7 @@
 import { Component, ElementRef, inject, viewChild } from '@angular/core';
 import { Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { AuthService } from '../auth/auth.service';
+import { Theme, ThemePreference } from '../theme/theme';
 
 @Component({
   selector: 'app-nav-bar',
@@ -15,7 +16,14 @@ export class NavBar {
     { path: '/deck-upload', label: 'Upload a deck' },
   ];
 
+  protected readonly themeOptions: { value: ThemePreference; label: string }[] = [
+    { value: 'system', label: 'System' },
+    { value: 'light', label: 'Light' },
+    { value: 'dark', label: 'Dark' },
+  ];
+
   protected readonly auth = inject(AuthService);
+  protected readonly theme = inject(Theme);
   private readonly router = inject(Router);
   private readonly menu = viewChild.required<ElementRef<HTMLElement>>('menu');
 
