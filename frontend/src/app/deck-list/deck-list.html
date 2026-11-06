@@ -1,4 +1,4 @@
-@if (searchTerm.decks()?.length === 0) {
+@if (searchTerm.current()?.total === 0) {
     <div class="flex flex-col items-center gap-4 rounded-xl bg-app-card px-6 py-16 text-center shadow-e1 transition-opacity"
         [class.opacity-60]="searchTerm.searching()" [attr.aria-busy]="searchTerm.searching()">
         <span class="grid size-14 place-items-center rounded-full bg-honey-100 text-honey-800 dark:bg-honey-400/15 dark:text-honey-300">
@@ -16,10 +16,10 @@
             </div>
         }
     </div>
-} @else if (searchTerm.decks()) {
+} @else if (searchTerm.current(); as page) {
     <ul class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-app-text-muted transition-opacity"
         [class.opacity-60]="searchTerm.searching()" [attr.aria-busy]="searchTerm.searching()">
-        @for (deck of searchTerm.decks(); track deck.etag) {
+        @for (deck of page.decks; track deck.etag) {
             <li class="flex flex-col gap-2 rounded-xl rounded-l-none border-l-4 bg-app-card shadow-e1 p-5 transition-shadow hover:shadow-e3"
                 [class]="borderClasses(deck.recentAccuracy)">
                 <div class="flex flex-col gap-1.5">

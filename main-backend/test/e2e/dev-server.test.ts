@@ -186,9 +186,10 @@ describe("GET /decks", () => {
 
   it("lists uploaded decks with name, size, etag and upload time", async () => {
     const res = await api(`${API}/decks?searchTerm=${name}`);
-    const decks = (await res.json()) as Array<Record<string, unknown>>;
+    const { decks, total } = (await res.json()) as { decks: Array<Record<string, unknown>>; total: number };
 
     expect(res.status).toBe(200);
+    expect(total).toBe(1);
     expect(decks).toHaveLength(1);
     expect(decks[0]).toMatchObject({ deckName: name, size: 5 });
     expect(typeof decks[0].etag).toBe("string");
@@ -209,7 +210,7 @@ describe("DELETE /deck/:key", () => {
     expect(get.status).toBe(404);
 
     const list = await api(`${API}/decks?searchTerm=${name}`);
-    expect(await list.json()).toEqual([]);
+    expect(((await list.json()) as { decks: unknown[] }).decks).toEqual([]);
   });
 
   it("returns 404 when deleting a deck that does not exist", async () => {

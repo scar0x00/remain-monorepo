@@ -1,0 +1,30 @@
+@if (page(); as page) {
+    @if (page.total > page.pageSize && page.decks.length) {
+        <nav aria-label="Deck pages" class="mt-6 flex items-center justify-between gap-3">
+            @if (page.page > 1) {
+                <a routerLink="." [queryParams]="searchTerm.pageParams(page.page - 1)" queryParamsHandling="merge" (click)="toTop()"
+                    class="inline-flex items-center gap-1.5 rounded-full border-2 border-app-border px-4 py-1.5 text-sm font-bold text-app-text hover:bg-app-card-hover"
+                    rel="prev">
+                    <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+                    Previous
+                </a>
+            } @else {
+                <span aria-hidden="true"></span>
+            }
+            <p class="text-center text-sm text-app-text-muted" aria-live="polite">
+                <span class="font-semibold text-app-text">{{ range()?.first }}–{{ range()?.last }}</span> of {{ page.total }} decks
+                <span class="sr-only">, page {{ page.page }} of {{ searchTerm.totalPages() }}</span>
+            </p>
+            @if (page.page < searchTerm.totalPages()) {
+                <a routerLink="." [queryParams]="searchTerm.pageParams(page.page + 1)" queryParamsHandling="merge" (click)="toTop()"
+                    class="inline-flex items-center gap-1.5 rounded-full border-2 border-app-border px-4 py-1.5 text-sm font-bold text-app-text hover:bg-app-card-hover"
+                    rel="next">
+                    Next
+                    <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+                </a>
+            } @else {
+                <span aria-hidden="true"></span>
+            }
+        </nav>
+    }
+}

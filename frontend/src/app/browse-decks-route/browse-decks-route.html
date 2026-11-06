@@ -1,5 +1,9 @@
 <section class="mx-auto w-full max-w-3xl">
     <h1 class="text-2xl font-bold leading-tight tracking-tight text-app-text mb-4">Your decks</h1>
-    <app-search-deck-field></app-search-deck-field>
+    <div class="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center">
+        <app-search-deck-field class="block flex-1"></app-search-deck-field>
+        <app-deck-sort-select></app-deck-sort-select>
+    </div>
     <app-deck-list></app-deck-list>
+    <app-deck-pagination></app-deck-pagination>
 </section>

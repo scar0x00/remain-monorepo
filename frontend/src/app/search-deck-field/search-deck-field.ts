@@ -13,7 +13,8 @@ export const SEARCH_THROTTLE_MS = 300;
 })
 export class SearchDeckField {
   searchTerm = inject(DeckSearchTerm);
-  searchValue = ''
+  // Starts from the URL's search, e.g. when coming back to the list.
+  searchValue = this.searchTerm.term();
   private readonly termChanges = new Subject<string>();
 
   constructor() {

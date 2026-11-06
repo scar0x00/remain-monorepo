@@ -16,7 +16,7 @@ describe('SearchDeckField', () => {
 
     await TestBed.configureTestingModule({
       imports: [SearchDeckField],
-      providers: [{ provide: DeckSearchTerm, useValue: { setTerm, searching } }],
+      providers: [{ provide: DeckSearchTerm, useValue: { setTerm, searching, term: () => '' } }],
     }).compileComponents();
 
     fixture = TestBed.createComponent(SearchDeckField);

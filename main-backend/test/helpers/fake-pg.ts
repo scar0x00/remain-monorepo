@@ -85,6 +85,38 @@ function sessionRow(s: SessionRecord) {
   };
 }
 
+/** What DECK_STUDY_STATS_SQL returns: stats over completed runs, by deck name. */
+function deckStudyStats(userId: unknown) {
+  const byDeck = new Map<string, { started: Date; accuracy: number | null }[]>();
+  for (const s of sessions.values()) {
+    if (s.user_id !== userId || s.status !== "completed") continue;
+    const mine = answers.filter((a) => a.session_id === s.id);
+    const accuracy = mine.length ? mine.filter((a) => a.correct).length / mine.length : null;
+    byDeck.set(s.deck_name, [...(byDeck.get(s.deck_name) ?? []), { started: s.started_at, accuracy }]);
+  }
+  return new Map(
+    [...byDeck].map(([deck_name, runs]) => {
+      runs.sort((a, b) => b.started.getTime() - a.started.getTime());
+      const recent = runs.slice(0, 3).map((r) => r.accuracy).filter((a): a is number => a !== null);
+      return [
+        deck_name,
+        {
+          study_count: String(runs.length),
+          recent_accuracy: recent.length ? recent.reduce((x, y) => x + y) / recent.length : null,
+          last_studied: runs[0].started,
+        },
+      ];
+    }),
+  );
+}
+
+function matchingDecks(userId: unknown, pattern: unknown) {
+  const matches = ilike(String(pattern ?? "%"));
+  return [...decks.values()]
+    .filter((d) => d.userId === userId)
+    .filter((d) => [d.name, d.title ?? ""].some(matches));
+}
+
 // Minimal stand-in for `pg.Client` that understands only the SQL statements
 // used by src/index.ts and src/lib/decks.ts. Installed with `mock.module("pg", ...)` in tests.
 export class FakeClient {
@@ -116,10 +148,7 @@ export class FakeClient {
     }
 
     if (normalized.startsWith("SELECT name, size")) {
-      const matches = ilike(String(params[0] ?? "%"));
-      const rows = [...decks.values()]
-        .filter((d) => d.userId === params[1])
-        .filter((d) => [d.name, d.title ?? ""].some(matches))
+      const rows = matchingDecks(params[1], params[0])
         .sort((a, b) => a.name.localeCompare(b.name))
         .map((d) => ({
           name: d.name,
@@ -131,6 +160,48 @@ export class FakeClient {
           meta: d.meta,
         }));
       return { rows };
+    }
+
+    if (normalized.startsWith("SELECT d.name, d.size")) {
+      // listDeckPage: parse the sort back out of the ORDER BY clause.
+      const [userId, pattern, limit, offset] = params as [string, string, number, number];
+      const [, column, direction] = normalized.match(/ORDER BY (\S+) (ASC|DESC) NULLS LAST/)!;
+      const stats = deckStudyStats(userId);
+      const value = (d: DeckRecord): string | number | null =>
+        column === "lower(d.name)"
+          ? d.name.toLowerCase()
+          : column === 'd."createdAt"'
+            ? d.createdAt.getTime()
+            : (stats.get(d.name)?.recent_accuracy ?? null);
+      const sign = direction === "ASC" ? 1 : -1;
+      const all = matchingDecks(userId, pattern).sort((a, b) => {
+        const [x, y] = [value(a), value(b)];
+        if (x !== y) {
+          if (x === null) return 1;
+          if (y === null) return -1;
+          return (x < y ? -1 : 1) * sign;
+        }
+        return a.name.toLowerCase().localeCompare(b.name.toLowerCase()) || (a.name < b.name ? -1 : 1);
+      });
+      const rows = all.slice(offset, offset + limit).map((d) => ({
+        name: d.name,
+        size: String(d.size),
+        createdAt: d.createdAt,
+        etag: d.etag,
+        card_count: d.cardCount,
+        title: d.title,
+        meta: d.meta,
+        study_count: null,
+        recent_accuracy: null,
+        last_studied: null,
+        ...stats.get(d.name),
+        total: String(all.length),
+      }));
+      return { rows };
+    }
+
+    if (normalized.startsWith("SELECT COUNT(*) AS count FROM public.decks")) {
+      return { rows: [{ count: String(matchingDecks(params[0], params[1]).length) }] };
     }
 
     if (normalized.startsWith("DELETE FROM public.decks")) {
@@ -183,27 +254,6 @@ export class FakeClient {
         s.finished_at = new Date();
       }
       return { rows: [] };
-    }
-
-    if (normalized.startsWith("WITH done AS")) {
-      const byDeck = new Map<string, { started: Date; accuracy: number | null }[]>();
-      for (const s of sessions.values()) {
-        if (s.user_id !== params[0] || s.status !== "completed") continue;
-        const mine = answers.filter((a) => a.session_id === s.id);
-        const accuracy = mine.length ? mine.filter((a) => a.correct).length / mine.length : null;
-        byDeck.set(s.deck_name, [...(byDeck.get(s.deck_name) ?? []), { started: s.started_at, accuracy }]);
-      }
-      const rows = [...byDeck].map(([deck_name, runs]) => {
-        runs.sort((a, b) => b.started.getTime() - a.started.getTime());
-        const recent = runs.slice(0, 3).map((r) => r.accuracy).filter((a): a is number => a !== null);
-        return {
-          deck_name,
-          study_count: String(runs.length),
-          recent_accuracy: recent.length ? recent.reduce((x, y) => x + y) / recent.length : null,
-          last_studied: runs[0].started,
-        };
-      });
-      return { rows };
     }
 
     if (normalized.includes("FROM public.study_sessions s") && normalized.includes("s.id = $1")) {

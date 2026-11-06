@@ -150,3 +150,31 @@ describe("study quick edit", () => {
     expect(saved.cards.find((card) => card.id === id)!.back).toBe(`${before.back} (fixed)`);
   });
 });
+
+describe("deck list pages", () => {
+  it("shows 10 decks a page, pages through the rest and sorts by creation date", async () => {
+    // With the decks the other tests made, more than one page.
+    for (let i = 0; i < 11; i++) {
+      const key = `e2e-page-${RUN}-${String(i).padStart(2, "0")}.json`;
+      created.push(key);
+      await putDeck(key, SEED);
+    }
+    const total = created.length;
+    const studyLinks = page.getByRole("link", { name: /^Study / });
+
+    await page.goto(`${BASE}/deck-browse`);
+    await page.getByText(`1–10 of ${total} decks`).waitFor();
+    expect(await studyLinks.count()).toBe(10);
+
+    await page.getByRole("link", { name: "Next" }).click();
+    await page.waitForURL(/[?&]page=2/);
+    await page.getByText(`11–${Math.min(20, total)} of ${total} decks`).waitFor();
+
+    // A new order starts over at the first page; the deck created last comes first.
+    await page.locator("#deck-sort").selectOption({ label: "Newest first" });
+    await page.waitForURL((url) => url.searchParams.get("sort") === "created" && !url.searchParams.has("page"));
+    await page.getByText(`1–10 of ${total} decks`).waitFor();
+    await page.getByRole("link", { name: "Study e2e-page-" + RUN + "-10" }).waitFor();
+    expect(await studyLinks.first().getAttribute("aria-label")).toBe(`Study e2e-page-${RUN}-10`);
+  });
+});
