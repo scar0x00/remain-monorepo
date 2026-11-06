@@ -295,3 +295,11 @@ input[type='checkbox']:disabled {
   outline: 1px solid color-mix(in srgb, var(--app-text) 12%, transparent);
   outline-offset: -1px;
 }
+
+/* A run of short facts ("42 cards · Studied 6× · Generated"): the dots are drawn here so
+   templates can show or hide any fact without leaving a stray separator behind. */
+.dot-list > * + *::before {
+  content: '·';
+  margin-right: 0.5rem;
+  color: var(--app-text-subtle);
+}

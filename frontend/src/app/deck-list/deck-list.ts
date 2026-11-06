@@ -3,6 +3,7 @@ import { DeckSearchTerm } from "../deck-search-term";
 import { RouterLink } from "@angular/router";
 import { DatePipe, PercentPipe } from "@angular/common";
 import { DeckTool } from "../../types/Deck";
+import { AuthService } from "../auth/auth.service";
 
 const TOOL_LABELS: Record<DeckTool["kind"], string> = {
   agent: "Generated",
@@ -18,6 +19,8 @@ const TOOL_LABELS: Record<DeckTool["kind"], string> = {
 })
 export class DeckList {
   searchTerm = inject(DeckSearchTerm);
+  // Decks are yours unless they say otherwise, so "by <you>" is left out.
+  protected readonly auth = inject(AuthService);
 
   // Only .json and .yaml files are decks the editor can open.
   isEditable(deckName: string): boolean {
