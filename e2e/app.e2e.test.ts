@@ -72,9 +72,10 @@ describe("deck browsing", () => {
     // The first page, which is what the deck list shows.
     const { decks: stored } = (await res.json()) as { decks: { deckName: string }[] };
 
+    // The card's headline is the deck's title when it has one, so find each deck by its Study link.
     for (const { deckName } of stored) {
       const name = deckName.replace(/\.json$/i, "");
-      await page.getByRole("link", { name, exact: true }).waitFor();
+      await page.getByRole("link", { name: `Study ${name}`, exact: true }).waitFor();
     }
     expect(await page.getByRole("link", { name: /\.json$/ }).count()).toBe(0);
   });
@@ -128,7 +129,7 @@ describe("study session", () => {
 
     await page.goto(`${BASE}/deck-browse`);
     await page.getByRole("textbox").first().fill(DECK);
-    await page.getByRole("link", { name: DECK, exact: true }).click();
+    await page.getByRole("link", { name: `Study ${DECK}`, exact: true }).click();
     await page.waitForURL(`**/deck-study/${DECK}`);
 
     const card = page.locator("app-flashcard");
