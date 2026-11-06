@@ -5,10 +5,13 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { Router, provideRouter } from '@angular/router';
 
 import { DeckSearchTerm } from './deck-search-term';
-import { DeckPage } from '../types/DeckEntry';
+import { DeckEntry, DeckPage } from '../types/DeckEntry';
 
 @Component({ template: '' })
 class Blank {}
+
+const entry = (deckName: string): DeckEntry => ({ deckName, size: 1, uploaded: '2026-10-01T00:00:00Z', etag: deckName });
+const names = (page: DeckPage | undefined) => page?.decks.map((d) => d.deckName);
 
 const page = (over: Partial<DeckPage> = {}): DeckPage => ({
   decks: [],
@@ -100,5 +103,64 @@ describe('DeckSearchTerm', () => {
     await settle();
     expect(router.url).toBe('/deck-browse?page=3');
     http.expectOne('/api/v1/decks?page=3').flush(page({ page: 3, total: 23, decks: [{} as never] }));
+  });
+
+  it('does not count the first load as searching', async () => {
+    await open('/deck-browse');
+    expect(service.deck.isLoading()).toBe(true);
+    expect(service.searching()).toBe(false);
+    http.expectOne('/api/v1/decks').flush(page());
+  });
+
+  it('sends the term trimmed, lowercased and URL-encoded', async () => {
+    await open('/deck-browse');
+    http.expectOne('/api/v1/decks').flush(page());
+
+    service.setTerm('  Q&A #1 ');
+    await settle();
+    const req = http.expectOne((r) => r.url === '/api/v1/decks');
+    expect(req.request.params.get('searchTerm')).toBe('q&a #1');
+    expect(req.request.urlWithParams).toBe('/api/v1/decks?searchTerm=q%26a%20%231');
+    req.flush(page());
+  });
+
+  it('does not refetch when only surrounding spaces change', async () => {
+    await open('/deck-browse?q=bio');
+    http.expectOne('/api/v1/decks?searchTerm=bio').flush(page());
+
+    service.setTerm('bio ');
+    await settle();
+    http.expectNone(() => true);
+  });
+
+  it('keeps the previous page on screen while the next search loads', async () => {
+    await open('/deck-browse');
+    http.expectOne('/api/v1/decks').flush(page({ decks: [entry('biology.json'), entry('history.json')], total: 2 }));
+    await settle();
+    expect(names(service.current())).toEqual(['biology.json', 'history.json']);
+
+    service.setTerm('bio');
+    await settle();
+    const req = http.expectOne('/api/v1/decks?searchTerm=bio');
+    expect(service.searching()).toBe(true);
+    expect(names(service.current())).toEqual(['biology.json', 'history.json']);
+
+    req.flush(page({ decks: [entry('biology.json')], total: 1 }));
+    await settle();
+    expect(service.searching()).toBe(false);
+    expect(names(service.current())).toEqual(['biology.json']);
+  });
+
+  it('drops the page after an error', async () => {
+    await open('/deck-browse');
+    http.expectOne('/api/v1/decks').flush(page({ decks: [entry('biology.json')], total: 1 }));
+    await settle();
+    expect(service.current()).toBeDefined();
+
+    service.setTerm('bio');
+    await settle();
+    http.expectOne('/api/v1/decks?searchTerm=bio').flush('nope', { status: 500, statusText: 'Server Error' });
+    await settle();
+    expect(service.current()).toBeUndefined();
   });
 });

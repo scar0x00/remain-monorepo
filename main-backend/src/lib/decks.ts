@@ -39,6 +39,12 @@ export type DeckEntry = {
 /** What the decks row keeps from a deck file. */
 export type DeckSummary = { cardCount: number; title: string | null; meta: DeckMeta };
 
+/** Escapes the LIKE wildcards (`%`, `_`) and the escape character itself, so a term matches literally. */
+export function escapeLike(term: string): string {
+  return term.replace(/[\\%_]/g, (c) => `\\${c}`);
+}
+
+/** The user's decks whose name or title contains `searchTerm` anywhere, ignoring case. */
 export async function listDecks(
   { pg, userId }: DeckStore,
   searchTerm = "",
@@ -46,9 +52,9 @@ export async function listDecks(
   const { rows } = await pg.query<DeckRow>(
     `SELECT name, size, "createdAt", etag, card_count, title, meta
      FROM public.decks
-     WHERE user_id = $2 AND (name ILIKE $1 OR title ILIKE $1)
+     WHERE user_id = $2 AND (name ILIKE $1 ESCAPE '\\' OR title ILIKE $1 ESCAPE '\\')
      ORDER BY name`,
-    [`${searchTerm}%`, userId],
+    [`%${escapeLike(searchTerm.trim())}%`, userId],
   );
 
   return rows.map(toDeckEntry);
@@ -107,7 +113,7 @@ const SORT_SQL: Record<DeckSort, string> = {
 };
 
 /**
- * One page of the user's decks matching `searchTerm` (a prefix of the name or title), with their
+ * One page of the user's decks whose name or title contains `searchTerm`, with their
  * study stats. Decks without a value for the sort (never studied, for `success`) always come last,
  * and ties go by name.
  */
@@ -117,7 +123,7 @@ export async function listDeckPage({ pg, userId }: DeckStore, query: DeckPageQue
   const page = Math.max(1, Math.floor(query.page ?? 1));
   const pageSize = Math.min(MAX_DECK_PAGE_SIZE, Math.max(1, Math.floor(query.pageSize ?? DECK_PAGE_SIZE)));
   const direction = order === "asc" ? "ASC" : "DESC";
-  const pattern = `${query.searchTerm ?? ""}%`;
+  const pattern = `%${escapeLike((query.searchTerm ?? "").trim())}%`;
 
   const { rows } = await pg.query<
     DeckRow & { study_count: string | null; recent_accuracy: number | null; last_studied: Date | null; total: string }
@@ -127,7 +133,7 @@ export async function listDeckPage({ pg, userId }: DeckStore, query: DeckPageQue
        COUNT(*) OVER () AS total
      FROM public.decks d
      LEFT JOIN (${DECK_STUDY_STATS_SQL}) st ON st.deck_name = d.name
-     WHERE d.user_id = $1 AND (d.name ILIKE $2 OR d.title ILIKE $2)
+     WHERE d.user_id = $1 AND (d.name ILIKE $2 ESCAPE '\\' OR d.title ILIKE $2 ESCAPE '\\')
      ORDER BY ${SORT_SQL[sort]} ${direction} NULLS LAST, lower(d.name), d.name
      LIMIT $3 OFFSET $4`,
     [userId, pattern, pageSize, (page - 1) * pageSize],
@@ -157,7 +163,8 @@ export async function listDeckPage({ pg, userId }: DeckStore, query: DeckPageQue
 
 async function countDecks(pg: Client, userId: string, pattern: string) {
   const { rows } = await pg.query<{ count: string }>(
-    `SELECT COUNT(*) AS count FROM public.decks WHERE user_id = $1 AND (name ILIKE $2 OR title ILIKE $2)`,
+    `SELECT COUNT(*) AS count FROM public.decks
+     WHERE user_id = $1 AND (name ILIKE $2 ESCAPE '\\' OR title ILIKE $2 ESCAPE '\\')`,
     [userId, pattern],
   );
   return Number(rows[0].count);

@@ -110,6 +110,17 @@ describe("listDeckPage", () => {
     expect(page.total).toBe(2);
   });
 
+  it("matches anywhere in the name, with LIKE wildcards taken literally", async () => {
+    await addDeck("100% recall.json", 1);
+    await addDeck("1000 words.json", 2);
+    await addDeck("snake_case.json", 3);
+    await addDeck("snakescase.json", 4);
+
+    expect(names(await listDeckPage(store, { searchTerm: "0%" }))).toEqual(["100% recall.json"]);
+    expect(names(await listDeckPage(store, { searchTerm: "e_c" }))).toEqual(["snake_case.json"]);
+    expect((await listDeckPage(store, { searchTerm: " CASE ", pageSize: 1, page: 9 })).total).toBe(2);
+  });
+
   it("only lists the user's own decks", async () => {
     await pg.query(
       `INSERT INTO "user" (id, name, email, "emailVerified", "createdAt", "updatedAt")

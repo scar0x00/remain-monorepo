@@ -9,6 +9,21 @@ type DeckRecord = {
   createdAt: Date;
 };
 
+/** Postgres `ILIKE` with a backslash escape: `%` is any run, `_` one character, a backslash makes the next one literal. */
+function ilike(pattern: string): (value: string) => boolean {
+  const literal = (c: string) => c.replace(/[.*+?^${}()|[\]\\/]/g, "\\$&");
+  let source = "";
+  for (let i = 0; i < pattern.length; i++) {
+    const c = pattern[i];
+    if (c === "\\") source += literal(pattern[++i] ?? "");
+    else if (c === "%") source += ".*";
+    else if (c === "_") source += ".";
+    else source += literal(c);
+  }
+  const re = new RegExp(`^${source}$`, "is");
+  return (value) => re.test(value);
+}
+
 /** Every user's deck rows, keyed by `<userId>/<name>`. Use `decksOf` to look at one user's. */
 export const decks = new Map<string, DeckRecord>();
 
@@ -96,10 +111,10 @@ function deckStudyStats(userId: unknown) {
 }
 
 function matchingDecks(userId: unknown, pattern: unknown) {
-  const prefix = String(pattern ?? "%").replace(/%$/, "").toLowerCase();
+  const matches = ilike(String(pattern ?? "%"));
   return [...decks.values()]
     .filter((d) => d.userId === userId)
-    .filter((d) => [d.name, d.title ?? ""].some((s) => s.toLowerCase().startsWith(prefix)));
+    .filter((d) => [d.name, d.title ?? ""].some(matches));
 }
 
 // Minimal stand-in for `pg.Client` that understands only the SQL statements

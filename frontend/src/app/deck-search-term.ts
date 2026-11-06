@@ -54,11 +54,20 @@ export class DeckSearchTerm {
         return { url: "/api/v1/decks", params };
     });
 
-    /** The page on screen: the last one loaded, kept while the next one loads so the list doesn't blink. */
-    readonly current = linkedSignal<DeckPage | undefined, DeckPage | undefined>({
-        source: () => (this.deck.hasValue() ? this.deck.value() : undefined),
-        computation: (page, previous) => page ?? previous?.value,
+    /**
+     * The page on screen: the latest one, or the previous one while the next search, sort or page
+     * loads, so the list doesn't blink to a spinner. Undefined before the first page and after an error.
+     */
+    readonly current = linkedSignal<{ value: DeckPage | undefined; loading: boolean }, DeckPage | undefined>({
+        source: () => ({
+            value: this.deck.hasValue() ? this.deck.value() : undefined,
+            loading: this.deck.isLoading(),
+        }),
+        computation: ({ value, loading }, previous) => value ?? (loading ? previous?.value : undefined),
     });
+
+    /** Loading while an earlier page is still on screen (the first load shows the list's own spinner). */
+    readonly searching = computed(() => this.deck.isLoading() && this.current() !== undefined);
 
     readonly totalPages = computed(() => {
         const page = this.current();
@@ -76,7 +85,8 @@ export class DeckSearchTerm {
     }
 
     setTerm(term: string) {
-        this.navigate({ q: term.toLowerCase() || null, page: null });
+        // An unchanged URL doesn't navigate, so trailing spaces don't refetch.
+        this.navigate({ q: term.trim().toLowerCase() || null, page: null });
     }
 
     setSort({ sort, order }: Pick<SortOption, "sort" | "order">) {
