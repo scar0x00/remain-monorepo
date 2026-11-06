@@ -63,21 +63,24 @@
                 </div>
                 <!-- Actions only: file actions on the left, study on the right. The date has its own line above. -->
                 <div class="mt-auto flex flex-wrap items-center gap-x-2 gap-y-2">
-                    <a class="grid size-9 place-items-center rounded-full text-app-text-subtle hover:bg-app-card-hover hover:text-app-text"
-                        [attr.href]="'/api/v1/deck/' + deck.deckName"
-                        [attr.download]="deck.deckName"
-                        [attr.aria-label]="'Download ' + getDeckPath(deck.deckName)"
-                        title="Download deck">
-                        <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V3"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/></svg>
-                    </a>
-                    @if (isEditable(deck.deckName)) {
+                    <!-- No gap: the 36px hit areas already space the 16px icons apart. -->
+                    <div class="flex items-center">
                         <a class="grid size-9 place-items-center rounded-full text-app-text-subtle hover:bg-app-card-hover hover:text-app-text"
-                            [routerLink]="['/deck-edit', editLink(deck.deckName).name]" [queryParams]="editLink(deck.deckName).queryParams"
-                            [attr.aria-label]="'Edit ' + getDeckPath(deck.deckName)"
-                            title="Edit deck">
-                            <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.17 6.81a1 1 0 0 0-3.99-3.99L3.84 16.17a2 2 0 0 0-.5.83l-1.32 4.35a.5.5 0 0 0 .62.62l4.35-1.32a2 2 0 0 0 .83-.5z"/><path d="m15 5 4 4"/></svg>
+                            [attr.href]="'/api/v1/deck/' + deck.deckName"
+                            [attr.download]="deck.deckName"
+                            [attr.aria-label]="'Download ' + getDeckPath(deck.deckName)"
+                            title="Download deck">
+                            <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V3"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/></svg>
                         </a>
-                    }
+                        @if (isEditable(deck.deckName)) {
+                            <a class="grid size-9 place-items-center rounded-full text-app-text-subtle hover:bg-app-card-hover hover:text-app-text"
+                                [routerLink]="['/deck-edit', editLink(deck.deckName).name]" [queryParams]="editLink(deck.deckName).queryParams"
+                                [attr.aria-label]="'Edit ' + getDeckPath(deck.deckName)"
+                                title="Edit deck">
+                                <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.17 6.81a1 1 0 0 0-3.99-3.99L3.84 16.17a2 2 0 0 0-.5.83l-1.32 4.35a.5.5 0 0 0 .62.62l4.35-1.32a2 2 0 0 0 .83-.5z"/><path d="m15 5 4 4"/></svg>
+                            </a>
+                        }
+                    </div>
                     <div class="ml-auto flex items-center gap-1">
                         <a class="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-bold text-app-text-muted hover:bg-app-card-hover hover:text-app-text"
                             [routerLink]="['/deck-study/', getDeckPath(deck.deckName)]" [queryParams]="{ quick: '' }"
