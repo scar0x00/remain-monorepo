@@ -24,11 +24,18 @@ export class FlashcardChatRoute {
   readonly activeDeck = signal<string | null>(null);
 
   constructor() {
+    // Keep the newest message in view. Nothing to follow while the log only holds the empty state:
+    // scrolling then would hide the top of the steps.
     afterRenderEffect(() => {
-      this.messages();
+      if (this.messages().length === 0) return;
       const element = this.log()?.nativeElement;
-      if (element) {
+      if (!element) return;
+      if (element.scrollHeight > element.clientHeight) {
+        // Fixed-height chat (`chat:` screens): the log is the scroller.
         element.scrollTop = element.scrollHeight;
+      } else {
+        // Phones: the page scrolls, so bring the last message on screen.
+        element.lastElementChild?.scrollIntoView?.({ block: 'nearest' });
       }
     });
   }
