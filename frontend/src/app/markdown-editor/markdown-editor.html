@@ -2,8 +2,8 @@
     <div class="flex items-center justify-between gap-2">
         <label [for]="fieldId()" class="text-sm font-semibold text-app-text-muted">{{ label() }}</label>
         <div class="flex gap-1 font-mono text-xs">
-            <button type="button" class="rounded-md px-2 py-1 text-app-text-subtle hover:bg-app-card-hover hover:text-app-text" title="Inline math" (click)="inlineMath()">$x$</button>
-            <button type="button" class="rounded-md px-2 py-1 text-app-text-subtle hover:bg-app-card-hover hover:text-app-text" title="Block math" (click)="blockMath()">$$x$$</button>
+            <button type="button" class="rounded-lg px-2 py-1 text-app-text-subtle hover:bg-app-card-hover hover:text-app-text" title="Inline math" (click)="inlineMath()">$x$</button>
+            <button type="button" class="rounded-lg px-2 py-1 text-app-text-subtle hover:bg-app-card-hover hover:text-app-text" title="Block math" (click)="blockMath()">$$x$$</button>
         </div>
     </div>
     <textarea #textarea [id]="fieldId()" rows="3" spellcheck="false"

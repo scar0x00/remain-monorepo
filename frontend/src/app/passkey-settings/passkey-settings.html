@@ -1,6 +1,6 @@
-<section class="flex flex-col gap-5 rounded-xl bg-app-card p-6 shadow-e3" aria-labelledby="passkeys-heading">
+<section class="flex flex-col gap-5 rounded-xl bg-app-card p-6 shadow-e1" aria-labelledby="passkeys-heading">
     <header class="flex flex-col gap-1">
-        <h2 id="passkeys-heading" class="text-xl font-semibold">Passkeys</h2>
+        <h2 id="passkeys-heading" class="text-lg font-semibold">Passkeys</h2>
         <p class="text-app-text-muted leading-relaxed">
             Sign in with your fingerprint, face or device PIN instead of a password. Add one on each device you use, so losing one doesn’t lock you out.
         </p>
@@ -32,7 +32,7 @@
                                 </div>
                                 <div class="flex gap-1">
                                     <button type="button" (click)="startRename(passkey)" class="min-h-10 rounded-full px-3 text-sm font-semibold text-app-text-muted hover:bg-app-card-hover hover:text-app-text hover:cursor-pointer">Rename</button>
-                                    <button type="button" (click)="removing.set(passkey.id)" class="min-h-10 rounded-full px-3 text-sm font-semibold text-accent hover:bg-app-card-hover hover:cursor-pointer">Remove</button>
+                                    <button type="button" (click)="removing.set(passkey.id)" class="min-h-10 rounded-full px-3 text-sm font-semibold text-app-text-muted hover:bg-app-card-hover hover:text-accent hover:cursor-pointer">Remove</button>
                                 </div>
                             </div>
                             @if (removing() === passkey.id) {
