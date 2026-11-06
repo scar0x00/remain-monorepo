@@ -59,7 +59,7 @@
                             <span>by {{ deck.author.name }}</span>
                         }
                     </p>
-                    <p class="-mt-1 text-sm text-app-text-subtle tabular-nums">Added <time [attr.datetime]="deck.uploaded">{{ convertToDate(deck.uploaded) | date: 'mediumDate' }}</time></p>
+                    <p class="-mt-1 font-mono text-xs text-app-text-subtle">Added <time [attr.datetime]="deck.uploaded">{{ convertToDate(deck.uploaded) | date: 'mediumDate' }}</time></p>
                 </div>
                 <!-- Actions only: file actions on the left, study on the right. The date has its own line above. -->
                 <div class="mt-auto flex flex-wrap items-center gap-x-2 gap-y-2">
