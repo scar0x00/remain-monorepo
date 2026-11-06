@@ -18,7 +18,8 @@ describe('BrowseDecksRoute', () => {
     fixture = TestBed.createComponent(BrowseDecksRoute);
     component = fixture.componentInstance;
     fixture.detectChanges();
-    TestBed.inject(HttpTestingController).expectOne('/api/v1/decks').flush([]);
+    TestBed.inject(HttpTestingController).expectOne('/api/v1/decks')
+      .flush({ decks: [], total: 0, page: 1, pageSize: 10, sort: 'name', order: 'asc' });
     await fixture.whenStable();
   });
 

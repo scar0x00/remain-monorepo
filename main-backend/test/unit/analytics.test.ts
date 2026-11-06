@@ -84,6 +84,22 @@ describe("REST events", () => {
     ]);
   });
 
+  it("records how many cards a study run covers and which kind of run it is", async () => {
+    const start = (body: object) =>
+      request("http://localhost/api/v1/study-sessions", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ deckName: "alpha.json", deckEtag: null, ...body }),
+      });
+    await start({ cardTotal: 10, mode: "quick" });
+    await start({ cardTotal: 40 });
+
+    expect(events()).toEqual([
+      expect.objectContaining({ event: "study_session_started", deck: "alpha.json", card_total: 10, mode: "quick" }),
+      expect.objectContaining({ event: "study_session_started", deck: "alpha.json", card_total: 40, mode: "full" }),
+    ]);
+  });
+
   it("never sends card text", async () => {
     await request("http://localhost/api/v1/deck/alpha.json", { method: "PUT", body: deck });
     expect(JSON.stringify(captured)).not.toContain('"Q"');

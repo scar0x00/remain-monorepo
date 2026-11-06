@@ -23,11 +23,18 @@ describe('DeckList', () => {
     // Not whenStable: the pending deck list request keeps the app unstable until it is flushed.
     fixture.detectChanges();
     TestBed.tick();
-    http.expectOne('/api/v1/decks').flush([
-      { deckName: 'alpha.json', size: 1, uploaded: '2026-10-01T00:00:00Z', etag: 'a' },
-      { deckName: 'notes.YAML', size: 1, uploaded: '2026-10-01T00:00:00Z', etag: 'b' },
-      { deckName: 'anki.apkg', size: 1, uploaded: '2026-10-01T00:00:00Z', etag: 'c' },
-    ]);
+    http.expectOne('/api/v1/decks').flush({
+      decks: [
+        { deckName: 'alpha.json', size: 1, uploaded: '2026-10-01T00:00:00Z', etag: 'a' },
+        { deckName: 'notes.YAML', size: 1, uploaded: '2026-10-01T00:00:00Z', etag: 'b' },
+        { deckName: 'anki.apkg', size: 1, uploaded: '2026-10-01T00:00:00Z', etag: 'c' },
+      ],
+      total: 3,
+      page: 1,
+      pageSize: 10,
+      sort: 'name',
+      order: 'asc',
+    });
     await fixture.whenStable();
   });
 
