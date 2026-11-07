@@ -99,6 +99,10 @@ export function authOptions(env: AuthEnv, overrides: AuthOverrides = {}) {
       max: 100,
       // Every sign-up and resend sends an email.
       customRules: {
+        // Every app load asks for the session. Counting it cost an Upstash write per load (the
+        // counter's INCR), while the answer itself mostly comes from the cookie cache with no I/O.
+        // Nothing to guess here (tokens are random and signed), so it isn't limited.
+        "/get-session": false,
         "/sign-up/email": { window: 60 * 60, max: 5 },
         "/send-verification-email": { window: 60 * 60, max: 5 },
         "/request-password-reset": { window: 60 * 60, max: 5 },

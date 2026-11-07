@@ -96,6 +96,18 @@ describe("session validation", () => {
     expect(testAuth.redis.calls()).toBe(before);
   });
 
+  it("answers get-session from the cookie cache without a rate-limit write", async () => {
+    const { cookie } = await signUpAndVerify(request, email, { address: "ada@example.com" });
+    const before = testAuth.redis.calls();
+
+    for (let i = 0; i < 5; i++) {
+      const res = await request("/api/v1/auth/get-session", { headers: { cookie } });
+      expect(((await res.json()) as { user: { email: string } }).user.email).toBe("ada@example.com");
+    }
+
+    expect(testAuth.redis.calls()).toBe(before);
+  });
+
   it("keeps sessions in Upstash, not only in the database", async () => {
     await signUpAndVerify(request, email, { address: "ada@example.com" });
     const keys = [...testAuth.redis.data.keys()];
